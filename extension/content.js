@@ -301,18 +301,17 @@
         currentCue = { id: cueId++, start, end, text };
       } else {
         const gap = start - currentCue.end;
-        if (currentCue.text.endsWith(text)) {
-          continue;
+        if (!currentCue.text.endsWith(text)) {
+          currentCue.text += ' ' + text;
         }
-        currentCue.text += ' ' + text;
         currentCue.end = Math.max(currentCue.end, end);
 
         // Merge into complete, natural semantic thoughts
-        const isPunctuation = /[.!?。！？]$/.test(text);
-        const isSpeechPause = gap > 0.8;
-        const isGoodDuration = (currentCue.end - currentCue.start >= 5.5);
+        const isPunctuation = /[.!?。！？]["']?$/.test(currentCue.text);
+        const isSpeechPause = gap > 0.9;
+        const isMaxDuration = (currentCue.end - currentCue.start >= 8.0);
 
-        if (isPunctuation || isSpeechPause || isGoodDuration) {
+        if (isPunctuation || isSpeechPause || isMaxDuration) {
           cues.push(currentCue);
           currentCue = null;
         }
@@ -343,17 +342,16 @@
           currentCue = { id: cueId++, start, end, text };
         } else {
           const gap = start - currentCue.end;
-          if (currentCue.text.endsWith(text)) {
-            continue;
+          if (!currentCue.text.endsWith(text)) {
+            currentCue.text += ' ' + text;
           }
-          currentCue.text += ' ' + text;
           currentCue.end = Math.max(currentCue.end, end);
 
-          const isPunctuation = /[.!?。！？]$/.test(text);
-          const isSpeechPause = gap > 0.8;
-          const isGoodDuration = (currentCue.end - currentCue.start >= 5.5);
+          const isPunctuation = /[.!?。！？]["']?$/.test(currentCue.text);
+          const isSpeechPause = gap > 0.9;
+          const isMaxDuration = (currentCue.end - currentCue.start >= 8.0);
 
-          if (isPunctuation || isSpeechPause || isGoodDuration) {
+          if (isPunctuation || isSpeechPause || isMaxDuration) {
             cues.push(currentCue);
             currentCue = null;
           }
@@ -681,25 +679,8 @@
     state.bufferedSeconds = 0;
     setNativeCaptionsHidden(true);
 
-    // 1. Pause video immediately & ENFORCE pause aggressively while buffering
+    // 1. Pause video cleanly while buffering
     pauseYouTubeVideo();
-    if (state.pauseEnforcerTimer) clearInterval(state.pauseEnforcerTimer);
-    state.pauseEnforcerTimer = setInterval(() => {
-      if (state.isSyncBuffering) {
-        const video = findVideoElement();
-        if (video && !video.paused) {
-          console.warn('[ThaiDubbing] Auto-play detected during buffering. Enforcing Pause...');
-          video.pause();
-          try {
-            const player = document.getElementById('movie_player') || document.querySelector('.html5-video-player');
-            if (player && typeof player.pauseVideo === 'function') player.pauseVideo();
-          } catch(e) {}
-        }
-      } else {
-        clearInterval(state.pauseEnforcerTimer);
-      }
-    }, 50);
-
     renderHUD();
     updateHUDStatus('⏳ วิดีโอหยุดชั่วคราว: กำลังวิเคราะห์และเรียบเรียงภาษาไทยล่วงหน้า 3 นาที...');
 
@@ -953,7 +934,9 @@
     audio.src = audioSrc;
     audio.volume = (typeof state.dubVolume === 'number' && !isNaN(state.dubVolume)) ? state.dubVolume : 1.0;
     try {
-      audio.playbackRate = videoSpeed;
+      audio.preservesPitch = true;
+      audio.webkitPreservesPitch = true;
+      audio.playbackRate = 1.0;
     } catch (rateErr) {}
 
     state.isPlaying = true;
