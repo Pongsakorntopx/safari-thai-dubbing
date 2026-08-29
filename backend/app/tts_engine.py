@@ -150,31 +150,39 @@ class TTSEngine:
             },
         }
 
-        # Fast 12.0s attempt per key on primary model to ensure robust voice synthesis
+        # Multi-model attempt: gemini-3.1-flash-tts-preview -> gemini-2.5-flash-preview-tts -> gemini-2.5-pro-preview-tts
+        models_to_try = [
+            "gemini-3.1-flash-tts-preview",
+            "gemini-2.5-flash-preview-tts",
+            "gemini-2.5-pro-preview-tts",
+        ]
+
         for key in keys:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key={key}"
-            try:
-                async with aiohttp.ClientSession() as session:
-                    async with session.post(
-                        url,
-                        json=payload,
-                        timeout=aiohttp.ClientTimeout(total=12.0),
-                    ) as resp:
-                        if resp.status == 200:
-                            res_data = await resp.json()
-                            candidates = res_data.get("candidates", [])
-                            if candidates:
-                                parts = candidates[0].get("content", {}).get("parts", [])
-                                for part in parts:
-                                    inline_data = part.get("inlineData", {})
-                                    if "data" in inline_data:
-                                        raw_base64 = inline_data["data"]
-                                        pcm_bytes = base64.b64decode(raw_base64)
-                                        return pcm_to_wav(pcm_bytes, sample_rate=24000)
-                        elif resp.status == 429:
-                            logger.warning("Google Studio Audio returned 429 on %s", key[:10])
-            except Exception as e:
-                logger.warning("Google Studio Audio error: %s", e)
+            for model_name in models_to_try:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={key}"
+                try:
+                    async with aiohttp.ClientSession() as session:
+                        async with session.post(
+                            url,
+                            json=payload,
+                            timeout=aiohttp.ClientTimeout(total=25.0),
+                        ) as resp:
+                            if resp.status == 200:
+                                res_data = await resp.json()
+                                candidates = res_data.get("candidates", [])
+                                if candidates:
+                                    parts = candidates[0].get("content", {}).get("parts", [])
+                                    for part in parts:
+                                        inline_data = part.get("inlineData", {})
+                                        if "data" in inline_data:
+                                            raw_base64 = inline_data["data"]
+                                            pcm_bytes = base64.b64decode(raw_base64)
+                                            logger.info("Successfully synthesized Google Studio Audio via %s (%d bytes)", model_name, len(pcm_bytes))
+                                            return pcm_to_wav(pcm_bytes, sample_rate=24000)
+                            elif resp.status == 429:
+                                logger.warning("Google Studio Audio (%s) returned 429 on key %s", model_name, key[:10])
+                except Exception as e:
+                    logger.warning("Google Studio Audio (%s) error: %s", model_name, e)
 
         raise RuntimeError("Google Audio quota reached or fast timeout")
 

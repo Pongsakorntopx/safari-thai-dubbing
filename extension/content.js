@@ -828,15 +828,19 @@
       const video = findVideoElement();
       if (!video || video.paused || state.isSyncBuffering) return;
 
-      // Allow the active sentence to finish its natural phrasing and concluding polite particle
-      if (state.isPlaying) return;
-
       const currentTime = video.currentTime;
       for (let i = 0; i < state.timedCues.length; i++) {
         const cue = state.timedCues[i];
         if (cue.status === 'ready' && currentTime >= cue.start && currentTime <= cue.start + 3.0) {
           cue.status = 'played';
-          schedulePlayAudio(cue);
+          if (cue.audioBuffer) {
+            if (!state.isPlaying) {
+              schedulePlayAudio(cue);
+            }
+          } else if (cue.translated) {
+            showThaiCaptionToast(cue.translated);
+            updateHUDStatus(`🔊 พากย์: "${cue.translated.slice(0, 16)}..."`);
+          }
           break;
         }
       }

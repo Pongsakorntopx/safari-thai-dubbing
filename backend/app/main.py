@@ -301,41 +301,67 @@ async def dub_cues_batch(req: BatchDubRequest):
     if len(thai_texts) != len(req.cues):
         thai_texts = [await translator.translate(c.text, context=req.context or "", style=style, gender=gender, custom_key=custom_key) for c in req.cues]
 
-    # 2. Parallel TTS Synthesis with Consistent, Natural Human Speech Rate
-    async def synth_cue(cue: CueItem, thai_text: str):
-        # Consistent, natural human tempo without artificial speed fluctuations
-        cue_rate = rate or "+0%"
+    # 2. TTS Synthesis: If Google Studio Audio is requested, synthesize the whole cohesive passage as 1 Master Track!
+    is_google = engine == "google" or voice in ["Aoede", "Puck", "Kore", "Fenrir", "Charon"]
 
-        # Check cache
-        cached = await cache.get_audio_dub(
-            source_text=cue.text,
-            engine=engine,
-            voice=voice,
-            rate=cue_rate,
-            pitch="0Hz",
-            style=style,
-            context=req.context or "",
-        )
-        if cached:
-            _, audio_bytes = cached
-            return {
-                "id": cue.id,
-                "translatedText": thai_text,
-                "base64Audio": base64.b64encode(audio_bytes).decode("utf-8"),
-                "cached": True,
-            }
+    if is_google:
+        full_passage = " ".join([t.strip() for t in thai_texts if t.strip()])
+        master_audio_bytes = None
+        try:
+            master_audio_bytes = await tts_engine.synthesize(
+                text=full_passage,
+                engine="google",
+                voice=voice,
+                style=style,
+                rate=rate or "+0%",
+                api_key=custom_key,
+            )
+        except Exception as e:
+            logger.warning("Google master audio synthesis failed: %s. Falling back to cue-by-cue.", e)
 
-        audio_bytes = await tts_engine.synthesize(
-            text=thai_text,
-            engine=engine,
-            voice=voice,
-            style=style,
-            rate=cue_rate,
-            api_key=custom_key,
-        )
-
-        if audio_bytes:
-            await cache.set_audio_dub(
+        if master_audio_bytes:
+            results = []
+            for idx, (cue, text) in enumerate(zip(req.cues, thai_texts)):
+                if idx == 0:
+                    results.append({
+                        "id": cue.id,
+                        "translatedText": text,
+                        "base64Audio": base64.b64encode(master_audio_bytes).decode("utf-8"),
+                        "cached": False,
+                        "isMasterTrack": True,
+                    })
+                else:
+                    results.append({
+                        "id": cue.id,
+                        "translatedText": text,
+                        "base64Audio": "",
+                        "cached": False,
+                        "isMasterTrack": False,
+                    })
+        else:
+            # Fallback to parallel cue synth if master failed
+            async def synth_cue(cue: CueItem, thai_text: str):
+                cue_rate = rate or "+0%"
+                audio_bytes = await tts_engine.synthesize(
+                    text=thai_text,
+                    engine=engine,
+                    voice=voice,
+                    style=style,
+                    rate=cue_rate,
+                    api_key=custom_key,
+                )
+                return {
+                    "id": cue.id,
+                    "translatedText": thai_text,
+                    "base64Audio": base64.b64encode(audio_bytes).decode("utf-8") if audio_bytes else "",
+                    "cached": False,
+                }
+            results = await asyncio.gather(*[synth_cue(c, t) for c, t in zip(req.cues, thai_texts)])
+    else:
+        # Standard Edge synthesis with cache
+        async def synth_cue(cue: CueItem, thai_text: str):
+            cue_rate = rate or "+0%"
+            cached = await cache.get_audio_dub(
                 source_text=cue.text,
                 engine=engine,
                 voice=voice,
@@ -343,24 +369,52 @@ async def dub_cues_batch(req: BatchDubRequest):
                 pitch="0Hz",
                 style=style,
                 context=req.context or "",
-                translated_text=thai_text,
-                audio_data=audio_bytes,
             )
+            if cached:
+                _, audio_bytes = cached
+                return {
+                    "id": cue.id,
+                    "translatedText": thai_text,
+                    "base64Audio": base64.b64encode(audio_bytes).decode("utf-8"),
+                    "cached": True,
+                }
+
+            audio_bytes = await tts_engine.synthesize(
+                text=thai_text,
+                engine=engine,
+                voice=voice,
+                style=style,
+                rate=cue_rate,
+                api_key=custom_key,
+            )
+
+            if audio_bytes:
+                await cache.set_audio_dub(
+                    source_text=cue.text,
+                    engine=engine,
+                    voice=voice,
+                    rate=cue_rate,
+                    pitch="0Hz",
+                    style=style,
+                    context=req.context or "",
+                    translated_text=thai_text,
+                    audio_data=audio_bytes,
+                )
+                return {
+                    "id": cue.id,
+                    "translatedText": thai_text,
+                    "base64Audio": base64.b64encode(audio_bytes).decode("utf-8"),
+                    "cached": False,
+                }
+
             return {
                 "id": cue.id,
                 "translatedText": thai_text,
-                "base64Audio": base64.b64encode(audio_bytes).decode("utf-8"),
+                "base64Audio": "",
                 "cached": False,
             }
 
-        return {
-            "id": cue.id,
-            "translatedText": thai_text,
-            "base64Audio": "",
-            "cached": False,
-        }
-
-    results = await asyncio.gather(*[synth_cue(c, t) for c, t in zip(req.cues, thai_texts)])
+        results = await asyncio.gather(*[synth_cue(c, t) for c, t in zip(req.cues, thai_texts)])
 
     return {
         "success": True,
