@@ -126,8 +126,15 @@ def pitch_shift_male(audio_np: np.ndarray, sr: int = 16000) -> np.ndarray:
         return audio_np[indices]
 
 
+# Set PyTorch CPU thread limit to minimize memory overhead
+try:
+    torch.set_num_threads(1)
+except Exception:
+    pass
+
+
 class ThaiVitsMasterEngine:
-    """Master Thai VITS & KhanomTan TTS v1.1 Engine."""
+    """Master Thai VITS & KhanomTan TTS v1.1 Engine with Ultra-Lean 512MB RAM Management."""
 
     def __init__(self):
         self._vits_model = None
@@ -136,24 +143,40 @@ class ThaiVitsMasterEngine:
         self._lock = threading.Lock()
 
     def _get_vits_community(self):
-        """Lazy load facebook/mms-tts-tha (Thai VITS Model)."""
+        """Lazy load facebook/mms-tts-tha (Thai VITS Model) with memory unloading."""
         if self._vits_model is None:
             with self._lock:
                 if self._vits_model is None:
+                    # Free KhanomTan to stay strictly below 512MB RAM on free cloud tiers
+                    if self._khanomtan_v11 is not None:
+                        del self._khanomtan_v11
+                        self._khanomtan_v11 = None
+                        gc.collect()
+
                     logger.info("🇹🇭 Loading VITS Thai Community (facebook/mms-tts-tha)...")
                     self._vits_model = VitsModel.from_pretrained("facebook/mms-tts-tha")
                     self._vits_tokenizer = AutoTokenizer.from_pretrained("facebook/mms-tts-tha")
+                    gc.collect()
                     logger.info("✅ VITS Thai Community loaded successfully!")
         return self._vits_model, self._vits_tokenizer
 
     def _get_khanomtan(self):
-        """Lazy load KhanomTan TTS v1.1."""
+        """Lazy load KhanomTan TTS v1.1 with memory unloading."""
         if self._khanomtan_v11 is None:
             with self._lock:
                 if self._khanomtan_v11 is None:
+                    # Free VITS model to stay strictly below 512MB RAM on free cloud tiers
+                    if self._vits_model is not None:
+                        del self._vits_model
+                        del self._vits_tokenizer
+                        self._vits_model = None
+                        self._vits_tokenizer = None
+                        gc.collect()
+
                     logger.info("🧁 Loading KhanomTan TTS v1.1...")
                     from pythaitts import TTS
                     self._khanomtan_v11 = TTS(pretrained="khanomtan", version="1.1")
+                    gc.collect()
                     logger.info("✅ KhanomTan TTS v1.1 loaded successfully!")
         return self._khanomtan_v11
 
