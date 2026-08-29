@@ -607,8 +607,11 @@
         restoreVideoVolume();
         const cur = video.currentTime;
         state.timedCues.forEach((c) => {
-          if (c.end < cur) c.status = 'played';
-          else if (c.status === 'played' && c.start >= cur) c.status = c.audioBuffer ? 'ready' : 'pending';
+          if (c.end < cur) {
+            c.status = 'played';
+          } else if (c.start >= cur) {
+            c.status = (c.audioUrl || c.audioBase64) ? 'ready' : 'pending';
+          }
         });
         updateBufferGauge();
       }
@@ -821,53 +824,64 @@
       const currentTime = video ? video.currentTime : 0;
       updateBufferGauge();
 
-      // If buffer drops below 100s, fetch next batch in background
-      if (state.bufferedSeconds < 100) {
+      // If buffer drops below 160s, keep fetching upcoming pending cues continuously!
+      if (state.bufferedSeconds < 160) {
         const upcomingCues = state.timedCues.filter((c) => c.end >= currentTime - 1.0);
         const pendingCues = upcomingCues.filter((c) => c.status === 'pending');
 
         if (pendingCues.length > 0) {
-          const nextBatch = pendingCues.slice(0, 16);
+          const nextBatch = pendingCues.slice(0, 12);
           nextBatch.forEach((c) => (c.status = 'fetching'));
           state.isPreFetching = true;
 
-          const batchRes = await fetchDubBatchDirect(nextBatch);
-          state.isPreFetching = false;
+          try {
+            const batchRes = await fetchDubBatchDirect(nextBatch);
+            if (batchRes && batchRes.success && batchRes.results) {
+              if (batchRes.speaker_count !== undefined && batchRes.speaker_count > state.speakerCount) {
+                state.speakerCount = batchRes.speaker_count;
+                state.maleCount = batchRes.male_count || 0;
+                state.femaleCount = batchRes.female_count || 0;
+                state.speakers = batchRes.speakers || [];
+                renderHUD();
+              }
 
-          if (batchRes && batchRes.success && batchRes.results) {
-            if (batchRes.speaker_count !== undefined && batchRes.speaker_count > state.speakerCount) {
-              state.speakerCount = batchRes.speaker_count;
-              state.maleCount = batchRes.male_count || 0;
-              state.femaleCount = batchRes.female_count || 0;
-              state.speakers = batchRes.speakers || [];
-              renderHUD();
-            }
-
-            for (const item of batchRes.results) {
-              const cue = state.timedCues.find((c) => c.id === item.id);
-              if (cue) {
-                cue.translated = item.translatedText || cue.text;
-                cue.isMasterTrack = !!item.isMasterTrack;
-                cue.speaker = item.speaker || 'Host';
-                cue.emotion = item.emotion || 'normal';
-                cue.orig_wpm = item.orig_wpm || 140;
-                cue.appliedRate = item.appliedRate || '+0%';
-                if (item.base64Audio) {
-                  cue.audioBase64 = item.base64Audio;
-                  cue.audioUrl = base64ToBlobUrl(item.base64Audio);
-                  cue.status = 'ready';
-                } else {
-                  cue.audioUrl = null;
-                  cue.audioBase64 = null;
-                  cue.status = 'ready';
+              for (const item of batchRes.results) {
+                const cue = state.timedCues.find((c) => c.id === item.id);
+                if (cue) {
+                  cue.translated = item.translatedText || cue.text;
+                  cue.isMasterTrack = !!item.isMasterTrack;
+                  cue.speaker = item.speaker || 'Host';
+                  cue.emotion = item.emotion || 'normal';
+                  cue.orig_wpm = item.orig_wpm || 140;
+                  cue.appliedRate = item.appliedRate || '+0%';
+                  if (item.base64Audio) {
+                    cue.audioBase64 = item.base64Audio;
+                    cue.audioUrl = base64ToBlobUrl(item.base64Audio);
+                    cue.status = 'ready';
+                  } else {
+                    cue.audioUrl = null;
+                    cue.audioBase64 = null;
+                    cue.status = 'ready';
+                  }
                 }
               }
+              updateBufferGauge();
+            } else {
+              nextBatch.forEach((c) => {
+                if (c.status === 'fetching') c.status = 'pending';
+              });
             }
-            updateBufferGauge();
+          } catch (fetchErr) {
+            console.error('[ThaiDubbing] Lookahead fetch error:', fetchErr);
+            nextBatch.forEach((c) => {
+              if (c.status === 'fetching') c.status = 'pending';
+            });
+          } finally {
+            state.isPreFetching = false;
           }
         }
       }
-    }, 250);
+    }, 300);
 
     // Audio Scheduler: Exact frame-accurate playback with natural sentence preservation and Video Phase-Lock Sync
     state.schedulerTimer = setInterval(() => {
@@ -933,6 +947,10 @@
   }
 
   function stopActivePlayback() {
+    if (state.playSafetyTimeout) {
+      clearTimeout(state.playSafetyTimeout);
+      state.playSafetyTimeout = null;
+    }
     const audio = getGlobalAudioPlayer();
     if (audio) {
       try {
@@ -944,7 +962,7 @@
     state.nextSpeechTime = 0;
   }
 
-  // --- Strict Single-Track Monophonic Speech Engine (Zero Overlap & Zero Ghost Voices) ---
+  // --- Strict Single-Track Monophonic Speech Engine (Zero Overlap & Zero Dropout) ---
   function schedulePlayAudio(cue) {
     if (!cue.audioUrl && !cue.audioBase64) return;
 
@@ -966,6 +984,16 @@
     state.isPlaying = true;
     applyAudioDucking();
 
+    // Safety watchdog: automatically unlock state.isPlaying if audio stalls or onended is dropped
+    const expectedDurationMs = Math.max(1500, Math.round(((cue.end - cue.start) + 2.5) * 1000));
+    state.playSafetyTimeout = setTimeout(() => {
+      if (state.isPlaying) {
+        console.log('[ThaiDubbing] Safety watchdog released isPlaying lock.');
+        state.isPlaying = false;
+        restoreVideoVolume();
+      }
+    }, expectedDurationMs);
+
     if (state.showSubtitles) {
       const durationMs = Math.max(800, Math.round((cue.end - cue.start) * 1000 + 400));
       renderCinemaSubtitle(cue.translated, durationMs);
@@ -977,6 +1005,7 @@
     updateHUDStatus(`🔊 ${rhythmTag}"${cue.translated.slice(0, 18)}..."`);
 
     audio.onended = () => {
+      if (state.playSafetyTimeout) clearTimeout(state.playSafetyTimeout);
       state.isPlaying = false;
       clearCinemaSubtitle();
       restoreVideoVolume();
@@ -985,12 +1014,16 @@
 
     audio.onerror = (err) => {
       console.error('[ThaiDubbing] Audio error:', err);
+      if (state.playSafetyTimeout) clearTimeout(state.playSafetyTimeout);
       state.isPlaying = false;
       restoreVideoVolume();
     };
 
     audio.play().catch((playErr) => {
       console.warn('[ThaiDubbing] Audio play caught:', playErr);
+      if (state.playSafetyTimeout) clearTimeout(state.playSafetyTimeout);
+      state.isPlaying = false;
+      restoreVideoVolume();
     });
   }
 
