@@ -74,11 +74,23 @@ def pcm_to_wav(pcm_data: bytes, sample_rate: int = 24000, channels: int = 1, sam
 
 
 def format_natural_thai_prosody(text: str) -> str:
-    """Clean text for natural, uninterrupted Thai prosody and authentic human intonation."""
+    """Clean and structure text with natural breath pauses (commas) and clause drops (periods)."""
     t = text.strip()
     # Remove artificial markers or brackets
     t = re.sub(r"[\"\'\`\<\>\[\]\(\)]", "", t)
+
+    # Insert natural pauses after common greeting and discourse markers
+    t = re.sub(r"(สวัสดีครับ|สวัสดีค่ะ|ยินดีต้อนรับครับ|ยินดีต้อนรับค่ะ)(?!\s*[,.])", r"\1, ", t)
+    t = re.sub(r"(ในคลิปนี้|วันนี้|สำหรับคลิปนี้|อย่างแรกเลย)(?!\s*[,.])", r"\1, ", t)
+    t = re.sub(r"(เพราะฉะนั้น|ดังนั้น|นอกจากนี้|อย่างไรก็ตาม|ในส่วนของ)(?!\s*[,.])", r"\1, ", t)
+
+    # Insert sentence boundary periods after polite particles followed by new clauses
+    t = re.sub(r"(นะครับ|นะคะ|ครับผม|ค่ะ|ครับ)(?=\s+[ก-ฮA-Za-z])", r"\1. ", t)
+
+    # Collapse multiple spaces and clean up
     t = re.sub(r"\s+", " ", t)
+    t = re.sub(r"\s*,\s*", ", ", t)
+    t = re.sub(r"\s*\.\s*", ". ", t)
     return t.strip()
 
 

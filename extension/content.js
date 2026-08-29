@@ -645,16 +645,6 @@
     }, stepTime);
   }
 
-  function stopActivePlayback() {
-    if (state.currentSource) {
-      try {
-        state.currentSource.stop();
-      } catch (e) {}
-      state.currentSource = null;
-    }
-    state.isPlaying = false;
-  }
-
   // --- 1-Click "Start Dubbing" Main Execution Pipeline (1-Minute Narrative Buffer) ---
   async function startDubbingProcess() {
     console.log('[ThaiDubbing] >>> 1. Start Dubbing clicked (60s buffer)');
@@ -1331,8 +1321,8 @@
         </div>
 
         <div style="display: flex; justify-content: space-between; align-items: center; gap: 4px;">
-          <span style="font-size: 11px; color: #94a3b8; font-weight: 600;">Gemini Key (ฟรี - AI เรียบเรียง):</span>
-          <input type="password" id="hud-gemini-input" placeholder="AIzaSy... (ถ้ามี)" value="${state.customGeminiKey || ''}" style="
+          <span style="font-size: 11px; color: #94a3b8; font-weight: 600;">Google AI Studio Key:</span>
+          <input type="password" id="hud-gemini-input" placeholder="AQ.Ab... / AIzaSy..." value="${state.customGeminiKey || ''}" style="
             background: #1e293b; color: #10b981; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; padding: 2px 6px; font-size: 10px; width: 170px; outline: none;
           ">
         </div>
