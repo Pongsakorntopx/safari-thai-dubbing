@@ -17,6 +17,7 @@
     rate: '+0%',
     dubVolume: 1.0,
     duckVolume: 0.2,
+    showSubtitles: false, // Default is OFF (ปิดเป็นค่าเริ่มต้น)
     backendUrl: 'http://127.0.0.1:8000',
     customGeminiKey: 'AQ.Ab8RN6KPbW' + 'fipLG3IEBPAVK-nRd6Ki' + 'PanW6ymcYDj3ymolbkbw',
 
@@ -31,7 +32,6 @@
     liveObserver: null,
     subtitleHookAttached: false,
     audioCtx: null,
-    clarityFilter: null,
     audioGainNode: null,
 
     // UI HUD Controls
@@ -65,28 +65,8 @@
       const AudioContextClass = window.AudioContext || window.webkitAudioContext;
       if (AudioContextClass) {
         state.audioCtx = new AudioContextClass();
-
-        // 1. Hardware Vocal Clarity EQ Filter (Boosts presence & crisp vocal definition at 3.2kHz)
-        state.clarityFilter = state.audioCtx.createBiquadFilter();
-        state.clarityFilter.type = 'peaking';
-        state.clarityFilter.frequency.setValueAtTime(3200, state.audioCtx.currentTime);
-        state.clarityFilter.gain.setValueAtTime(2.2, state.audioCtx.currentTime);
-
-        // 2. Hardware Broadcast Dynamics Compressor (Studio presence, warm level leveling, anti-clipping)
-        state.compressorNode = state.audioCtx.createDynamicsCompressor();
-        state.compressorNode.threshold.setValueAtTime(-16, state.audioCtx.currentTime);
-        state.compressorNode.knee.setValueAtTime(20, state.audioCtx.currentTime);
-        state.compressorNode.ratio.setValueAtTime(6, state.audioCtx.currentTime);
-        state.compressorNode.attack.setValueAtTime(0.003, state.audioCtx.currentTime);
-        state.compressorNode.release.setValueAtTime(0.20, state.audioCtx.currentTime);
-
-        // 3. Master Volume Gain Node
         state.audioGainNode = state.audioCtx.createGain();
-        state.audioGainNode.gain.value = state.dubVolume;
-
-        // Connect Hardware DSP Chain: Filter -> Compressor -> Gain -> Destination
-        state.clarityFilter.connect(state.compressorNode);
-        state.compressorNode.connect(state.audioGainNode);
+        state.audioGainNode.gain.setValueAtTime(state.dubVolume !== undefined ? state.dubVolume : 1.0, state.audioCtx.currentTime);
         state.audioGainNode.connect(state.audioCtx.destination);
       }
     }
@@ -119,11 +99,13 @@
         'rate',
         'dubVolume',
         'duckVolume',
+        'showSubtitles',
         'backendUrl',
         'customGeminiKey',
         'isCollapsed',
       ]);
       if (data.enabled !== undefined) state.enabled = data.enabled;
+      if (data.showSubtitles !== undefined) state.showSubtitles = data.showSubtitles;
       if (data.voice) {
         state.voice = data.voice;
         const vObj = VOICES.find((v) => v.id === data.voice);
@@ -184,6 +166,12 @@
             state.gender = vObj.gender;
           }
         }
+        if (key === 'showSubtitles') {
+          state.showSubtitles = change.newValue;
+          if (!state.showSubtitles) {
+            clearCinemaSubtitle();
+          }
+        }
         if (key === 'dubVolume' && state.audioGainNode) {
           state.audioGainNode.gain.value = change.newValue;
         }
@@ -209,6 +197,35 @@
       bytes[i] = binary.charCodeAt(i);
     }
     return bytes.buffer;
+  }
+
+  function decodeAudioBuffer(ctx, arrayBuf) {
+    return new Promise((resolve) => {
+      if (!ctx || !arrayBuf || arrayBuf.byteLength === 0) {
+        resolve(null);
+        return;
+      }
+      try {
+        const copy = arrayBuf.slice(0);
+        ctx.decodeAudioData(
+          copy,
+          (buf) => resolve(buf),
+          () => {
+            try {
+              ctx.decodeAudioData(arrayBuf.slice(0)).then(resolve).catch(() => resolve(null));
+            } catch (e) {
+              resolve(null);
+            }
+          }
+        );
+      } catch (err) {
+        try {
+          ctx.decodeAudioData(arrayBuf.slice(0)).then(resolve).catch(() => resolve(null));
+        } catch (e) {
+          resolve(null);
+        }
+      }
+    });
   }
 
   function getVideoId() {
@@ -790,7 +807,7 @@
                 if (item.base64Audio && ctx) {
                   try {
                     const arrayBuf = base64ToArrayBuffer(item.base64Audio);
-                    cue.audioBuffer = await ctx.decodeAudioData(arrayBuf);
+                    cue.audioBuffer = await decodeAudioBuffer(ctx, arrayBuf);
                   } catch (decErr) {
                     console.error('[ThaiDubbing] Audio decode error:', decErr);
                   }
@@ -904,7 +921,7 @@
                   try {
                     if (ctx) {
                       const arrayBuf = base64ToArrayBuffer(item.base64Audio);
-                      cue.audioBuffer = await ctx.decodeAudioData(arrayBuf);
+                      cue.audioBuffer = await decodeAudioBuffer(ctx, arrayBuf);
                       cue.status = 'ready';
                     }
                   } catch (e) {
@@ -1030,7 +1047,7 @@
     // Per-cue isolated gain node
     const cueGain = ctx.createGain();
     cueGain.gain.setValueAtTime(1.0, ctx.currentTime);
-    cueGain.connect(state.clarityFilter || state.audioGainNode || ctx.destination);
+    cueGain.connect(state.audioGainNode || ctx.destination);
 
     const source = ctx.createBufferSource();
     source.buffer = cue.audioBuffer;
@@ -1046,8 +1063,14 @@
     state.isPlaying = true;
 
     applyAudioDucking();
-    const durationMs = Math.max(800, Math.round((cue.end - cue.start) * 1000 + 400));
-    renderCinemaSubtitle(cue.translated, durationMs);
+
+    if (state.showSubtitles) {
+      const durationMs = Math.max(800, Math.round((cue.end - cue.start) * 1000 + 400));
+      renderCinemaSubtitle(cue.translated, durationMs);
+    } else {
+      clearCinemaSubtitle();
+    }
+
     const rhythmTag = cue.orig_wpm ? `⚡ ${cue.orig_wpm} WPM (${cue.appliedRate || '+0%'}) | ` : '';
     updateHUDStatus(`🔊 ${rhythmTag}"${cue.translated.slice(0, 18)}..."`);
 
@@ -1176,37 +1199,53 @@
       const ctx = getAudioContext();
       if (ctx) {
         const arrayBuf = base64ToArrayBuffer(dubRes.base64Audio);
-        const buf = await ctx.decodeAudioData(arrayBuf);
-        playDirectLiveBuffer(buf, dubRes.translatedText);
+        const buf = await decodeAudioBuffer(ctx, arrayBuf);
+        if (buf) {
+          playDirectLiveBuffer(buf, dubRes.translatedText);
+        }
       }
     }
   }
 
   function playDirectLiveBuffer(buffer, translatedText) {
     const ctx = getAudioContext();
-    if (!ctx) return;
+    if (!ctx || !buffer) return;
 
     stopActivePlayback();
     unlockAudio();
 
     const video = findVideoElement();
+    const cueGain = ctx.createGain();
+    cueGain.gain.setValueAtTime(1.0, ctx.currentTime);
+    cueGain.connect(state.audioGainNode || ctx.destination);
+
     const source = ctx.createBufferSource();
     source.buffer = buffer;
-    source.connect(state.audioGainNode);
+    source.connect(cueGain);
     state.currentSource = source;
+    state.currentGainNode = cueGain;
     state.isPlaying = true;
 
     // Apply playback rate according to video playback rate (Default 1.0x)
     const videoSpeed = (video && video.playbackRate) ? video.playbackRate : 1.0;
-    source.playbackRate.setValueAtTime(videoSpeed, ctx.currentTime);
+    try {
+      source.playbackRate.setValueAtTime(videoSpeed, ctx.currentTime);
+    } catch(e) {}
 
     applyAudioDucking();
-    const durationMs = Math.max(800, Math.round((buffer.duration || 3) * 1000 + 400));
-    renderCinemaSubtitle(translatedText, durationMs);
+
+    if (state.showSubtitles) {
+      const durationMs = Math.max(800, Math.round((buffer.duration || 3) * 1000 + 400));
+      renderCinemaSubtitle(translatedText, durationMs);
+    } else {
+      clearCinemaSubtitle();
+    }
+
     updateHUDStatus(`🔊 พากย์: "${translatedText.slice(0, 15)}..."`);
 
     source.onended = () => {
       state.currentSource = null;
+      state.currentGainNode = null;
       state.isPlaying = false;
       clearCinemaSubtitle();
       restoreVideoVolume();
@@ -1242,7 +1281,7 @@
 
   // --- Cinema-Grade 100% Synchronized Thai Subtitle Overlay ---
   function renderCinemaSubtitle(text, durationMs) {
-    if (!text || !state.isDubbingActive) return;
+    if (!text || !state.isDubbingActive || !state.showSubtitles) return;
     let sub = document.getElementById('thai-cinema-subtitles');
     if (!sub) {
       sub = document.createElement('div');
@@ -1513,6 +1552,24 @@
           cursor: pointer;
         ">🔊</button>
 
+        <!-- Subtitle On/Off Toggle Button (Default: OFF) -->
+        <button id="hud-subtitle-toggle-btn" type="button" title="เปิด/ปิด ซับไตเติลภาษาไทย (ค่าเริ่มต้น: ปิด)" style="
+          background: ${state.showSubtitles ? 'rgba(56, 189, 248, 0.25)' : 'rgba(255, 255, 255, 0.08)'};
+          color: ${state.showSubtitles ? '#38bdf8' : '#94a3b8'};
+          border: 1px solid ${state.showSubtitles ? 'rgba(56, 189, 248, 0.6)' : 'rgba(255, 255, 255, 0.15)'};
+          border-radius: 10px;
+          padding: 3px 7px;
+          font-size: 11px;
+          font-weight: 600;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 3px;
+        ">
+          <span>💬</span>
+          <span>${state.showSubtitles ? 'ซับ: เปิด' : 'ซับ: ปิด'}</span>
+        </button>
+
         <!-- Settings Cog -->
         <button id="hud-settings-btn" type="button" title="ตั้งค่าสไตล์/ความเร็ว/ระดับเสียง" style="
           background: transparent;
@@ -1731,6 +1788,20 @@
       };
     }
 
+    const subBtn = document.getElementById('hud-subtitle-toggle-btn');
+    if (subBtn) {
+      subBtn.onclick = (e) => {
+        e.stopPropagation();
+        state.showSubtitles = !state.showSubtitles;
+        saveSetting('showSubtitles', state.showSubtitles);
+        if (!state.showSubtitles) {
+          clearCinemaSubtitle();
+        }
+        showSystemToast(state.showSubtitles ? '💬 เปิดซับไตเติลภาษาไทยแล้ว' : '💬 ปิดซับไตเติลภาษาไทยแล้ว');
+        renderHUD();
+      };
+    }
+
     const testBtn = document.getElementById('hud-test-btn');
     if (testBtn) {
       testBtn.onclick = (e) => {
@@ -1770,8 +1841,10 @@
         const ctx = getAudioContext();
         if (ctx) {
           const arrayBuf = base64ToArrayBuffer(response.base64Audio);
-          const buf = await ctx.decodeAudioData(arrayBuf);
-          playDirectLiveBuffer(buf, response.translatedText || sampleText);
+          const buf = await decodeAudioBuffer(ctx, arrayBuf);
+          if (buf) {
+            playDirectLiveBuffer(buf, response.translatedText || sampleText);
+          }
         }
       } else {
         updateHUDStatus('❌ เชื่อมต่อ Backend ไม่ได้');

@@ -12,6 +12,7 @@ const VITS_VOICES = [
 document.addEventListener('DOMContentLoaded', async () => {
   // DOM Elements
   const enabledToggle = document.getElementById('enabledToggle');
+  const subtitleToggle = document.getElementById('subtitleToggle');
   const statusBadge = document.getElementById('statusBadge');
   const engineSelect = document.getElementById('engineSelect');
   const voiceSelect = document.getElementById('voiceSelect');
@@ -42,6 +43,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   try {
     const data = await chrome.storage.local.get([
       'enabled',
+      'showSubtitles',
       'engine',
       'voice',
       'style',
@@ -56,6 +58,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       enabledToggle.checked = data.enabled;
     }
     updateStatusBadge(enabledToggle.checked);
+
+    if (subtitleToggle) {
+      subtitleToggle.checked = !!data.showSubtitles;
+    }
 
     const activeEngine = data.engine || 'khanomtan';
     engineSelect.value = 'vits_thai';
@@ -120,6 +126,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateStatusBadge(isChecked);
     saveSetting('enabled', isChecked);
   });
+
+  if (subtitleToggle) {
+    subtitleToggle.addEventListener('change', () => {
+      saveSetting('showSubtitles', subtitleToggle.checked);
+    });
+  }
 
   engineSelect.addEventListener('change', () => {
     const eng = engineSelect.value;
