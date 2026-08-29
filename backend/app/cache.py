@@ -15,9 +15,12 @@ _translation_lru = LRUCache(maxsize=settings.in_memory_cache_size)
 _audio_lru = LRUCache(maxsize=settings.in_memory_cache_size)
 
 
+CACHE_VERSION = "v5"
+
+
 def _generate_cache_key(source_text: str, *args: str) -> str:
-    """Generate a consistent SHA256 cache key from input parameters."""
-    normalized = ":::".join([source_text.strip().lower()] + [str(a).strip() for a in args])
+    """Generate a consistent versioned SHA256 cache key from input parameters."""
+    normalized = ":::".join([CACHE_VERSION, source_text.strip().lower()] + [str(a).strip() for a in args])
     return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
 
 
