@@ -301,8 +301,8 @@ async def dub_cues_batch(req: BatchDubRequest):
     if len(thai_texts) != len(req.cues):
         thai_texts = [await translator.translate(c.text, context=req.context or "", style=style, gender=gender, custom_key=custom_key) for c in req.cues]
 
-    # 2. TTS Synthesis: If Google Studio Audio or Apple Native is requested, synthesize the whole cohesive passage as 1 Master Track!
-    is_master_audio = engine in ["google", "apple"] or voice in ["Aoede", "Puck", "Kore", "Fenrir", "Charon", "Kanya", "Pattara"]
+    # 2. TTS Synthesis: Synthesize the whole cohesive passage as 1 Master Continuous Track (NotebookLM Audio Overview Standard)
+    is_master_audio = True
 
     if is_master_audio:
         full_passage = " ".join([t.strip() for t in thai_texts if t.strip()])
