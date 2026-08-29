@@ -906,7 +906,7 @@
       }
     }, 250);
 
-    // Audio Scheduler: Exact frame-accurate playback with natural sentence preservation
+    // Audio Scheduler: Exact frame-accurate playback with natural sentence preservation and Video Phase-Lock Sync
     state.schedulerTimer = setInterval(() => {
       if (!state.isDubbingActive || state.timedCues.length === 0) return;
       const video = findVideoElement();
@@ -924,10 +924,35 @@
       if (video.paused) return;
 
       const currentTime = video.currentTime;
+      const ctx = getAudioContext();
+
+      // 🎯 VIDEO-AUDIO PHASE-LOCK SYNC (PLL):
+      // If the Thai voice is still speaking previous sentence and the video is racing ahead,
+      // dynamically slow down or micro-pause the video so the audio and video stay perfectly in sync!
+      if (state.isPlaying && state.nextSpeechTime && ctx) {
+        const audioRemaining = state.nextSpeechTime - ctx.currentTime;
+        if (state.lastScheduledCue) {
+          const videoSlotRemaining = state.lastScheduledCue.end - currentTime;
+          // If video has raced past the subtitle boundary while voice is still speaking:
+          if (currentTime >= state.lastScheduledCue.end + 0.15 && audioRemaining > 0.25) {
+            if (!video.paused) {
+              video.pause();
+              const pauseDurationMs = Math.min(1200, Math.max(150, Math.round((audioRemaining - 0.08) * 1000)));
+              setTimeout(() => {
+                if (state.isDubbingActive && !state.isSyncBuffering) {
+                  video.play().catch(() => {});
+                }
+              }, pauseDurationMs);
+            }
+          }
+        }
+      }
+
       for (let i = 0; i < state.timedCues.length; i++) {
         const cue = state.timedCues[i];
         if (cue.status === 'ready' && currentTime >= cue.start - 0.25 && currentTime <= cue.end + 2.5) {
           cue.status = 'played';
+          state.lastScheduledCue = cue;
           if (cue.audioBuffer) {
             schedulePlayAudio(cue);
           } else if (cue.translated) {

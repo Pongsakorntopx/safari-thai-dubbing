@@ -365,14 +365,16 @@ async def dub_cues_batch(req: BatchDubRequest):
         # Calculate adaptive speech rate so Thai text fits comfortably inside the video time slot
         slot_duration = max(1.2, float(cue.end - cue.start))
         thai_chars = len(thai_text)
-        expected_sec = thai_chars / 12.0
+        expected_sec = thai_chars / 11.5
 
         cue_rate = rate or "+0%"
         if cue_rate == "+0%" or not cue_rate:
-            if expected_sec > slot_duration * 1.30:
-                cue_rate = "+20%"
-            elif expected_sec > slot_duration * 1.12:
-                cue_rate = "+10%"
+            if expected_sec > slot_duration * 1.35:
+                cue_rate = "+25%"
+            elif expected_sec > slot_duration * 1.20:
+                cue_rate = "+15%"
+            elif expected_sec > slot_duration * 1.08:
+                cue_rate = "+8%"
 
         cached = await cache.get_audio_dub(
             source_text=cue.text,
