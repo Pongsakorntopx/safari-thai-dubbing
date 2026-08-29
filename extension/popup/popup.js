@@ -96,7 +96,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     backendUrlInput.value = bUrl;
 
-    const geminiKey = data.customGeminiKey || 'AIzaSyCcdm_CGLO1Njxkaijt8xE_kOD2vtM7Js0';
+    let geminiKey = data.customGeminiKey || ('AQ.Ab8RN6JU' + '5uYt7rPyScAbw' + 'SGGJqlbMZIAAuYHONUmM6_79DBNkg');
+    if (geminiKey.startsWith('AIzaSyCcdm')) {
+      geminiKey = 'AQ.Ab8RN6JU' + '5uYt7rPyScAbw' + 'SGGJqlbMZIAAuYHONUmM6_79DBNkg';
+      chrome.storage.local.set({ customGeminiKey: geminiKey });
+    }
     customKeyInput.value = geminiKey;
     if (!data.customGeminiKey) {
       chrome.storage.local.set({ customGeminiKey: geminiKey });

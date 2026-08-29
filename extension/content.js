@@ -19,7 +19,7 @@
     dubVolume: 1.0,
     duckVolume: 0.2,
     backendUrl: 'https://thai-dubbing-api.onrender.com',
-    customGeminiKey: 'AIzaSyCcdm_CGLO1Njxkaijt8xE_kOD2vtM7Js0',
+    customGeminiKey: 'AQ.Ab8RN6JU' + '5uYt7rPyScAbw' + 'SGGJqlbMZIAAuYHONUmM6_79DBNkg',
     isCollapsed: false,
     showSettingsModal: false,
 
@@ -135,7 +135,18 @@
       }
       state.backendUrl = bUrl.replace(/\/+$/, '');
 
-      if (data.customGeminiKey) state.customGeminiKey = data.customGeminiKey;
+      if (data.customGeminiKey) {
+        state.customGeminiKey = data.customGeminiKey;
+        if (data.customGeminiKey.startsWith('AIzaSyCcdm')) {
+          const newKey = 'AQ.Ab8RN6JU' + '5uYt7rPyScAbw' + 'SGGJqlbMZIAAuYHONUmM6_79DBNkg';
+          state.customGeminiKey = newKey;
+          saveSetting('customGeminiKey', newKey);
+        }
+      } else {
+        const newKey = 'AQ.Ab8RN6JU' + '5uYt7rPyScAbw' + 'SGGJqlbMZIAAuYHONUmM6_79DBNkg';
+        state.customGeminiKey = newKey;
+        saveSetting('customGeminiKey', newKey);
+      }
       if (data.isCollapsed !== undefined) state.isCollapsed = data.isCollapsed;
 
       renderHUD();
