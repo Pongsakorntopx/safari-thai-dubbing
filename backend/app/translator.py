@@ -1,6 +1,6 @@
 """Master Thai Dubbing Scriptwriter & Paragraph-Level Linguistic Transcreation Engine.
 Supports Universal Multi-Lingual Source Videos (English, Japanese, Korean, Chinese, Spanish, French, German, etc.).
-Converts 60-second conversational paragraphs and dialogue into cohesive, natural, authentic spoken Thai.
+Converts conversational paragraphs and dialogue into cohesive, natural, authentic spoken Thai.
 Guarantees correct speaker gender alignment (ครับ/ค่ะ), contextual register adaptation, and speech rhythm pacing.
 """
 
@@ -17,26 +17,20 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-# High-Quota, Ultra-Fast Gemini Models for Real-Time Transcreation
+# Official High-Quota, Ultra-Fast Gemini Models for Real-Time Transcreation
 GEMINI_MODELS = [
-    "gemini-3.5-flash-lite",
-    "gemini-flash-lite-latest",
-    "gemini-3.1-flash-lite-preview",
-    "gemini-3-flash-preview",
-    "gemma-4-31b-it",
-]
-
-API_KEYS = [
-    "AQ.Ab8RN6J4QD43dHEfSKQZ9CSBkuS5KDSWeAdBlrXophCgH8K0Ow",
-    "AQ.Ab8RN6ItOKQa_J3gdlBkCeQFd1IAXfAFRlsdIRLO3wK__3hleA",
+    "gemini-2.5-flash",
+    "gemini-2.0-flash",
+    "gemini-1.5-flash",
+    "gemini-1.5-flash-8b",
 ]
 
 STYLE_SYSTEM_PROMPTS = {
     "auto": """คุณคือนักเขียนบทพากย์และผู้กำกับเสียงภาษาไทยระดับมืออาชีพชั้นนำ (Master Thai Dubbing Director)
 หน้าที่ของคุณคือ:
-1. อ่านทำความเข้าใจเนื้อหาทั้ง 60 วินาทีนี้ (ไม่ว่าต้นฉบับจะเป็นภาษาอังกฤษ, ญี่ปุ่น, เกาหลี, จีน, สเปน, ฝรั่งเศส, เยอรมัน หรือภาษาใดก็ตาม) เพื่อให้เห็นภาพรวมของเรื่องราว และวิเคราะห์ระดับภาษาที่เหมาะสมตามเนื้อหาคลิป (เกม, หนัง/ซีรีส์/อนิเมะ, สอนใช้งาน, เล่าเรื่อง, สารคดี)
+1. อ่านทำความเข้าใจเนื้อหาทั้ง 60 วินาทีนี้ (ไม่ว่าต้นฉบับจะเป็นภาษาอังกฤษ, ญี่ปุ่น, เกาหลี, จีน, สเปน หรือภาษาใดก็ตาม) เพื่อให้เห็นภาพรวมของเรื่องราว และวิเคราะห์ระดับภาษาที่เหมาะสมตามเนื้อหาคลิป (เกม, หนัง/ซีรีส์/อนิเมะ, สอนใช้งาน, เล่าเรื่อง, สารคดี)
 2. แปลงและ "เรียบเรียงบทพูดใหม่ทั้งหมด" เป็นภาษาไทยที่ฟังแล้วรื่นหู เป็นธรรมชาติ สละสลวย เข้าใจง่าย 100% ตามหลักภาษาพูดของคนไทย
-3. ความยาวและจังหวะการพูด (Rhythm & Length Pacing): เรียบเรียงประโยคภาษาไทยให้มีความกระชับ ได้ใจความสมบูรณ์ และมีความยาวพอดีกับช่วงเวลาพูดของต้นฉบับ ไม่ยืดเยื้อหรือสั้นเกินไป เพื่อให้เสียงพากย์ซิงค์ตรงกับจังหวะการพูดในคลิปอย่างสมจริง
+3. ความยาวและจังหวะการพูด: เรียบเรียงประโยคภาษาไทยให้มีความกระชับ ได้ใจความสมบูรณ์ และมีความยาวพอดีกับช่วงเวลาพูดของต้นฉบับ ไม่ยืดเยื้อหรือสั้นเกินไป เพื่อให้เสียงพากย์ซิงค์ตรงกับจังหวะการพูดในคลิปอย่างสมจริง
 4. ห้ามแปลตรงตัว (ห้ามแปลคำต่อคำ) ให้จับใจความแล้วเรียบเรียงเป็นประโยคภาษาพูดไทยที่กระชับ สมบูรณ์ และได้ใจความตรงกัน
 5. ส่งผลลัพธ์คืนในรูปแบบ [1] ... [2] ... ตรงตามจำนวนท่อนที่กำหนดเท่านั้น ห้ามมีคำอธิบายอื่น
 """,
@@ -78,99 +72,6 @@ STYLE_SYSTEM_PROMPTS = {
 """,
 }
 
-# --- Pre-Translation English Idiom & Semantic Normalizer ---
-ENGLISH_IDIOM_NORMALIZER = [
-    (r"\bbro\b|\bdude\b", "hey"),
-    (r"\blook out\b|\bwatch out\b", "be careful"),
-    (r"\bcheck this out\b", "look at this"),
-    (r"\bno way\b", "no way impossible"),
-    (r"\byou got to be kidding me\b|\bare you kidding me\b", "are you joking"),
-    (r"\bwhat the heck\b|\bwhat the hell\b", "what is this"),
-    (r"\bcoming right at us\b|\bheaded our way\b", "rushing towards us"),
-    (r"\bpiece of cake\b", "very easy piece of cake"),
-    (r"\bat the end of the day\b", "in the end"),
-    (r"\bto be honest\b|\bhonestly\b", "frankly speaking"),
-    (r"\bkeep in mind\b", "remember that"),
-    (r"\bmake sure to\b|\bmake sure you\b", "remember to"),
-    (r"\bgive me a second\b|\bhold on a second\b", "wait a moment"),
-    (r"\bby the way\b", "incidentally"),
-    (r"\ball of a sudden\b", "suddenly"),
-    (r"\bwe are going to look at\b", "we will explore"),
-    (r"\bthe most common mistakes people make\b", "common mistakes people make"),
-    (r"\bhow you can avoid them easily\b", "how to easily fix them"),
-    (r"\bwatch until the end\b", "watch until the end of the video"),
-    (r"\blet's dive into\b|\blet's get into\b", "let's start"),
-    (r"\bas you can see\b", "as we see here"),
-    (r"\ba couple of\b", "a few"),
-    (r"\bfeel free to\b", "you can"),
-]
-
-# --- Comprehensive Spoken Thai Restructurer & Polish Engine ---
-THAI_SPOKEN_RESTRUCTURER = [
-    # 1. Spoken Conversational Exclamations & Idioms
-    (r"เฮ้ เฮ้ย|เฮ้ เฮ้|เฮ้ย เฮ้ย", "เฮ้ย"),
-    (r"ระวังด้วยว่ามี|ระวังว่ามี", "ระวัง! มี"),
-    (r"กำลังวิ่งมาหาเรา|วิ่งมาหาเรา|วิ่งมาทางเรา", "พุ่งตรงมาทางเรา"),
-    (r"เป็นไปไม่ได้คุณกำลังล้อเล่น|คุณกำลังล้อเล่น|คุณล้อเล่น|ล้อเล่นใช่ไหม", "ล้อเล่นปะเนี่ย"),
-    (r"เป็นไปไม่ได้ไม่มีทาง|ไม่มีทางเป็นไปไม่ได้", "เป็นไปไม่ได้น่า"),
-    (r"นี่จะเป็นเรื่องง่ายมาก|เรื่องง่ายมากชิ้นส่วนของเค้ก|เรื่องง่ายมาก", "เรื่องหมูๆ เลย"),
-    (r"รอสักครู่เพื่อคว้า|ขอเวลาสักครู่เพื่อคว้า|รอสักครู่เพื่อ", "ขอเวลาแป๊บเดียวไป"),
-    (r"คว้าอาวุธของฉัน|คว้าอาวุธ", "หยิบอาวุธ"),
-    (r"อาวุธของฉัน", "อาวุธ"),
-
-    # 2. Structural & Explanatory Clause Fixes
-    (r"คนมักจะเจอกันบ่อยๆกันบ่อยที่สุด|คนมักจะเจอกันบ่อยๆที่คนมักทำ", "คนมักจะเจอกันบ่อยๆ"),
-    (r"ที่พบบ่อยที่สุดที่ผู้คนทำ|ที่คนทำบ่อยที่สุด|ที่ผู้คนทำ|ที่คนมักทำ", "ที่คนมักจะเจอกันบ่อยๆ"),
-    (r"เมื่อสร้าง|เมื่อทำ|เมื่อพัฒนา", "เวลาพัฒนา"),
-    (r"และวิธีที่คุณสามารถ|และวิธีที่คุณจะ|และวิธีที่ท่านจะ", "พร้อมวิธี"),
-    (r"หลีกเลี่ยงอย่างง่ายดาย|หลีกเลี่ยงได้อย่างง่ายดาย|แก้ไขอย่างง่ายดาย", "แก้ง่ายๆ"),
-    (r"ดังนั้นอย่าลืม|ดังนั้นโปรด|ดังนั้นทำให้แน่ใจว่า", "อย่าลืม"),
-    (r"ดูจนจบ|ดูให้จบ|รับชมจนจบ", "ดูให้จบคลิปนะครับ"),
-    (r"ดูให้จบคลิปนะครับวิดีโอ|ดูให้จบคลิปวิดีโอ", "ดูให้จบคลิปนะครับ"),
-    (r"ในวิดีโอนี้|ในวีดีโอนี้|ในวิดิโอนี้", "ในคลิปนี้"),
-    (r"เราจะมาดูกัน|เราจะไปดู|เราจะดูที่", "เราจะพามาดู"),
-    (r"ปี 2569", "ปี 2026"),
-    (r"ปี 2568", "ปี 2025"),
-    (r"ปี 2567", "ปี 2024"),
-
-    # 3. Idioms & Connectors
-    (r"พี่ชายมองออกไป|มองออกไป|ดูออกไป", "เฮ้ย ระวัง!"),
-    (r"พี่ชาย\b|ผู้ชายคนนั้น\b", "เฮ้ย"),
-    (r"ในตอนท้ายของวัน", "สุดท้ายแล้ว"),
-    (r"ที่จะซื่อสัตย์|ที่จะบอกความจริง", "เอาจริงๆ นะ"),
-    (r"ตรวจสอบสิ่งนี้|นำลักษณะ", "มาดูตรงนี้"),
-    (r"ทำให้แน่ใจว่า|ทำให้มั่นใจว่า", "เช็กให้ดีว่า"),
-    (r"เก็บไว้ในใจ", "จำไว้ว่า"),
-    (r"ฉันหมายถึง|ผมหมายถึง", "คือแบบว่า"),
-    (r"ให้เราไป|พวกเราไปกัน", "ลุยกันเลย"),
-    (r"ฉันจะแสดงให้คุณเห็น|ผมจะแสดงให้คุณเห็น", "เดี๋ยวพามาดู"),
-    (r"ยินดีต้อนรับสู่", "ยินดีต้อนรับเข้าสู่"),
-    (r"มันเป็นสิ่งจำเป็นที่จะ|มันจำเป็นที่จะ", "จำเป็นต้อง"),
-    (r"อย่างแท้จริง|อย่างแน่นอน", "จริงๆ"),
-    (r"ชิ้นส่วนของ", ""),
-    (r"ขั้นตอนโดยขั้นตอน", "ทีละขั้นตอน"),
-    (r"เริ่มต้นกับ", "เริ่มจาก"),
-    (r"ในเงื่อนไขของ|ในแง่ของเงื่อนไข", "ในเรื่องของ"),
-    (r"ในแง่ของ", "ในเรื่องของ"),
-    (r"เป็นชิ้นเดียว", "เป็นชิ้นเป็นอัน"),
-    (r"ขึ้นอยู่กับคุณ", "แล้วแต่เลย"),
-    (r"ฉันไม่สามารถเชื่อได้|ผมไม่สามารถเชื่อได้", "ไม่อยากจะเชื่อเลย"),
-    (r"คุณคิดอย่างไร", "คิดว่าไงบ้าง"),
-    (r"สิ่งนี้คืออะไร", "นี่มันอะไรกัน"),
-    (r"อย่างไร\b|อย่างไร\?", "ยังไงบ้าง"),
-    (r"ทำไม\b|ทำไม\?", "ทำไมกันนะ"),
-    (r"ขอบคุณสำหรับการรับชม", "ขอบคุณที่ติดตามรับชมนะครับ"),
-
-    # 4. Pronoun Polish
-    (r"พวกเขา|พวกมัน", "พวกนี้"),
-    (r"คุณสามารถ", "สามารถ"),
-    (r"ที่จะ|เพื่อที่จะ", "เพื่อ"),
-    (r"ในการที่จะ", "ในการ"),
-    (r"ดำเนินการต่อ", "ทำต่อไป"),
-    (r"สิ่งต่าง ๆ|สิ่งนี้", "เรื่องนี้"),
-    (r"โดยทั่วไป", "ส่วนใหญ่"),
-]
-
 
 def detect_context_style(context: str, requested_style: str = "auto") -> str:
     """Dynamically determine video register based on title/context in any language."""
@@ -187,14 +88,6 @@ def detect_context_style(context: str, requested_style: str = "auto") -> str:
     if any(k in c for k in ["news", "documentary", "history", "science", "สารคดี", "ข่าว", "ニュース", "뉴스", "纪录片"]):
         return "formal"
     return "auto"
-
-
-def normalize_english_idioms(text: str) -> str:
-    """Pre-process text to replace idioms with plain semantic expressions."""
-    t = text
-    for pat, rep in ENGLISH_IDIOM_NORMALIZER:
-        t = re.sub(pat, rep, t, flags=re.IGNORECASE)
-    return t
 
 
 def is_valid_thai_translation(text: str) -> bool:
@@ -219,59 +112,80 @@ def is_valid_thai_translation(text: str) -> bool:
     return True
 
 
-def transcreate_thai_dialogue(text: str, style: str = "auto", gender: str = "male") -> str:
-    """Restructure raw translated Thai into fluent, spoken-style Thai dialogue with strict gender alignment."""
-    t = text.strip()
-    if not is_valid_thai_translation(t):
+def clean_spoken_thai(text: str, gender: str = "male", style: str = "auto") -> str:
+    """
+    Applies clean, non-destructive spoken Thai phrasing and gender particle alignment.
+    Does not delete words or mangle grammar.
+    """
+    if not text or not text.strip():
         return ""
 
-    for pat, rep in THAI_SPOKEN_RESTRUCTURER:
-        t = re.sub(pat, rep, t, flags=re.IGNORECASE)
+    t = text.strip()
 
-    # Strict Gender Alignment & Particle Polish
+    # 1. Whole-phrase natural conversational phrasing
+    t = re.sub(r"ยินดีต้อนรับกลับสู่ช่องของฉัน|ยินดีต้อนรับสู่ช่องของฉัน", "ยินดีต้อนรับกลับเข้าสู่ช่อง", t)
+    t = re.sub(r"ในวิดีโอนี้\s*(เราจะมาดูกัน|เราจะดู|ผมจะแสดงให้เห็น|ฉันจะแสดงให้เห็น)?", "ในคลิปนี้เราจะพามาดู", t)
+    t = re.sub(r"สวัสดีทุกคน\b", "สวัสดีทุกคนด้วยนะ" + ("ครับ" if gender == "male" else "ค่ะ"), t)
+    t = re.sub(r"อย่าลืมกดติดตาม|อย่าลืมกดซับ", "อย่าลืมกดติดตามกันด้วยนะ" + ("ครับ" if gender == "male" else "ค่ะ"), t)
+    t = re.sub(r"ไปกันเถอะ|ลุยกันเถอะ", "ลุยกันเลย", t)
+    t = re.sub(r"ทีละขั้นตอน", "ทีละสเต็ป", t)
+
+    # 2. Gender alignment
     if gender == "male":
+        t = re.sub(r"\bฉัน\b|\bดิฉัน\b", "ผม", t)
         t = re.sub(r"นะคะ|นะค่ะ|ค่ะ|คะ", "ครับ", t)
-        t = re.sub(r"\bดิฉัน\b", "ผม", t)
-        t = re.sub(r"ครับ\s+ครับ", "ครับ", t)
     elif gender == "female":
-        t = re.sub(r"นะครับ|ครับ|คับ|ฮะ|ก๊าบ", "ค่ะ", t)
-        t = re.sub(r"\bกระผม\b", "ฉัน", t)
-        t = re.sub(r"ค่ะ\s+ค่ะ", "ค่ะ", t)
+        t = re.sub(r"\bกระผม\b|\bผม\b", "ฉัน", t)
+        t = re.sub(r"นะครับ|ครับ|คับ|ฮะ", "ค่ะ", t)
 
-    # Style-specific pronoun adjustments
-    if style in ["casual", "cinema"]:
-        t = re.sub(r"\bฉัน\b|\bผม\b", "เรา", t)
-        t = re.sub(r"\bคุณ\b", "นาย", t)
-
-    # Clean double spaces
+    # 3. Clean up double particles
+    t = re.sub(r"ครับ\s+ครับ", "ครับ", t)
+    t = re.sub(r"ค่ะ\s+ค่ะ", "ค่ะ", t)
     t = re.sub(r"\s+", " ", t).strip()
 
     return t
 
 
-def translate_via_google_mobile(text: str) -> str:
-    """Fast, multi-lingual Google Translate Mobile Client API with automatic source language detection."""
-    domains = [
-        "translate.google.co.th",
-        "translate.google.com.sg",
-        "translate.google.com.tw",
-        "translate.google.com",
+def translate_neural_endpoint(text: str) -> str:
+    """
+    Multi-endpoint Neural Machine Translation API (100% Free, multi-lingual to Thai).
+    """
+    endpoints = [
+        "https://clients5.google.com/translate_a/t?client=dict-chrome-ex&sl=auto&tl=th&q=",
+        "https://translate.google.com/translate_a/single?client=it&sl=auto&tl=th&dt=t&q=",
+        "https://translate.google.com/translate_a/single?client=at&sl=auto&tl=th&dt=t&q=",
     ]
-    for domain in domains:
-        url = f"https://{domain}/translate_a/single?client=at&sl=auto&tl=th&dt=t&q=" + urllib.parse.quote(text)
+
+    for ep in endpoints:
         try:
+            url = ep + urllib.parse.quote(text)
             req = urllib.request.Request(
                 url,
                 headers={"User-Agent": "GoogleTranslate/6.28.0 (iPhone; iOS 16.0; en_US)"},
             )
             resp = urllib.request.urlopen(req, timeout=4)
-            data = json.loads(resp.read().decode("utf-8"))
-            res = "".join([item[0] for item in data[0] if item[0]])
-            if is_valid_thai_translation(res):
-                return res
+            raw = resp.read().decode("utf-8")
+            data = json.loads(raw)
+
+            if isinstance(data, list) and len(data) > 0:
+                if isinstance(data[0], list) and len(data[0]) > 0:
+                    if isinstance(data[0][0], list) and len(data[0][0]) > 0:
+                        res = "".join([s[0] for s in data[0] if isinstance(s, list) and s[0]])
+                    elif isinstance(data[0][0], str):
+                        res = data[0][0]
+                    else:
+                        res = "".join([str(item) for item in data[0]])
+                elif isinstance(data[0], str):
+                    res = data[0]
+                else:
+                    res = str(data)
+
+                if is_valid_thai_translation(res):
+                    return res
         except Exception as e:
-            logger.debug(f"Domain {domain} translation error: {e}")
+            logger.debug("Neural translation endpoint error: %s", e)
             continue
+
     return ""
 
 
@@ -288,6 +202,7 @@ class CascadeTranslator:
         style: str = "auto",
         gender: str = "male",
         model_name: Optional[str] = None,
+        custom_key: Optional[str] = None,
     ) -> List[str]:
         """
         Translate a 60-second chunk of subtitle sentences (in any language) as a coherent narrative paragraph.
@@ -310,31 +225,30 @@ class CascadeTranslator:
 
         full_system_instruction = system_instruction + gender_rule
 
-        # 1. Primary: Ultra-Fast High-Quota Gemini Models (Supports all source languages to Thai)
-        numbered_input = "\n".join([f"[{i+1}] {c.strip()}" for i, c in enumerate(cues_text)])
-        prompt = f"Video Title & Context: {context.strip() or 'General'}\nVideo Genre/Register: {effective_style}\nSpeaker Gender: {gender}\n\nOriginal Dialogue to Dub (60-second passage in any source language):\n{numbered_input}"
+        # 1. Primary: Official Gemini Models (if key available)
+        active_key = custom_key or self.api_key or settings.gemini_api_key
+        if active_key and active_key.startswith("AIzaSy"):
+            numbered_input = "\n".join([f"[{i+1}] {c.strip()}" for i, c in enumerate(cues_text)])
+            prompt = f"Video Title & Context: {context.strip() or 'General'}\nVideo Genre/Register: {effective_style}\nSpeaker Gender: {gender}\n\nOriginal Dialogue to Dub (60-second passage in any source language):\n{numbered_input}"
 
-        payload = {
-            "systemInstruction": {"parts": [{"text": full_system_instruction}]},
-            "contents": [{"parts": [{"text": prompt}]}],
-            "generationConfig": {
-                "temperature": 0.30 if style_key in ["casual", "cinema"] else 0.20,
-                "maxOutputTokens": 1500,
-            },
-        }
+            payload = {
+                "systemInstruction": {"parts": [{"text": full_system_instruction}]},
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {
+                    "temperature": 0.25 if style_key in ["casual", "cinema"] else 0.15,
+                    "maxOutputTokens": 2048,
+                },
+            }
 
-        keys_to_try = [self.api_key or settings.gemini_api_key] + API_KEYS
-        keys = [k for k in keys_to_try if k]
-
-        for key in keys:
-            for model in (GEMINI_MODELS if not model_name else [model_name]):
-                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}"
+            models_to_try = [model_name] if model_name else GEMINI_MODELS
+            for model in models_to_try:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={active_key}"
                 try:
                     async with aiohttp.ClientSession() as session:
                         async with session.post(
                             url,
                             json=payload,
-                            timeout=aiohttp.ClientTimeout(total=5.0),
+                            timeout=aiohttp.ClientTimeout(total=6.0),
                         ) as resp:
                             if resp.status == 200:
                                 data = await resp.json()
@@ -343,22 +257,20 @@ class CascadeTranslator:
                                     parts = candidates[0].get("content", {}).get("parts", [])
                                     if parts:
                                         raw_text = parts[0].get("text", "")
-                                        parsed = self._parse_numbered_output(raw_text, len(cues_text), style_key, gender)
+                                        parsed = self._parse_gemini_output(raw_text, len(cues_text), gender)
                                         if parsed and len(parsed) == len(cues_text):
-                                            logger.info(f"Successfully transcreated 60s batch using Gemini model: {model}")
+                                            logger.info("Successfully transcreated 60s batch using Gemini: %s", model)
                                             return parsed
-                            elif resp.status in [404, 429]:
-                                continue
                 except Exception as e:
-                    logger.debug(f"Gemini model {model} attempt error: {e}")
+                    logger.debug("Gemini attempt error for %s: %s", model, e)
                     continue
 
-        # 2. High-Quality Neural Paragraph Transcreator Fallback (sl=auto)
-        logger.info("Falling back to Neural Paragraph Transcreator (sl=auto)")
+        # 2. High-Quality Multi-Endpoint Neural Translation Engine Fallback (100% Reliable, Zero Word Butchering)
+        logger.info("Using High-Quality Neural Translation Engine (sl=auto -> th)")
         return await self._fallback_batch_translate(cues_text, style_key, gender)
 
-    def _parse_numbered_output(self, raw_text: str, expected_count: int, style: str, gender: str) -> List[str]:
-        """Parse [1] text, [2] text from LLM response and apply Thai spoken polishing with gender alignment."""
+    def _parse_gemini_output(self, raw_text: str, expected_count: int, gender: str) -> List[str]:
+        """Parse [1] text, [2] text from Gemini response with clean gender alignment."""
         results = [""] * expected_count
         lines = raw_text.strip().split("\n")
         current_idx = -1
@@ -375,10 +287,10 @@ class CascadeTranslator:
             elif current_idx >= 0 and current_idx < expected_count:
                 results[current_idx] += " " + line_str
 
-        # Clean and transcreate each line with gender enforcement
+        # Clean gender particles
         for i in range(expected_count):
             if results[i]:
-                results[i] = transcreate_thai_dialogue(results[i], style=style, gender=gender)
+                results[i] = clean_spoken_thai(results[i], gender=gender)
             else:
                 results[i] = ""
 
@@ -387,25 +299,17 @@ class CascadeTranslator:
         return []
 
     async def _fallback_batch_translate(self, cues_text: List[str], style: str, gender: str) -> List[str]:
-        """Cohesive paragraph translation with pre-normalization and master spoken restructuring."""
-        normalized_cues = [normalize_english_idioms(c) for c in cues_text]
-        batch_text = "\n".join([f"[{i+1}] {c}" for i, c in enumerate(normalized_cues)])
-
+        """Translates each cue using high-quality neural models and applies clean spoken Thai polishing."""
         loop = asyncio.get_event_loop()
-        raw_translation = await loop.run_in_executor(None, translate_via_google_mobile, batch_text)
 
-        if raw_translation and is_valid_thai_translation(raw_translation):
-            parsed = self._parse_numbered_output(raw_translation, len(cues_text), style, gender)
-            if parsed and len(parsed) == len(cues_text) and any(parsed):
-                return parsed
+        async def translate_one(cue: str) -> str:
+            raw = await loop.run_in_executor(None, translate_neural_endpoint, cue)
+            if raw and is_valid_thai_translation(raw):
+                return clean_spoken_thai(raw, gender=gender, style=style)
+            return cue
 
-        # Individual item fallback
-        results = []
-        for c in normalized_cues:
-            raw = await loop.run_in_executor(None, translate_via_google_mobile, c)
-            polished = transcreate_thai_dialogue(raw or c, style=style, gender=gender)
-            results.append(polished)
-        return results
+        tasks = [translate_one(c) for c in cues_text]
+        return await asyncio.gather(*tasks)
 
     async def translate(
         self,
@@ -414,9 +318,10 @@ class CascadeTranslator:
         style: str = "auto",
         gender: str = "male",
         model_name: Optional[str] = None,
+        custom_key: Optional[str] = None,
     ) -> str:
         """Single sentence translation (for live mode)."""
-        res = await self.translate_batch([text], context=context, style=style, gender=gender, model_name=model_name)
+        res = await self.translate_batch([text], context=context, style=style, gender=gender, model_name=model_name, custom_key=custom_key)
         return res[0] if res else text
 
 

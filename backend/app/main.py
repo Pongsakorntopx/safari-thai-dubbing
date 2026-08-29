@@ -288,11 +288,12 @@ async def dub_cues_batch(req: BatchDubRequest):
         context=req.context or "",
         style=style,
         gender=gender,
+        custom_key=custom_key,
     )
 
     # Fallback if mismatch
     if len(thai_texts) != len(req.cues):
-        thai_texts = [await translator.translate(c.text, context=req.context or "", style=style, gender=gender) for c in req.cues]
+        thai_texts = [await translator.translate(c.text, context=req.context or "", style=style, gender=gender, custom_key=custom_key) for c in req.cues]
 
     # 2. Parallel TTS Synthesis
     async def synth_cue(cue: CueItem, thai_text: str):
@@ -378,6 +379,7 @@ async def dub_text(req: DubRequest):
         context=req.context or "",
         style=style,
         gender=gender,
+        custom_key=custom_key,
     )
 
     if not thai_text:
