@@ -404,20 +404,25 @@ class CascadeTranslator:
    - ตรวจสอบก่อนว่าคลิปนี้เป็น **'ผู้พูดคนเดียว (Solo Narrator / Creator / Reviewer)'** หรือเป็น **'บทสนทนาที่มีหลายคนพูดคุยกันจริงๆ (Multi-Speaker Dialogue / Interview)'**
    - **กรณีผู้พูดคนเดียว (Solo Creator):** ให้กำหนด `speaker` ของทุกท่อนเป็นคนเดียวกัน 100% (เช่น `male_1` ทั้งหมด หรือ `female_1` ทั้งหมด) **ห้ามแยกเป็นหลายคนหรือเปลี่ยนตัวละครไปมาระหว่างท่อนเด็ดขาด!**
    - **กรณีมีหลายคนพูดคุยกันจริงๆ (Multi-Person):** ให้ระบุ `speaker` เป็น `male_1`, `female_1` ตามผู้พูดจริงในแต่ละท่อน
-2. **วิเคราะห์อารมณ์และน้ำเสียง (emotion):** excited, cheerful, serious, calm, dramatic, playful, neutral
-3. **กำหนดเพศ (gender) เป็น 'male' หรือ 'female':**
-   - ผู้ชาย: ใช้คำลงท้าย 'ครับ/นะครับ' สรรพนาม 'ผม/เรา'
-   - ผู้หญิง: ใช้คำลงท้าย 'ค่ะ/นะคะ' สรรพนาม 'ฉัน/เรา'
+2. **วิเคราะห์เพศของผู้พูดอย่างแม่นยำจากเนื้อหาบทสนทนา (Deep Contextual Gender Detection):**
+   - ตรวจสอบจากรูปประโยค เนื้อหา สรรพนาม อุปนิสัย และบริบทที่ปรากฏจริงในบทสนทนา (ห้ามตั้งสมมติฐานว่าเป็นผู้ชายตามค่าเริ่มต้นเด็ดขาด)
+   - **หากผู้พูดเป็นผู้หญิง** (เช่น ช่องสอนแต่งหน้า, รีวิว, เล่าเรื่อง, ผู้หญิงสายไอที/เกมเมอร์สาว/ครีเอเตอร์หญิง):
+     -> กำหนด gender = 'female' และ speaker = 'female_1'
+     -> ใช้คำลงท้าย 'ค่ะ / นะคะ / คะ' สรรพนาม 'ฉัน / เรา / หนู' (ห้ามใช้ 'ครับ' เด็ดขาด)
+   - **หากผู้พูดเป็นผู้ชาย**:
+     -> กำหนด gender = 'male' และ speaker = 'male_1'
+     -> ใช้คำลงท้าย 'ครับ / นะครับ' สรรพนาม 'ผม / เรา' (ห้ามใช้ 'ค่ะ' เด็ดขาด)
+3. **วิเคราะห์อารมณ์และน้ำเสียง (emotion):** excited, cheerful, serious, calm, dramatic, playful, neutral
 4. **แปลและเรียบเรียงบทพากย์ภาษาไทยให้เป็นภาษาพูดที่สละสลวย ธรรมชาติ 100%:**
    - ความยาวพยางค์ต้องกระชับพอดีกับเวลา (duration) ของแต่ละท่อน
    - แต่ละท่อนต้องพูดจบประโยคสมบูรณ์ ห้ามตัดคำค้างคาเด็ดขาด
 5. **ส่งผลลัพธ์เป็น JSON Array เท่านั้น ในรูปแบบ:**
 [
-  {{"id": 1, "speaker": "male_1", "gender": "male", "emotion": "excited", "pitch": "+0Hz", "rate": "+10%", "thai": "ข้อความภาษาไทย"}},
-  {{"id": 2, "speaker": "male_1", "gender": "male", "emotion": "cheerful", "pitch": "+0Hz", "rate": "+5%", "thai": "ข้อความภาษาไทย"}}
+  {{"id": 1, "speaker": "female_1", "gender": "female", "emotion": "cheerful", "pitch": "+0Hz", "rate": "+0%", "thai": "ข้อความภาษาไทย"}},
+  {{"id": 2, "speaker": "female_1", "gender": "female", "emotion": "excited", "pitch": "+0Hz", "rate": "+5%", "thai": "ข้อความภาษาไทย"}}
 ]"""
 
-            user_prompt = f"Video Title & Context: {context.strip() or 'General'}\nVideo Register: {effective_style}\nTarget Default Gender: {gender}\n\nDialogue to Dub:\n{numbered_input}"
+            user_prompt = f"Video Title & Context: {context.strip() or 'General'}\nVideo Register: {effective_style}\nRequested Gender Mode: {gender}\n\nDialogue to Dub:\n{numbered_input}"
 
             payload = {
                 "systemInstruction": {"parts": [{"text": system_prompt}]},

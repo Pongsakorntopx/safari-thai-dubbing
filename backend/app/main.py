@@ -99,24 +99,10 @@ def resolve_auto_settings(
 ):
     """
     Intelligent Auto & Explicit Voice Resolver:
-    - If user explicitly chooses a voice (e.g. vachana-m1, vachana-f1, lunarlist, mms-thai, etc.),
-      honor the exact model and voice requested!
-    - If auto mode is selected, automatically resolve optimal engine and voice based on context and gender.
+    - If user explicitly chooses a voice, honor the exact model and voice requested!
+    - If auto mode is selected, preserve gender="auto" so AI can perform deep semantic gender detection.
     """
-    # 1. Gender Auto-Detection from Context / Title / Keywords
-    gender = req_gender
-    if not gender or gender == "auto":
-        c_lower = context.lower()
-        female_signals = [
-            "she", "her", "woman", "girl", "actress", "female", "คุณหญิง", "น้อง",
-            "พี่สาว", "แม่", "สาว", "ผู้หญิง", "kanya", "premwadee", "aoede"
-        ]
-        if any(w in c_lower for w in female_signals):
-            gender = "female"
-        else:
-            gender = "male"
-
-    # 2. Engine & Voice Resolution
+    gender = req_gender or "auto"
     engine = req_engine or "auto"
     voice = req_voice or "auto"
 
@@ -127,7 +113,6 @@ def resolve_auto_settings(
         if not req_gender or req_gender == "auto":
             gender = reg.get("gender", gender)
     elif engine and engine != "auto":
-        # Find matching voice for the specified engine
         matching = [v for v in VOICE_REGISTRY.values() if v.get("engine") == engine]
         if matching:
             gender_match = [v for v in matching if v.get("gender") == gender]
@@ -137,9 +122,13 @@ def resolve_auto_settings(
     else:
         # Full Auto Mode
         engine = "edge"
-        voice = "th-TH-NiwatNeural" if gender == "male" else "th-TH-PremwadeeNeural"
+        if gender == "female":
+            voice = "th-TH-PremwadeeNeural"
+        elif gender == "male":
+            voice = "th-TH-NiwatNeural"
+        else:
+            voice = "auto"
 
-    # 3. Style Auto-Selection
     style = req_style or "notebooklm"
     if style == "auto":
         style = "notebooklm"

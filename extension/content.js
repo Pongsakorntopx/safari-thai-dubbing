@@ -1506,6 +1506,17 @@
         box-shadow: 0 6px 18px rgba(0,0,0,0.6);
       ">
         <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-size: 11px; color: #94a3b8; font-weight: 600;">เพศของผู้พูด (Gender Mode):</span>
+          <select id="hud-gender-select" style="
+            background: #1e293b; color: #38bdf8; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; padding: 2px 6px; font-size: 11px; outline: none;
+          ">
+            <option value="auto" ${state.gender === 'auto' ? 'selected' : ''}>🤖 อัตโนมัติ (AI ตรวจจับเพศจากบทพูด)</option>
+            <option value="female" ${state.gender === 'female' ? 'selected' : ''}>👩 ผู้หญิง (ค่ะ/นะคะ - เปรมวดี)</option>
+            <option value="male" ${state.gender === 'male' ? 'selected' : ''}>👨 ผู้ชาย (ครับ/นะครับ - นิวัฒน์)</option>
+          </select>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center;">
           <span style="font-size: 11px; color: #94a3b8; font-weight: 600;">สไตล์ / ระดับภาษา:</span>
           <select id="hud-style-select" style="
             background: #1e293b; color: white; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; padding: 2px 6px; font-size: 11px;
@@ -1626,6 +1637,28 @@
           });
           updateBufferGauge();
           showThaiCaptionToast(`เปลี่ยนโมเดลเสียงเป็น "${found ? found.name : selectedId}"`);
+        }
+      };
+    }
+
+    const genderEl = document.getElementById('hud-gender-select');
+    if (genderEl) {
+      genderEl.onchange = (e) => {
+        const val = e.target.value;
+        state.gender = val;
+        saveSetting('gender', val);
+        showThaiCaptionToast(`เปลี่ยนโหมดเพศเป็น: ${val === 'female' ? '👩 ผู้หญิง (ค่ะ)' : (val === 'male' ? '👨 ผู้ชาย (ครับ)' : '🤖 อัตโนมัติ')}`);
+
+        if (state.isDubbingActive && state.timedCues.length > 0) {
+          const video = findVideoElement();
+          const cur = video ? video.currentTime : 0;
+          state.timedCues.forEach((c) => {
+            if (c.start >= cur - 1.0) {
+              c.status = 'pending';
+              c.audioBuffer = null;
+            }
+          });
+          updateBufferGauge();
         }
       };
     }
