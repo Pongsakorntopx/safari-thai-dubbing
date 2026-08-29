@@ -45,13 +45,13 @@
   };
 
   const VOICES = [
-    { id: 'auto', name: '🤖 อัตโนมัติ (AI เลือกเสียงที่ดีที่สุดและตรงตามคลิป)', engine: 'auto', gender: 'auto' },
-    { id: 'Pattara', name: '🍎 ภัทร (Apple Silicon Neural - ชาย ทุ้มนุ่ม เร็ว 0ms [ครับ])', engine: 'apple', gender: 'male' },
-    { id: 'Kanya', name: '🍎 กัญญา (Apple Silicon Neural - หญิง นุ่มนวล เร็ว 0ms [ค่ะ])', engine: 'apple', gender: 'female' },
-    { id: 'th-TH-NiwatNeural', name: '👨‍💼 นิวัฒน์ (Edge Neural - ชาย ทุ้มนุ่ม ชัดเจน [ครับ])', engine: 'edge', gender: 'male' },
-    { id: 'th-TH-PremwadeeNeural', name: '👩‍💼 เปรมวดี (Edge Neural - หญิง นุ่มนวล ธรรมชาติ [ค่ะ])', engine: 'edge', gender: 'female' },
-    { id: 'Puck', name: '👨‍💼 Puck (Google Studio - ชายอบอุ่น [ครับ])', engine: 'google', gender: 'male' },
-    { id: 'Aoede', name: '👩‍💼 Aoede (Google Studio - หญิงพอดแคสต์ [ค่ะ])', engine: 'google', gender: 'female' },
+    { id: 'auto', name: '🤖 อัตโนมัติ (AI เลือกเสียงที่เหมือนคนที่สุดตามคลิป)', engine: 'auto', gender: 'auto' },
+    { id: 'th-TH-NiwatNeural', name: '👨‍💼 นิวัฒน์ (Neural Studio - เสียงชาย เหมือนคนจริง ทุ้มนุ่ม [ครับ])', engine: 'edge', gender: 'male' },
+    { id: 'th-TH-PremwadeeNeural', name: '👩‍💼 เปรมวดี (Neural Studio - เสียงหญิง เหมือนคนจริง นุ่มนวล [ค่ะ])', engine: 'edge', gender: 'female' },
+    { id: 'Puck', name: '👨‍💼 Puck (Google Studio - เสียงชายพอดแคสต์ [ครับ])', engine: 'google', gender: 'male' },
+    { id: 'Aoede', name: '👩‍💼 Aoede (Google Studio - เสียงหญิงพอดแคสต์ [ค่ะ])', engine: 'google', gender: 'female' },
+    { id: 'Pattara', name: '🍎 ภัทร (Apple Hardware - เสียงชาย [ครับ])', engine: 'apple', gender: 'male' },
+    { id: 'Kanya', name: '🍎 กัญญา (Apple Hardware - เสียงหญิง [ค่ะ])', engine: 'apple', gender: 'female' },
     { id: 'JaiTTS-Male', name: '🌟 ใจ ชาย (JaiTTS - ภาษาพูดสมจริง [ครับ])', engine: 'jaitts', gender: 'male' },
     { id: 'JaiTTS-Female', name: '🌟 ใจ หญิง (JaiTTS - ภาษาพูดสมจริง [ค่ะ])', engine: 'jaitts', gender: 'female' },
   ];

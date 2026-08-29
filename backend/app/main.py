@@ -114,18 +114,13 @@ def resolve_auto_settings(
         else:
             gender = "male"
 
-    # 2. Engine & Voice Auto-Selection (Best Quality + Zero Latency)
+    # 2. Engine & Voice Auto-Selection (Best Quality Human Studio Neural Voice)
     engine = req_engine or "auto"
     voice = req_voice or "auto"
 
     if engine == "auto" or voice == "auto":
-        is_macos = platform.system() == "Darwin"
-        if is_macos:
-            engine = "apple"
-            voice = "Pattara" if gender == "male" else "Kanya"
-        else:
-            engine = "edge"
-            voice = "th-TH-NiwatNeural" if gender == "male" else "th-TH-PremwadeeNeural"
+        engine = "edge"
+        voice = "th-TH-NiwatNeural" if gender == "male" else "th-TH-PremwadeeNeural"
 
     # 3. Style Auto-Selection
     style = req_style or "notebooklm"
