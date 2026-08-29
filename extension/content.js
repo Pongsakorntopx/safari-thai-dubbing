@@ -146,16 +146,12 @@
       }
       if (data.duckVolume !== undefined) state.duckVolume = data.duckVolume;
 
-      // Auto-detect local daemon (http://127.0.0.1:8000) for instant 0ms latency
-      try {
-        const localCheck = await fetch('http://127.0.0.1:8000/health', { signal: AbortSignal.timeout(600) });
-        if (localCheck.ok) {
-          state.backendUrl = 'http://127.0.0.1:8000';
-        } else {
-          state.backendUrl = data.backendUrl || 'https://thai-dubbing-api.onrender.com';
-        }
-      } catch (e) {
-        state.backendUrl = data.backendUrl || 'https://thai-dubbing-api.onrender.com';
+      // Always default to Local Mac Daemon (http://127.0.0.1:8000)
+      if (!data.backendUrl || data.backendUrl.includes('render.com')) {
+        state.backendUrl = 'http://127.0.0.1:8000';
+        chrome.storage.local.set({ backendUrl: 'http://127.0.0.1:8000' });
+      } else {
+        state.backendUrl = data.backendUrl;
       }
       state.backendUrl = state.backendUrl.replace(/\/+$/, '');
 
@@ -452,7 +448,7 @@
     }
   }
 
-  // --- Subtitle Dispatcher (Direct Browser First -> Local Daemon -> Background Proxy Fallback) ---
+  // --- Subtitle Dispatcher (Direct Browser First -> Local Daemon via Background SW) ---
   async function fetchTranscriptDirect(videoId) {
     // 1. Direct Same-Origin Browser Extraction (100% Reliable, 0 Latency)
     const directRes = await fetchYouTubeInnertubeDirect(videoId);
@@ -460,40 +456,13 @@
       return directRes;
     }
 
-    // 2. Direct HTTP call to Backend Endpoints (/api/v1/transcript)
-    const endpointsToTry = [
-      state.backendUrl,
-      'http://127.0.0.1:8000',
-      'https://thai-dubbing-api.onrender.com',
-    ].filter(Boolean);
-
-    for (const ep of endpointsToTry) {
-      try {
-        const targetUrl = ep.replace(/\/+$/, '') + '/api/v1/transcript';
-        const res = await fetch(targetUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ videoId }),
-          signal: AbortSignal.timeout(4000),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data.success && data.cues && data.cues.length > 0) {
-            console.log(`[ThaiDubbing] 🎉 Successfully fetched ${data.cues.length} cues via backend: ${ep}`);
-            return data;
-          }
-        }
-      } catch (e) {}
-    }
-
-    // 3. Fallback via Background Service Worker
-    console.log('[ThaiDubbing] Direct extraction empty, trying Background Service Worker...');
+    // 2. Fetch via Background Service Worker (Safe from Mixed Content)
     return new Promise((resolve) => {
       chrome.runtime.sendMessage(
         {
           type: 'FETCH_TRANSCRIPT',
           payload: {
-            backendUrl: state.backendUrl,
+            backendUrl: state.backendUrl || 'http://127.0.0.1:8000',
             videoId: videoId,
           },
         },
@@ -522,43 +491,18 @@
       fishApiKey: state.fishApiKey,
     };
 
-    const endpointsToTry = [
-      'http://127.0.0.1:8000',
-      state.backendUrl,
-      'https://thai-dubbing-api.onrender.com',
-    ].filter(Boolean);
-
-    for (const ep of endpointsToTry) {
-      try {
-        const targetUrl = ep.replace(/\/+$/, '') + '/api/v1/dub_batch';
-        const resp = await fetch(targetUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-          signal: AbortSignal.timeout(30000),
-        });
-        if (resp.ok) {
-          const data = await resp.json();
-          if (data && data.success && data.results && data.results.length > 0) {
-            return data;
-          }
-        }
-      } catch (directErr) {}
-    }
-
-    // Fallback via Background Service Worker
     return new Promise((resolve) => {
       chrome.runtime.sendMessage(
         {
           type: 'FETCH_DUB_BATCH',
           payload: {
-            backendUrl: state.backendUrl,
+            backendUrl: state.backendUrl || 'http://127.0.0.1:8000',
             ...payload,
           },
         },
         (res) => {
-          if (chrome.runtime.lastError || !res) {
-            console.warn('[ThaiDubbing] Batch dub fetch error:', chrome.runtime.lastError);
+          if (chrome.runtime.lastError || !res || !res.success || !res.results) {
+            console.warn('[ThaiDubbing] Batch dub fetch error:', chrome.runtime.lastError || res);
             resolve({ success: false, results: [] });
           } else {
             resolve(res);
@@ -569,41 +513,12 @@
   }
 
   async function fetchDubDirect(payload) {
-    const endpointsToTry = [
-      'http://127.0.0.1:8000',
-      state.backendUrl,
-      'https://thai-dubbing-api.onrender.com',
-    ].filter(Boolean);
-
-    for (const ep of endpointsToTry) {
-      try {
-        const targetUrl = ep.replace(/\/+$/, '') + '/api/v1/dub';
-        const resp = await fetch(targetUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            text: payload.text,
-            context: payload.context || getVideoTitle(),
-            engine: payload.engine || state.engine,
-            voice: payload.voice || state.voice,
-            gender: payload.gender || state.gender || 'male',
-            style: payload.style || state.style,
-            rate: payload.rate || state.rate,
-            customGeminiKey: payload.customGeminiKey || state.customGeminiKey,
-          }),
-        });
-        if (resp.ok) {
-          return await resp.json();
-        }
-      } catch (e) {}
-    }
-
     return new Promise((resolve) => {
       chrome.runtime.sendMessage(
         {
           type: 'FETCH_DUB',
           payload: {
-            backendUrl: state.backendUrl,
+            backendUrl: state.backendUrl || 'http://127.0.0.1:8000',
             text: payload.text,
             context: payload.context || getVideoTitle(),
             engine: payload.engine || state.engine,
@@ -612,6 +527,7 @@
             style: payload.style || state.style,
             rate: payload.rate || state.rate,
             customGeminiKey: payload.customGeminiKey || state.customGeminiKey,
+            fishApiKey: payload.fishApiKey || state.fishApiKey,
           },
         },
         (res) => {

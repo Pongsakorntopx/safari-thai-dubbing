@@ -24,10 +24,13 @@ chrome.runtime.onInstalled.addListener(async () => {
         toSet[key] = value;
       }
     }
+    if (!existing.backendUrl || existing.backendUrl.includes('render.com')) {
+      toSet.backendUrl = 'http://127.0.0.1:8000';
+    }
     if (Object.keys(toSet).length > 0) {
       await chrome.storage.local.set(toSet);
     }
-    console.log('[ThaiDubbing SW] Settings and cloud backend initialized.');
+    console.log('[ThaiDubbing SW] Settings and local daemon backend initialized.');
   } catch (err) {
     console.error('[ThaiDubbing SW] Error initializing settings:', err);
   }
@@ -201,8 +204,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           return;
         }
 
-        // 2. Fallback to Cloud Backend
-        const targetUrl = (backendUrl || 'https://thai-dubbing-api.onrender.com').replace(/\/+$/, '') + '/api/v1/transcript';
+        // 2. Fallback to Local Daemon
+        const targetUrl = (backendUrl && !backendUrl.includes('render.com') ? backendUrl : 'http://127.0.0.1:8000').replace(/\/+$/, '') + '/api/v1/transcript';
         const res = await fetch(targetUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -227,9 +230,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     (async () => {
       const { backendUrl, cues, context, engine, voice, style, gender, rate, customGeminiKey, fishApiKey } = message.payload;
       const endpointsToTry = [
-        backendUrl,
         'http://127.0.0.1:8000',
-        'https://thai-dubbing-api.onrender.com',
+        backendUrl && !backendUrl.includes('render.com') ? backendUrl : null,
       ].filter(Boolean);
 
       const payload = {
@@ -261,7 +263,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           }
         } catch (err) {}
       }
-      sendResponse({ success: false, error: 'All backend endpoints failed', results: [] });
+      sendResponse({ success: false, error: 'Local backend endpoint failed', results: [] });
     })();
     return true;
   }
@@ -270,9 +272,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     (async () => {
       const { backendUrl, text, context, engine, voice, style, gender, rate, customGeminiKey, fishApiKey } = message.payload;
       const endpointsToTry = [
-        backendUrl,
         'http://127.0.0.1:8000',
-        'https://thai-dubbing-api.onrender.com',
+        backendUrl && !backendUrl.includes('render.com') ? backendUrl : null,
       ].filter(Boolean);
 
       const payload = {
@@ -302,7 +303,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           }
         } catch (err) {}
       }
-      sendResponse({ success: false, error: 'All backend endpoints failed' });
+      sendResponse({ success: false, error: 'Local backend endpoint failed' });
     })();
     return true;
   }
@@ -310,7 +311,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'PING_BACKEND') {
     (async () => {
       try {
-        const targetUrl = (message.url || 'https://thai-dubbing-api.onrender.com').replace(/\/+$/, '') + '/health';
+        const rawUrl = message.url || 'http://127.0.0.1:8000';
+        const targetUrl = (rawUrl.includes('render.com') ? 'http://127.0.0.1:8000' : rawUrl).replace(/\/+$/, '') + '/health';
         const res = await fetch(targetUrl);
         const data = await res.json();
         sendResponse({ success: true, data });
