@@ -77,10 +77,19 @@
   }
 
   function unlockAudio() {
-    const ctx = getAudioContext();
-    if (ctx && ctx.state === 'suspended') {
-      ctx.resume().catch(() => {});
-    }
+    try {
+      const ctx = getAudioContext();
+      if (ctx) {
+        if (ctx.state === 'suspended') {
+          ctx.resume().catch(() => {});
+        }
+        // Play an inaudible 1-sample buffer to permanently unlock Safari WebKit AudioContext
+        const osc = ctx.createBufferSource();
+        osc.buffer = ctx.createBuffer(1, 1, 22050);
+        osc.connect(ctx.destination);
+        osc.start(0);
+      }
+    } catch (e) {}
   }
 
   ['click', 'touchstart', 'keydown'].forEach((evt) => {
@@ -490,8 +499,8 @@
     const payload = {
       cues: cues.map((c) => ({ id: c.id, start: c.start, end: c.end, text: c.text })),
       context: getVideoTitle(),
-      engine: 'fish_speech',
-      voice: state.voice || 'auto',
+      engine: state.engine || 'khanomtan',
+      voice: state.voice || 'khanomtan-v1.1-female',
       gender: state.gender || 'auto',
       style: state.style || 'auto',
       rate: state.rate,
@@ -642,20 +651,15 @@
 
   function attachVideoEvents(video) {
     video.addEventListener('pause', () => {
-      if (state.audioCtx && state.audioCtx.state === 'running' && state.isPlaying) {
-        state.audioCtx.suspend();
-      }
+      // Do not suspend audioCtx on pause, just allow monophonic queue management
     });
 
     video.addEventListener('play', () => {
       unlockAudio();
       if (state.isSyncBuffering) {
-        console.log('[ThaiDubbing] Video play attempted during 60s pre-buffering, keeping paused...');
+        console.log('[ThaiDubbing] Video play attempted during pre-buffering, keeping paused...');
         pauseYouTubeVideo();
         return;
-      }
-      if (state.audioCtx && state.audioCtx.state === 'suspended' && state.isPlaying) {
-        state.audioCtx.resume();
       }
     });
 
@@ -1046,12 +1050,13 @@
 
     // Per-cue isolated gain node
     const cueGain = ctx.createGain();
-    cueGain.gain.setValueAtTime(1.0, ctx.currentTime);
-    cueGain.connect(state.audioGainNode || ctx.destination);
+    const targetVol = (typeof state.dubVolume === 'number' && !isNaN(state.dubVolume)) ? state.dubVolume : 1.0;
+    cueGain.gain.setValueAtTime(targetVol, ctx.currentTime);
 
     const source = ctx.createBufferSource();
     source.buffer = cue.audioBuffer;
     source.connect(cueGain);
+    cueGain.connect(ctx.destination);
 
     // Natural Human Pitch & Cadence Preservation: Match video playback speed without distorting voice pitch
     try {
@@ -1216,12 +1221,13 @@
 
     const video = findVideoElement();
     const cueGain = ctx.createGain();
-    cueGain.gain.setValueAtTime(1.0, ctx.currentTime);
-    cueGain.connect(state.audioGainNode || ctx.destination);
+    const targetVol = (typeof state.dubVolume === 'number' && !isNaN(state.dubVolume)) ? state.dubVolume : 1.0;
+    cueGain.gain.setValueAtTime(targetVol, ctx.currentTime);
 
     const source = ctx.createBufferSource();
     source.buffer = buffer;
     source.connect(cueGain);
+    cueGain.connect(ctx.destination);
     state.currentSource = source;
     state.currentGainNode = cueGain;
     state.isPlaying = true;
@@ -1828,7 +1834,7 @@
       type: 'FETCH_DUB',
       payload: {
         backendUrl: state.backendUrl,
-        text: 'Welcome to our channel! Here is a natural Thai voice demonstration.',
+        text: sampleText,
         engine: state.engine,
         voice: state.voice,
         gender: state.gender,

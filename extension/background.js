@@ -235,8 +235,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       const payload = {
         cues,
         context: context || '',
-        engine: engine || 'fish_speech',
-        voice: voice || 'auto',
+        engine: engine || 'khanomtan',
+        voice: voice || 'khanomtan-v1.1-female',
         style: style || 'auto',
         gender: gender || 'auto',
         rate: rate || '+0%',
@@ -278,8 +278,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       const payload = {
         text,
         context: context || '',
-        engine: engine || 'fish_speech',
-        voice: voice || 'auto',
+        engine: engine || 'khanomtan',
+        voice: voice || 'khanomtan-v1.1-female',
         style: style || 'auto',
         gender: gender || 'auto',
         rate: rate || '+0%',
