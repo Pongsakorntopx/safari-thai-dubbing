@@ -899,14 +899,11 @@
         return;
       }
 
-      // If already playing a cue, wait until it finishes naturally
-      if (state.isPlaying) return;
-
       const currentTime = video.currentTime;
 
       for (let i = 0; i < state.timedCues.length; i++) {
         const cue = state.timedCues[i];
-        if (cue.status === 'ready' && currentTime >= cue.start - 0.15 && currentTime <= cue.end + 0.5) {
+        if (cue.status === 'ready' && currentTime >= cue.start - 0.08 && currentTime <= cue.end + 0.3) {
           cue.status = 'played';
           state.lastScheduledCue = cue;
           if (cue.audioUrl || cue.audioBase64) {
@@ -916,12 +913,12 @@
             renderCinemaSubtitle(cue.translated, durMs);
           }
           break;
-        } else if (cue.start > currentTime + 1.0) {
+        } else if (cue.start > currentTime + 0.5) {
           // Cues are sorted by start time, no need to check further into future
           break;
         }
       }
-    }, 60);
+    }, 40);
   }
 
   function stopActivePlayback() {

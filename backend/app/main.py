@@ -501,9 +501,11 @@ async def dub_cues_batch(req: BatchDubRequest):
                     pitch=pitch,
                 )
             except Exception as e:
-                logger.warning("KhanomTan TTS synthesis error for cue %d: %s", cue.id, e)
+                logger.warning("TTS synthesis error for cue %d: %s", cue.id, e)
 
         if audio_bytes:
+            from app.tts_engine import fit_audio_to_slot_duration
+            audio_bytes = fit_audio_to_slot_duration(audio_bytes, slot_duration)
             await cache.set_audio_dub(
                 source_text=cue.text,
                 engine=cue_engine,
