@@ -248,5 +248,10 @@ class TTSEngine:
             pitch=pitch,
         )
 
+    def list_voices(self) -> Dict[str, Dict[str, str]]:
+        """Return the dictionary of supported voice personas."""
+        return VOICE_REGISTRY
+
 
 tts_engine = TTSEngine()
+
