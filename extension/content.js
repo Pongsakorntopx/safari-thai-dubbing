@@ -980,7 +980,11 @@
 
       for (let i = 0; i < state.timedCues.length; i++) {
         const cue = state.timedCues[i];
-        if (cue.status === 'ready' && currentTime >= cue.start - 0.25 && currentTime <= cue.end + 2.5) {
+        if (cue.status === 'ready' && currentTime >= cue.start - 0.15 && currentTime <= cue.end + 0.8) {
+          // If a sentence is currently speaking, let it finish naturally without overlapping!
+          if (state.isPlaying) {
+            break;
+          }
           cue.status = 'played';
           state.lastScheduledCue = cue;
           if (cue.audioBuffer) {
@@ -996,15 +1000,22 @@
   }
 
   function stopActivePlayback() {
+    if (state.currentSource) {
+      try {
+        state.currentSource.stop();
+        state.currentSource.disconnect();
+      } catch (e) {}
+      state.currentSource = null;
+    }
     if (state.activeSources && state.activeSources.length > 0) {
       state.activeSources.forEach((src) => {
-        try { src.stop(); } catch (e) {}
+        try { src.stop(); src.disconnect(); } catch (e) {}
       });
       state.activeSources = [];
     }
     if (state.currentGainNode && state.audioCtx) {
       try {
-        state.currentGainNode.gain.linearRampToValueAtTime(0.01, state.audioCtx.currentTime + 0.05);
+        state.currentGainNode.gain.setValueAtTime(0.0, state.audioCtx.currentTime);
       } catch (e) {}
     }
     state.currentSource = null;
@@ -1013,7 +1024,7 @@
     state.nextSpeechTime = 0;
   }
 
-  // --- Master Human Cadence & Zero-Truncation Speech Queue ---
+  // --- Strict Single-Track Monophonic Speech Engine (Zero Overlap & Zero Ghost Voices) ---
   function schedulePlayAudio(cue) {
     if (!cue.audioBuffer) return;
     const ctx = getAudioContext();
@@ -1023,10 +1034,13 @@
       ctx.resume().catch(() => {});
     }
 
+    // Stop and disconnect any existing active audio before starting new cue
+    stopActivePlayback();
+
     const video = findVideoElement();
     const videoSpeed = (video && video.playbackRate) ? video.playbackRate : 1.0;
 
-    // Per-cue isolated gain node for pristine acoustics
+    // Per-cue isolated gain node
     const cueGain = ctx.createGain();
     cueGain.gain.setValueAtTime(1.0, ctx.currentTime);
     cueGain.connect(state.clarityFilter || state.audioGainNode || ctx.destination);
@@ -1037,9 +1051,9 @@
 
     // Adaptive Sentence Duration Fitting
     const audioDur = cue.audioBuffer.duration;
-    const slotDur = Math.max(1.0, cue.end - cue.start);
+    const slotDur = Math.max(0.8, cue.end - cue.start);
     let adaptiveRate = videoSpeed;
-    if (audioDur > slotDur * 1.15) {
+    if (audioDur > slotDur * 1.12) {
       adaptiveRate = Math.min(1.22, (audioDur / slotDur) * videoSpeed);
     }
 
@@ -1047,17 +1061,6 @@
       source.playbackRate.setValueAtTime(adaptiveRate, ctx.currentTime);
     } catch (rateErr) {}
 
-    // 🌟 ZERO-TRUNCATION GUARANTEE:
-    // If previous sentence is still speaking, seamlessly queue this sentence immediately after it!
-    // Never stop or cut off previous sentence mid-thought!
-    if (!state.activeSources) state.activeSources = [];
-    
-    const now = ctx.currentTime;
-    const scheduledStart = Math.max(now, state.nextSpeechTime || now);
-    const effectiveDuration = audioDur / adaptiveRate;
-    state.nextSpeechTime = scheduledStart + effectiveDuration + 0.08; // 0.08s natural human breathing pause
-
-    state.activeSources.push(source);
     state.currentSource = source;
     state.currentGainNode = cueGain;
     state.isPlaying = true;
@@ -1069,10 +1072,7 @@
     updateHUDStatus(`🔊 ${speakerTag}${wpmText}"${cue.translated.slice(0, 14)}..."`);
 
     source.onended = () => {
-      if (state.activeSources) {
-        state.activeSources = state.activeSources.filter((s) => s !== source);
-      }
-      if (ctx.currentTime >= state.nextSpeechTime - 0.12) {
+      if (state.currentSource === source) {
         state.currentSource = null;
         state.currentGainNode = null;
         state.isPlaying = false;
@@ -1081,7 +1081,7 @@
       }
     };
 
-    source.start(scheduledStart);
+    source.start(0);
   }
 
   function updateBufferGauge() {
