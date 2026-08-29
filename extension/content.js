@@ -422,7 +422,7 @@
     }
   }
 
-  // --- Subtitle Dispatcher (Direct Browser First -> Background Proxy Fallback) ---
+  // --- Subtitle Dispatcher (Direct Browser First -> Local Daemon -> Background Proxy Fallback) ---
   async function fetchTranscriptDirect(videoId) {
     // 1. Direct Same-Origin Browser Extraction (100% Reliable, 0 Latency)
     const directRes = await fetchYouTubeInnertubeDirect(videoId);
@@ -430,7 +430,33 @@
       return directRes;
     }
 
-    // 2. Fallback via Background Service Worker
+    // 2. Direct HTTP call to Backend Endpoints (/api/v1/transcript)
+    const endpointsToTry = [
+      state.backendUrl,
+      'http://127.0.0.1:8000',
+      'https://thai-dubbing-api.onrender.com',
+    ].filter(Boolean);
+
+    for (const ep of endpointsToTry) {
+      try {
+        const targetUrl = ep.replace(/\/+$/, '') + '/api/v1/transcript';
+        const res = await fetch(targetUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ videoId }),
+          signal: AbortSignal.timeout(4000),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.success && data.cues && data.cues.length > 0) {
+            console.log(`[ThaiDubbing] 🎉 Successfully fetched ${data.cues.length} cues via backend: ${ep}`);
+            return data;
+          }
+        }
+      } catch (e) {}
+    }
+
+    // 3. Fallback via Background Service Worker
     console.log('[ThaiDubbing] Direct extraction empty, trying Background Service Worker...');
     return new Promise((resolve) => {
       chrome.runtime.sendMessage(
@@ -465,22 +491,31 @@
       customGeminiKey: state.customGeminiKey,
     };
 
-    // 1. Direct HTTPS fetch to Render Cloud Backend
-    const targetUrl = (state.backendUrl || 'https://thai-dubbing-api.onrender.com').replace(/\/+$/, '') + '/api/v1/dub_batch';
-    try {
-      const resp = await fetch(targetUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (resp.ok) {
-        return await resp.json();
-      }
-    } catch (directErr) {
-      console.warn('[ThaiDubbing] Direct cloud batch dub error, falling back to background proxy:', directErr);
+    const endpointsToTry = [
+      state.backendUrl,
+      'http://127.0.0.1:8000',
+      'https://thai-dubbing-api.onrender.com',
+    ].filter(Boolean);
+
+    for (const ep of endpointsToTry) {
+      try {
+        const targetUrl = ep.replace(/\/+$/, '') + '/api/v1/dub_batch';
+        const resp = await fetch(targetUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+          signal: AbortSignal.timeout(12000),
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data && data.success && data.results && data.results.length > 0) {
+            return data;
+          }
+        }
+      } catch (directErr) {}
     }
 
-    // 2. Fallback via Background Service Worker
+    // Fallback via Background Service Worker
     return new Promise((resolve) => {
       chrome.runtime.sendMessage(
         {
@@ -712,9 +747,7 @@
       const video = findVideoElement();
       const cur = video ? video.currentTime : 0;
       const targetTime = cur + state.targetBufferSeconds;
-      const batchCues = state.timedCues.filter((c) => c.end >= cur && c.start <= targetTime);
-
-      const toFetch = batchCues.slice(0, 32);
+      const toFetch = (batchCues.length > 0 ? batchCues : state.timedCues).slice(0, 32);
       toFetch.forEach((c) => (c.status = 'fetching'));
       updateHUDStatus('⏳ กำลังเรียบเรียงบทพากย์ภาษาไทยและสร้างเสียงพากย์ 2 นาที...');
 
