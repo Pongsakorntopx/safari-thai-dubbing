@@ -112,23 +112,21 @@ def resolve_auto_settings(
     """
     Fish Speech Intelligent Voice Resolver:
     - Pure LLM-Based Fish Speech Architecture for high-fidelity natural Thai prosody.
-    - Honors user explicit voice or resolves automatically based on AI detected gender.
+    - Honors user explicit voice or defaults cleanly to single host voice.
     """
-    gender = req_gender or "auto"
+    gender = req_gender or "male"
     engine = "fish_speech"
-    voice = req_voice or "auto"
+    voice = req_voice or "fish-thai-male"
 
-    if voice and voice != "auto" and voice in VOICE_REGISTRY:
+    if voice in VOICE_REGISTRY:
         reg = VOICE_REGISTRY[voice]
-        if not req_gender or req_gender == "auto":
-            gender = reg.get("gender", gender)
+        gender = reg.get("gender", gender)
     else:
         if gender == "female":
             voice = "fish-thai-female"
-        elif gender == "male":
-            voice = "fish-thai-male"
         else:
-            voice = "auto"
+            voice = "fish-thai-male"
+            gender = "male"
 
     style = req_style or "auto"
     return engine, voice, style, gender

@@ -60,16 +60,35 @@ VOICE_REGISTRY: Dict[str, Dict[str, str]] = {
 
 
 def clean_thai_text_for_speech(text: str) -> str:
-    """Clean text for natural, fluent, continuous human speech synthesis in Fish Speech."""
+    """Clean text for natural, fluent, continuous human speech synthesis."""
     if not text:
         return ""
     t = text.strip()
     t = re.sub(r"[\"\'\`\<\>\[\]\(\)\{\}\*\#\_]", "", t)
-    # Remove awkward spaces between Thai words that cause unnatural pauses
-    t = re.sub(r"([ก-๙])\s+([ก-๙])", r"\1\2", t)
-    t = re.sub(r"([ก-๙])\s+([ก-๙])", r"\1\2", t)
-    t = re.sub(r"(?<=[ก-๙])\s+(?=[ะ-ู็-์])", "", t)
-    t = re.sub(r"(?<=[เ-ไ])\s+(?=[ก-ฮ])", "", t)
+    
+    # Expand common tech and everyday acronyms to natural Thai phonetics for flawless pronunciation
+    acronym_map = {
+        r"\bAI\b": "เอไอ",
+        r"\bAPI\b": "เอพีไอ",
+        r"\bUI\b": "ยูไอ",
+        r"\bUX\b": "ยูเอ็กซ์",
+        r"\biOS\b": "ไอโอเอส",
+        r"\bmacOS\b": "แมคโอเอส",
+        r"\bPython\b": "ไพธอน",
+        r"\bYouTube\b": "ยูทูป",
+        r"\bSafari\b": "ซาฟารี",
+        r"\bURL\b": "ยูอาร์แอล",
+        r"\bCPU\b": "ซีพียู",
+        r"\bGPU\b": "จีพียู",
+        r"\bRAM\b": "แรม",
+        r"\bApp\b": "แอป",
+        r"\bApps\b": "แอป",
+        r"\bWeb\b": "เว็บ",
+    }
+    for eng, th in acronym_map.items():
+        t = re.sub(eng, th, t, flags=re.IGNORECASE)
+
+    # Normalize excessive spaces but preserve natural breathing pause boundaries
     t = re.sub(r"\s+", " ", t)
     return t.strip()
 
@@ -98,7 +117,7 @@ class FishSpeechEngine:
     ) -> bytes:
         """
         Synthesize Thai speech using Fish Speech LLM Architecture.
-        Supports both Cloud API and Local Fish Speech Inference.
+        Strictly locked to the single requested voice persona.
         """
         cleaned_text = clean_thai_text_for_speech(text)
         if not cleaned_text:
@@ -165,9 +184,12 @@ class FishSpeechEngine:
             except Exception as e:
                 logger.warning("Fish Audio API request failed: %s", e)
 
-        # 4. Built-in Studio Fallback (High-Definition Neural Fallback matching requested gender)
+        # 4. Built-in Studio Fallback (Hard-Locked to the exact selected voice persona)
         try:
-            target_voice = "th-TH-PremwadeeNeural" if (reg_entry.get("gender") == "female" or gender == "female") else "th-TH-NiwatNeural"
+            # Enforce strict single voice selection: If voice is female -> Premwadee, otherwise ALWAYS Niwat!
+            is_female = (voice == "fish-thai-female") or (reg_entry.get("gender") == "female") or (gender == "female" and voice not in ["fish-thai-male", "fish-thai-narrator"])
+            target_voice = "th-TH-PremwadeeNeural" if is_female else "th-TH-NiwatNeural"
+
             communicate = edge_tts.Communicate(cleaned_text, voice=target_voice, rate=rate, pitch=pitch)
             audio_buffer = io.BytesIO()
             async for chunk in communicate.stream():
@@ -175,7 +197,7 @@ class FishSpeechEngine:
                     audio_buffer.write(chunk["data"])
             audio_bytes = audio_buffer.getvalue()
             if audio_bytes:
-                logger.info("Generated studio neural fallback audio (%d bytes)", len(audio_bytes))
+                logger.info("Generated studio neural fallback audio with locked voice %s (%d bytes)", target_voice, len(audio_bytes))
                 return audio_bytes
         except Exception as e:
             logger.error("TTS synthesis fatal error: %s", e)

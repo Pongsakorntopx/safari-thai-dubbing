@@ -3,9 +3,8 @@
  */
 
 const FISH_VOICES = [
-  { id: 'auto', name: '🤖 อัตโนมัติ (AI เลือกเสียง Fish Speech ที่ดีที่สุดตามคลิป)' },
-  { id: 'fish-thai-male', name: '🐟 Fish Speech: ชายไทยธรรมชาติ (Thai Male Master - LLM)' },
-  { id: 'fish-thai-female', name: '🐟 Fish Speech: หญิงไทยธรรมชาติ (Thai Female Master - LLM)' },
+  { id: 'fish-thai-male', name: '🐟 Fish Speech: ชายไทยธรรมชาติ (Thai Male Master)' },
+  { id: 'fish-thai-female', name: '🐟 Fish Speech: หญิงไทยธรรมชาติ (Thai Female Master)' },
   { id: 'fish-thai-narrator', name: '🐟 Fish Speech: ผู้บรรยายสารคดี (Thai Documentary Narrator)' },
   { id: 'fish-custom-clone', name: '🐟 Fish Speech: โคลนเสียงตัวอย่าง 5-10 วิ (Zero-Shot Clone)' },
 ];

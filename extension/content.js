@@ -33,17 +33,19 @@
     timedCues: [],
     currentVideoId: null,
     targetBufferSeconds: 120, // 120-Second (2-minute) Initial Sync Buffer
-    bufferedSeconds: 0,
-    isSyncBuffering: false,
-    isPreFetching: false,
-    lookaheadTimer: null,
-    schedulerTimer: null,
+    lastScheduledCue: null,
+    nextSpeechTime: 0,
+    syncInterval: null,
+    liveObserver: null,
+    subtitleHookAttached: false,
+    currentVideoId: '',
+    audioCtx: null,
+    clarityFilter: null,
+    audioGainNode: null,
 
-    // Multi-Speaker Diarization & Cast Detection
-    speakerCount: 0,
-    maleCount: 0,
-    femaleCount: 0,
-    speakers: [],
+    // UI HUD Controls
+    isHUDMinimized: false,
+    showSettingsModal: false,
 
     // Audio Ducking & Volume Restore
     originalVideoVolume: 1.0,
@@ -51,9 +53,8 @@
   };
 
   const VOICES = [
-    { id: 'auto', name: '🤖 อัตโนมัติ (AI เลือกเสียง Fish Speech ที่ดีที่สุดตามคลิป)', engine: 'fish_speech', gender: 'auto' },
-    { id: 'fish-thai-male', name: '🐟 Fish Speech: ชายไทยธรรมชาติ (Thai Male Master - LLM-Based)', engine: 'fish_speech', gender: 'male' },
-    { id: 'fish-thai-female', name: '🐟 Fish Speech: หญิงไทยธรรมชาติ (Thai Female Master - LLM-Based)', engine: 'fish_speech', gender: 'female' },
+    { id: 'fish-thai-male', name: '🐟 Fish Speech: ชายไทยธรรมชาติ (Thai Male Master)', engine: 'fish_speech', gender: 'male' },
+    { id: 'fish-thai-female', name: '🐟 Fish Speech: หญิงไทยธรรมชาติ (Thai Female Master)', engine: 'fish_speech', gender: 'female' },
     { id: 'fish-thai-narrator', name: '🐟 Fish Speech: ผู้บรรยายสารคดี (Thai Documentary Narrator)', engine: 'fish_speech', gender: 'male' },
     { id: 'fish-custom-clone', name: '🐟 Fish Speech: โคลนเสียงตัวอย่าง 5-10 วิ (Zero-Shot Clone)', engine: 'fish_speech', gender: 'auto' },
   ];
