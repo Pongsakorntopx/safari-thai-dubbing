@@ -1,20 +1,13 @@
 /**
- * Safari AI Thai Video Dubber - Popup UI Controller (Unlock-TTS Integration)
+ * Safari AI Thai Video Dubber - Popup UI Controller (Fish Speech Integration)
  */
 
-const GOOGLE_VOICES = [
-  { id: 'google-thai', name: '🇹🇭 Google Native Thai (เสียงภาษาไทยแท้ มาตรฐาน Google ชัดเจนเป็นธรรมชาติ)' },
-];
-
-const EDGE_VOICES = [
-  { id: 'th-TH-NiwatNeural', name: '🎙️ นิวัฒน์ (Studio Neural HD 48kHz - เสียงชาย ทุ้มนุ่ม [ครับ])' },
-  { id: 'th-TH-PremwadeeNeural', name: '🎙️ เปรมวดี (Studio Neural HD 48kHz - เสียงหญิง นุ่มนวล [ค่ะ])' },
-];
-
-const VITS_VOICES = [
-  { id: 'mms-narrator', name: '🇹🇭 ผู้บรรยายสารคดี (Documentary Narrator VITS)' },
-  { id: 'mms-female-v2', name: '🇹🇭 หญิง V2 ธรรมชาติ (Thai Female V2 Deep Neural)' },
-  { id: 'mms-male-v2', name: '🇹🇭 ชาย V2 ธรรมชาติ (Thai Male V2 Deep Neural)' },
+const FISH_VOICES = [
+  { id: 'auto', name: '🤖 อัตโนมัติ (AI เลือกเสียง Fish Speech ที่ดีที่สุดตามคลิป)' },
+  { id: 'fish-thai-male', name: '🐟 Fish Speech: ชายไทยธรรมชาติ (Thai Male Master - LLM)' },
+  { id: 'fish-thai-female', name: '🐟 Fish Speech: หญิงไทยธรรมชาติ (Thai Female Master - LLM)' },
+  { id: 'fish-thai-narrator', name: '🐟 Fish Speech: ผู้บรรยายสารคดี (Thai Documentary Narrator)' },
+  { id: 'fish-custom-clone', name: '🐟 Fish Speech: โคลนเสียงตัวอย่าง 5-10 วิ (Zero-Shot Clone)' },
 ];
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -35,30 +28,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   const testBtn = document.getElementById('testBtn');
   const connResult = document.getElementById('connResult');
 
-  function populateVoices(engine, selectedVoice) {
+  function populateVoices(selectedVoice) {
     voiceSelect.innerHTML = '';
-    let voices = [];
-    if (engine === 'auto') {
-      voices = [{ id: 'auto', name: '🤖 อัตโนมัติ (AI วิเคราะห์คลิปและเลือกโมเดลที่ดีที่สุด)' }];
-    } else if (engine === 'gtts') {
-      voices = GOOGLE_VOICES;
-    } else if (engine === 'edge') {
-      voices = EDGE_VOICES;
-    } else {
-      voices = VITS_VOICES;
-    }
-
-    voices.forEach((v) => {
+    FISH_VOICES.forEach((v) => {
       const opt = document.createElement('option');
       opt.value = v.id;
       opt.textContent = v.name;
       if (v.id === selectedVoice) opt.selected = true;
       voiceSelect.appendChild(opt);
     });
-
-    if (styleGroup) {
-      styleGroup.style.display = (engine === 'google' || engine === 'auto') ? 'flex' : 'none';
-    }
   }
 
   // Load Saved Settings from chrome.storage.local

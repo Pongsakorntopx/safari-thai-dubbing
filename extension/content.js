@@ -51,13 +51,11 @@
   };
 
   const VOICES = [
-    { id: 'auto', name: '🤖 อัตโนมัติ (AI วิเคราะห์คลิปและเลือกโมเดลที่ดีที่สุด)', engine: 'auto', gender: 'auto' },
-    { id: 'google-thai', name: '🇹🇭 Google Native Thai (เสียงภาษาไทยแท้ มาตรฐาน Google ชัดเจนเป็นธรรมชาติ)', engine: 'gtts', gender: 'female' },
-    { id: 'th-TH-NiwatNeural', name: '🎙️ นิวัฒน์ (Studio Neural HD 48kHz - เสียงชาย ทุ้มนุ่ม พอดแคสต์ สารคดี [ครับ])', engine: 'edge', gender: 'male' },
-    { id: 'th-TH-PremwadeeNeural', name: '🎙️ เปรมวดี (Studio Neural HD 48kHz - เสียงหญิง นุ่มนวล คมชัด สดใส [ค่ะ])', engine: 'edge', gender: 'female' },
-    { id: 'mms-narrator', name: '🇹🇭 ผู้บรรยายสารคดี (Documentary Narrator - VITS Neural Model ภาษาไทย)', engine: 'vits', gender: 'male' },
-    { id: 'mms-female-v2', name: '🇹🇭 หญิง V2 ธรรมชาติ (Thai Female V2 - Deep Neural Model ภาษาไทยแท้)', engine: 'vits', gender: 'female' },
-    { id: 'mms-male-v2', name: '🇹🇭 ชาย V2 ธรรมชาติ (Thai Male V2 - Deep Neural Model ภาษาไทยแท้)', engine: 'vits', gender: 'male' },
+    { id: 'auto', name: '🤖 อัตโนมัติ (AI เลือกเสียง Fish Speech ที่ดีที่สุดตามคลิป)', engine: 'fish_speech', gender: 'auto' },
+    { id: 'fish-thai-male', name: '🐟 Fish Speech: ชายไทยธรรมชาติ (Thai Male Master - LLM-Based)', engine: 'fish_speech', gender: 'male' },
+    { id: 'fish-thai-female', name: '🐟 Fish Speech: หญิงไทยธรรมชาติ (Thai Female Master - LLM-Based)', engine: 'fish_speech', gender: 'female' },
+    { id: 'fish-thai-narrator', name: '🐟 Fish Speech: ผู้บรรยายสารคดี (Thai Documentary Narrator)', engine: 'fish_speech', gender: 'male' },
+    { id: 'fish-custom-clone', name: '🐟 Fish Speech: โคลนเสียงตัวอย่าง 5-10 วิ (Zero-Shot Clone)', engine: 'fish_speech', gender: 'auto' },
   ];
 
   const STYLES = [
@@ -483,12 +481,13 @@
     const payload = {
       cues: cues.map((c) => ({ id: c.id, start: c.start, end: c.end, text: c.text })),
       context: getVideoTitle(),
-      engine: state.engine,
-      voice: state.voice,
-      gender: state.gender || 'male',
+      engine: 'fish_speech',
+      voice: state.voice || 'auto',
+      gender: state.gender || 'auto',
       style: state.style || 'auto',
       rate: state.rate,
       customGeminiKey: state.customGeminiKey,
+      fishApiKey: state.fishApiKey,
     };
 
     const endpointsToTry = [
@@ -1531,6 +1530,13 @@
         </div>
 
         <div style="display: flex; justify-content: space-between; align-items: center; gap: 4px;">
+          <span style="font-size: 11px; color: #94a3b8; font-weight: 600;">Fish Audio API Key:</span>
+          <input type="password" id="hud-fish-input" placeholder="fa_... (คีย์ Fish Audio)" value="${state.fishApiKey || ''}" style="
+            background: #1e293b; color: #38bdf8; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; padding: 2px 6px; font-size: 10px; width: 170px; outline: none;
+          ">
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 4px;">
           <span style="font-size: 11px; color: #94a3b8; font-weight: 600;">Google AI Studio Key:</span>
           <input type="password" id="hud-gemini-input" placeholder="AQ.Ab... / AIzaSy..." value="${state.customGeminiKey || ''}" style="
             background: #1e293b; color: #10b981; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; padding: 2px 6px; font-size: 10px; width: 170px; outline: none;
@@ -1674,6 +1680,16 @@
     if (duckSlider) {
       duckSlider.oninput = (e) => {
         saveSetting('duckVolume', parseInt(e.target.value, 10) / 100);
+      };
+    }
+
+    const fishInput = document.getElementById('hud-fish-input');
+    if (fishInput) {
+      fishInput.onchange = (e) => {
+        const val = e.target.value.trim();
+        saveSetting('fishApiKey', val);
+        state.fishApiKey = val;
+        updateHUDStatus(`🐟 บันทึก Fish Audio Key เรียบร้อย`);
       };
     }
 

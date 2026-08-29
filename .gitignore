@@ -24,3 +24,14 @@ DerivedData/
 xcuserdata/
 *.xcscmblueprint
 backend/.env
+
+# AI Models & Audio Binaries
+*.onnx
+*.tar.bz2
+*.bin
+*.m4a
+*.mp3
+*.wav
+backend/models/
+backend/voices/
+voices/

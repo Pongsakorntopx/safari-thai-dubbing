@@ -48,12 +48,13 @@ app.add_middleware(
 class DubRequest(BaseModel):
     text: str
     context: Optional[str] = ""
-    engine: Optional[str] = "auto"
+    engine: Optional[str] = "fish_speech"
     voice: Optional[str] = "auto"
     style: Optional[str] = "auto"
     gender: Optional[str] = "auto"
     rate: Optional[str] = "+0%"
     customGeminiKey: Optional[str] = ""
+    fishApiKey: Optional[str] = ""
 
 
 class CueItem(BaseModel):
@@ -66,12 +67,13 @@ class CueItem(BaseModel):
 class BatchDubRequest(BaseModel):
     cues: List[CueItem]
     context: Optional[str] = ""
-    engine: Optional[str] = "auto"
+    engine: Optional[str] = "fish_speech"
     voice: Optional[str] = "auto"
     style: Optional[str] = "auto"
     gender: Optional[str] = "auto"
     rate: Optional[str] = "+0%"
     customGeminiKey: Optional[str] = ""
+    fishApiKey: Optional[str] = ""
 
 
 class TranscriptRequest(BaseModel):
@@ -332,6 +334,7 @@ async def dub_cues_batch(req: BatchDubRequest):
     )
     rate = req.rate or "+0%"
     custom_key = req.customGeminiKey.strip() if req.customGeminiKey else None
+    custom_fish_key = req.fishApiKey.strip() if req.fishApiKey else None
 
     # 1. Multi-Speaker Diarization, Emotion Analysis & Duration-Aware Transcreation
     raw_cues_dict = [c.dict() for c in req.cues]
@@ -357,17 +360,15 @@ async def dub_cues_batch(req: BatchDubRequest):
         cue_engine = engine
         cue_voice = voice
 
-        # 🎭 Multi-Speaker Cast Assignment (when user selects Auto / Dynamic mode):
+        # 🐟 Fish Speech Voice Assignment (Pure LLM-based Architecture):
+        cue_engine = "fish_speech"
         if not req.voice or req.voice == "auto":
             if speaker == "female_1" or speaker_gender == "female":
-                cue_engine = "edge"
-                cue_voice = "th-TH-PremwadeeNeural"
+                cue_voice = "fish-thai-female"
             else:
-                cue_engine = "edge"
-                cue_voice = "th-TH-NiwatNeural"
+                cue_voice = "fish-thai-male"
         else:
-            cue_engine = engine
-            cue_voice = voice
+            cue_voice = req.voice
 
         # 🎯 Original Video Speech Cadence & Exact Duration Pacing (WPS / WPM)
         words_count = len(cue.text.split())
@@ -424,12 +425,13 @@ async def dub_cues_batch(req: BatchDubRequest):
                     engine=cue_engine,
                     voice=cue_voice,
                     style=style,
+                    gender=speaker_gender,
                     rate=cue_rate,
                     pitch=pitch,
-                    api_key=custom_key,
+                    api_key=custom_fish_key,
                 )
             except Exception as e:
-                logger.warning("TTS synthesis error for cue %d: %s", cue.id, e)
+                logger.warning("Fish Speech synthesis error for cue %d: %s", cue.id, e)
 
             # Retry once if needed
             if not audio_bytes:
@@ -440,9 +442,10 @@ async def dub_cues_batch(req: BatchDubRequest):
                         engine=cue_engine,
                         voice=cue_voice,
                         style=style,
+                        gender=speaker_gender,
                         rate=cue_rate,
                         pitch=pitch,
-                        api_key=custom_key,
+                        api_key=custom_fish_key,
                     )
                 except Exception:
                     pass
@@ -493,14 +496,14 @@ async def dub_cues_batch(req: BatchDubRequest):
             spk_gender = d.get("gender", "male")
             if not req.voice or req.voice == "auto":
                 if spk_id == "female_1" or spk_gender == "female":
-                    v_name = "เปรมวดี (Studio HD หญิง)"
-                    v_code = "th-TH-PremwadeeNeural"
+                    v_name = "🐟 Fish Speech (หญิงไทย)"
+                    v_code = "fish-thai-female"
                 else:
-                    v_name = "นิวัฒน์ (Studio HD ชาย)"
-                    v_code = "th-TH-NiwatNeural"
+                    v_name = "🐟 Fish Speech (ชายไทย)"
+                    v_code = "fish-thai-male"
             else:
-                v_name = voice
-                v_code = voice
+                v_name = VOICE_REGISTRY.get(req.voice, {}).get("name", req.voice)
+                v_code = req.voice
 
             unique_speakers[spk_id] = {
                 "id": spk_id,
