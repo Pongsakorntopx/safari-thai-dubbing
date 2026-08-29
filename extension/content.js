@@ -76,6 +76,24 @@
     return globalAudioPlayer;
   }
 
+  function base64ToBlobUrl(base64) {
+    if (!base64) return '';
+    try {
+      const cleanBase64 = base64.replace(/^data:audio\/\w+;base64,/, '');
+      const binaryStr = atob(cleanBase64);
+      const len = binaryStr.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binaryStr.charCodeAt(i);
+      }
+      const blob = new Blob([bytes], { type: 'audio/wav' });
+      return URL.createObjectURL(blob);
+    } catch (e) {
+      console.warn('[ThaiDubbing] Blob conversion error, fallback to data URI:', e);
+      return base64.startsWith('data:') ? base64 : `data:audio/wav;base64,${base64}`;
+    }
+  }
+
   function unlockAudio() {
     try {
       const audio = getGlobalAudioPlayer();
@@ -813,7 +831,7 @@
                 cue.appliedRate = item.appliedRate || '+0%';
                 if (item.base64Audio) {
                   cue.audioBase64 = item.base64Audio;
-                  cue.audioUrl = `data:audio/wav;base64,${item.base64Audio}`;
+                  cue.audioUrl = base64ToBlobUrl(item.base64Audio);
                 }
                 cue.status = 'ready';
                 totalFetchedCues++;
@@ -921,7 +939,7 @@
                 cue.appliedRate = item.appliedRate || '+0%';
                 if (item.base64Audio) {
                   cue.audioBase64 = item.base64Audio;
-                  cue.audioUrl = `data:audio/wav;base64,${item.base64Audio}`;
+                  cue.audioUrl = base64ToBlobUrl(item.base64Audio);
                   cue.status = 'ready';
                 } else {
                   cue.audioUrl = null;
@@ -1023,7 +1041,7 @@
     const audio = getGlobalAudioPlayer();
     if (!audio) return;
 
-    const audioSrc = cue.audioUrl || `data:audio/wav;base64,${cue.audioBase64}`;
+    const audioSrc = cue.audioUrl || base64ToBlobUrl(cue.audioBase64);
     audio.src = audioSrc;
     audio.volume = (typeof state.dubVolume === 'number' && !isNaN(state.dubVolume)) ? state.dubVolume : 1.0;
     try {
@@ -1184,8 +1202,7 @@
     const audio = getGlobalAudioPlayer();
     if (!audio) return;
 
-    const audioSrc = audioBase64.startsWith('data:') ? audioBase64 : `data:audio/wav;base64,${audioBase64}`;
-    audio.src = audioSrc;
+    audio.src = base64ToBlobUrl(audioBase64);
     audio.volume = (typeof state.dubVolume === 'number' && !isNaN(state.dubVolume)) ? state.dubVolume : 1.0;
     try {
       audio.playbackRate = videoSpeed;
