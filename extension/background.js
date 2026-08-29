@@ -187,28 +187,37 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     (async () => {
       try {
         const { backendUrl, videoId } = message.payload;
-        
-        // 1. Direct browser extraction first (100% reliable)
-        const directRes = await fetchYouTubeTranscriptDirect(videoId);
+        const cleanVid = videoId.split('&')[0].split('?')[0];
+
+        // 1. High-Speed Local Daemon on Mac (0 Latency & 100% Reliable via YouTubeTranscriptApi)
+        try {
+          const targetUrl = (backendUrl && !backendUrl.includes('render.com') ? backendUrl : 'http://127.0.0.1:8000').replace(/\/+$/, '') + '/api/v1/transcript';
+          const res = await fetch(targetUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ videoId: cleanVid }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data.success && data.cues && data.cues.length > 0) {
+              console.log(`[ThaiDubbing SW] Daemon fetched ${data.cues.length} cues for ${cleanVid}`);
+              sendResponse(data);
+              return;
+            }
+          }
+        } catch (daemonErr) {
+          console.warn('[ThaiDubbing SW] Daemon transcript fetch skipped:', daemonErr);
+        }
+
+        // 2. Direct Innertube Extraction Fallback
+        const directRes = await fetchYouTubeTranscriptDirect(cleanVid);
         if (directRes && directRes.cues && directRes.cues.length > 0) {
+          console.log(`[ThaiDubbing SW] Direct Innertube fetched ${directRes.cues.length} cues for ${cleanVid}`);
           sendResponse(directRes);
           return;
         }
 
-        // 2. Fallback to Local Daemon
-        const targetUrl = (backendUrl && !backendUrl.includes('render.com') ? backendUrl : 'http://127.0.0.1:8000').replace(/\/+$/, '') + '/api/v1/transcript';
-        const res = await fetch(targetUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ videoId }),
-        });
-        if (!res.ok) {
-          const errText = await res.text();
-          sendResponse({ success: false, error: `HTTP ${res.status}: ${errText}`, cues: [] });
-          return;
-        }
-        const data = await res.json();
-        sendResponse(data);
+        sendResponse({ success: false, cues: [], error: 'No subtitles available' });
       } catch (err) {
         console.error('[ThaiDubbing SW] Transcript fetch error:', err);
         sendResponse({ success: false, error: err.message, cues: [] });
