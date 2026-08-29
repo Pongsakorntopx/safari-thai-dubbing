@@ -71,7 +71,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const activeEngine = data.engine || 'google';
     engineSelect.value = activeEngine;
 
-    const defaultVoice = activeEngine === 'edge' ? 'th-TH-PremwadeeNeural' : 'Aoede';
+    const defaultVoice = activeEngine === 'edge' ? 'th-TH-PremwadeeNeural' : 'Puck';
     populateVoices(activeEngine, data.voice || defaultVoice);
 
     if (data.style) styleSelect.value = data.style;

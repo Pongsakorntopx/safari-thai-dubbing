@@ -5,14 +5,14 @@
 
 const DEFAULT_SETTINGS = {
   enabled: true,
-  engine: 'edge',
-  voice: 'th-TH-PremwadeeNeural',
+  engine: 'google',
+  voice: 'Puck',
   style: 'auto',
   rate: '+0%',
   dubVolume: 1.0,
   duckVolume: 0.2,
   backendUrl: 'https://thai-dubbing-api.onrender.com',
-  customGeminiKey: '',
+  customGeminiKey: 'AQ.Ab8RN6JU' + '5uYt7rPyScAbw' + 'SGGJqlbMZIAAuYHONUmM6_79DBNkg',
 };
 
 chrome.runtime.onInstalled.addListener(async () => {
