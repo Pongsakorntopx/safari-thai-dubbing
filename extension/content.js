@@ -888,6 +888,10 @@
               if (cue) {
                 cue.translated = item.translatedText || cue.text;
                 cue.isMasterTrack = !!item.isMasterTrack;
+                cue.speaker = item.speaker || 'Host';
+                cue.emotion = item.emotion || 'normal';
+                cue.orig_wpm = item.orig_wpm || 140;
+                cue.appliedRate = item.appliedRate || '+0%';
                 if (item.base64Audio) {
                   try {
                     if (ctx) {

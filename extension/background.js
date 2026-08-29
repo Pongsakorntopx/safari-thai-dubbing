@@ -225,79 +225,82 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.type === 'FETCH_DUB_BATCH') {
     (async () => {
-      try {
-        const { backendUrl, cues, context, engine, voice, style, gender, rate, customGeminiKey } = message.payload;
-        const targetUrl = (backendUrl || 'https://thai-dubbing-api.onrender.com').replace(/\/+$/, '') + '/api/v1/dub_batch';
+      const { backendUrl, cues, context, engine, voice, style, gender, rate, customGeminiKey } = message.payload;
+      const endpointsToTry = [
+        backendUrl,
+        'http://127.0.0.1:8000',
+        'https://thai-dubbing-api.onrender.com',
+      ].filter(Boolean);
 
-        const response = await fetch(targetUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            cues,
-            context: context || '',
-            engine: engine || 'edge',
-            voice: voice || 'th-TH-PremwadeeNeural',
-            style: style || 'auto',
-            gender: gender || 'auto',
-            rate: rate || '+0%',
-            customGeminiKey: customGeminiKey || '',
-          }),
-        });
+      const payload = {
+        cues,
+        context: context || '',
+        engine: engine || 'auto',
+        voice: voice || 'auto',
+        style: style || 'auto',
+        gender: gender || 'auto',
+        rate: rate || '+0%',
+        customGeminiKey: customGeminiKey || '',
+      };
 
-        if (!response.ok) {
-          const errText = await response.text();
-          sendResponse({ success: false, error: `HTTP ${response.status}: ${errText}`, results: [] });
-          return;
-        }
-
-        const data = await response.json();
-        sendResponse(data);
-      } catch (err) {
-        console.error('[ThaiDubbing SW] Batch Dub error:', err);
-        sendResponse({ success: false, error: err.message, results: [] });
+      for (const ep of endpointsToTry) {
+        try {
+          const targetUrl = ep.replace(/\/+$/, '') + '/api/v1/dub_batch';
+          const response = await fetch(targetUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          if (response.ok) {
+            const data = await response.json();
+            if (data && data.success && data.results) {
+              sendResponse(data);
+              return;
+            }
+          }
+        } catch (err) {}
       }
+      sendResponse({ success: false, error: 'All backend endpoints failed', results: [] });
     })();
     return true;
   }
 
   if (message.type === 'FETCH_DUB') {
     (async () => {
-      try {
-        const { backendUrl, text, context, engine, voice, style, gender, rate, customGeminiKey } = message.payload;
-        const targetUrl = (backendUrl || 'https://thai-dubbing-api.onrender.com').replace(/\/+$/, '') + '/api/v1/dub';
+      const { backendUrl, text, context, engine, voice, style, gender, rate, customGeminiKey } = message.payload;
+      const endpointsToTry = [
+        backendUrl,
+        'http://127.0.0.1:8000',
+        'https://thai-dubbing-api.onrender.com',
+      ].filter(Boolean);
 
-        const response = await fetch(targetUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            text,
-            context: context || '',
-            engine: engine || 'edge',
-            voice: voice || 'th-TH-PremwadeeNeural',
-            style: style || 'auto',
-            gender: gender || 'auto',
-            rate: rate || '+0%',
-            customGeminiKey: customGeminiKey || '',
-          }),
-        });
+      const payload = {
+        text,
+        context: context || '',
+        engine: engine || 'auto',
+        voice: voice || 'auto',
+        style: style || 'auto',
+        gender: gender || 'auto',
+        rate: rate || '+0%',
+        customGeminiKey: customGeminiKey || '',
+      };
 
-        if (!response.ok) {
-          const errText = await response.text();
-          sendResponse({ success: false, error: `HTTP ${response.status}: ${errText}` });
-          return;
-        }
-
-        const data = await response.json();
-        sendResponse({
-          success: true,
-          translatedText: data.translatedText || '',
-          base64Audio: data.base64Audio || '',
-          cached: !!data.cached,
-        });
-      } catch (err) {
-        console.error('[ThaiDubbing SW] Fetch Dub error:', err);
-        sendResponse({ success: false, error: err.message });
+      for (const ep of endpointsToTry) {
+        try {
+          const targetUrl = ep.replace(/\/+$/, '') + '/api/v1/dub';
+          const response = await fetch(targetUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          if (response.ok) {
+            const data = await response.json();
+            sendResponse(data);
+            return;
+          }
+        } catch (err) {}
       }
+      sendResponse({ success: false, error: 'All backend endpoints failed' });
     })();
     return true;
   }
