@@ -57,30 +57,42 @@ VOICE_REGISTRY: Dict[str, Dict[str, str]] = {
         "name": "🇹🇭 Meta MMS Thai (Open-Source Native VITS Neural Model)",
         "gender": "male",
         "engine": "mms",
+        "desc": "โมเดล VITS ภาษาไทยแท้จาก Meta AI รันออฟไลน์บนเครื่อง 100%",
     },
     "th-TH-NiwatNeural": {
         "id": "th-TH-NiwatNeural",
-        "name": "👨‍💼 นิวัฒน์ (Neural Studio - เสียงชาย ทุ้มนุ่ม เป็นธรรมชาติ [ครับ])",
+        "name": "👨‍💼 นิวัฒน์ (Neural Studio - เสียงชาย ทุ้มนุ่ม พอดแคสต์ [ครับ])",
         "gender": "male",
         "engine": "edge",
+        "desc": "เสียงพากย์ชาย Deep Neural คมชัดระดับ 48kHz ทุ้มนุ่มน่าฟัง",
     },
     "th-TH-PremwadeeNeural": {
         "id": "th-TH-PremwadeeNeural",
         "name": "👩‍💼 เปรมวดี (Neural Studio - เสียงหญิง นุ่มนวล ชัดเจน [ค่ะ])",
         "gender": "female",
         "engine": "edge",
+        "desc": "เสียงพากย์หญิง Deep Neural คมชัดระดับ 48kHz สดใสเป็นธรรมชาติ",
     },
     "kokoro-sarah": {
         "id": "kokoro-sarah",
         "name": "🌟 Kokoro Sarah (82M Open-Source Studio Model - หญิง)",
         "gender": "female",
         "engine": "kokoro",
+        "desc": "โมเดล Open-Weight ขนาด 82M พารามิเตอร์ระดับโลก",
     },
     "kokoro-adam": {
         "id": "kokoro-adam",
         "name": "🌟 Kokoro Adam (82M Open-Source Studio Model - ชาย)",
         "gender": "male",
         "engine": "kokoro",
+        "desc": "โมเดล Open-Weight ขนาด 82M พารามิเตอร์ระดับโลก",
+    },
+    "gtts-thai": {
+        "id": "gtts-thai",
+        "name": "🌐 Open Web TTS (Thai Standard Engine)",
+        "gender": "female",
+        "engine": "gtts",
+        "desc": "ระบบเสียงมาตรฐานภาษาไทย Open Web",
     },
 }
 
@@ -220,6 +232,24 @@ class TTSEngine:
 
         return buffer.getvalue()
 
+    async def synthesize_gtts(self, text: str) -> bytes:
+        """Synthesize Thai speech via gTTS (Open Web Synthesizer)."""
+        clean = clean_thai_text_for_speech(text)
+        if not clean:
+            return b""
+        loop = asyncio.get_event_loop()
+        def _run_gtts():
+            try:
+                from gtts import gTTS
+                tts = gTTS(text=clean, lang="th", slow=False)
+                buf = io.BytesIO()
+                tts.write_to_fp(buf)
+                return buf.getvalue()
+            except Exception as e:
+                logger.warning("gTTS synthesis error: %s", e)
+                return b""
+        return await loop.run_in_executor(None, _run_gtts)
+
     async def synthesize(
         self,
         text: str,
@@ -236,6 +266,7 @@ class TTSEngine:
         1. Meta MMS Thai VITS (100% Native Open-Source Model)
         2. Microsoft Edge Neural (th-TH-NiwatNeural / th-TH-PremwadeeNeural)
         3. Kokoro 82M ONNX
+        4. gTTS Open Web Synthesizer
         """
         clean = clean_thai_text_for_speech(text)
         if not clean:
@@ -250,6 +281,12 @@ class TTSEngine:
         # Kokoro Open Source
         if engine == "kokoro" or "kokoro" in v_lower:
             return await self.synthesize_kokoro(clean, voice=voice or "af_sarah")
+
+        # gTTS Open Web
+        if engine == "gtts" or "gtts" in v_lower:
+            gtts_res = await self.synthesize_gtts(clean)
+            if gtts_res:
+                return gtts_res
 
         # Edge Neural (Default high-fidelity)
         selected_voice = voice if voice in ["th-TH-PremwadeeNeural", "th-TH-NiwatNeural"] else "th-TH-NiwatNeural"

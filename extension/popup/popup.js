@@ -16,6 +16,10 @@ const KOKORO_VOICES = [
   { id: 'kokoro-adam', name: '🌟 Kokoro Adam (82M Open-Source Studio Model - ชาย)' },
 ];
 
+const GTTS_VOICES = [
+  { id: 'gtts-thai', name: '🌐 Open Web TTS (Thai Standard Engine)' },
+];
+
 document.addEventListener('DOMContentLoaded', async () => {
   // DOM Elements
   const enabledToggle = document.getElementById('enabledToggle');
@@ -43,8 +47,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       voices = MMS_VOICES;
     } else if (engine === 'edge') {
       voices = EDGE_VOICES;
-    } else {
+    } else if (engine === 'kokoro') {
       voices = KOKORO_VOICES;
+    } else {
+      voices = GTTS_VOICES;
     }
 
     voices.forEach((v) => {

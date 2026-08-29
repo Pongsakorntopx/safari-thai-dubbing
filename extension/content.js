@@ -45,12 +45,13 @@
   };
 
   const VOICES = [
-    { id: 'auto', name: '🤖 อัตโนมัติ (AI เลือกโมเดล Open-Source ที่ดีที่สุด)', engine: 'auto', gender: 'auto' },
+    { id: 'auto', name: '🤖 อัตโนมัติ (AI เลือกโมเดลและเสียง Open-Source ที่ดีที่สุด)', engine: 'auto', gender: 'auto' },
+    { id: 'th-TH-NiwatNeural', name: '👨‍💼 นิวัฒน์ (Neural Studio - ชาย ทุ้มนุ่ม พอดแคสต์ [ครับ])', engine: 'edge', gender: 'male' },
+    { id: 'th-TH-PremwadeeNeural', name: '👩‍💼 เปรมวดี (Neural Studio - หญิง นุ่มนวล คมชัด [ค่ะ])', engine: 'edge', gender: 'female' },
     { id: 'mms-thai', name: '🇹🇭 Meta MMS Thai (Open-Source Native VITS Neural Model)', engine: 'mms', gender: 'male' },
-    { id: 'th-TH-NiwatNeural', name: '👨‍💼 นิวัฒน์ (Neural Studio - เสียงชาย เหมือนคนจริง ทุ้มนุ่ม [ครับ])', engine: 'edge', gender: 'male' },
-    { id: 'th-TH-PremwadeeNeural', name: '👩‍💼 เปรมวดี (Neural Studio - เสียงหญิง เหมือนคนจริง นุ่มนวล [ค่ะ])', engine: 'edge', gender: 'female' },
     { id: 'kokoro-sarah', name: '🌟 Kokoro Sarah (82M Open-Source Studio Model - หญิง)', engine: 'kokoro', gender: 'female' },
     { id: 'kokoro-adam', name: '🌟 Kokoro Adam (82M Open-Source Studio Model - ชาย)', engine: 'kokoro', gender: 'male' },
+    { id: 'gtts-thai', name: '🌐 Open Web TTS (Thai Standard Engine)', engine: 'gtts', gender: 'female' },
   ];
 
   const STYLES = [
