@@ -21,7 +21,7 @@ from pydantic import BaseModel
 from app.cache import cache
 from app.config import settings
 from app.translator import translator
-from app.tts_engine import tts_engine
+from app.tts_engine import tts_engine, VOICE_REGISTRY
 
 logging.basicConfig(
     level=logging.INFO,
