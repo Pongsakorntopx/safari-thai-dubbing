@@ -29,16 +29,18 @@ async def test_cache_sqlite_operations(tmp_path):
     assert await test_cache.get_translation(source, context) == translated
 
     # 2. Test audio dubbing caching
-    voice = "th-TH-PremwadeeNeural"
-    rate = "+5%"
+    engine = "fish_speech"
+    voice = "fish-thai-male"
+    rate = "+0%"
     pitch = "+0Hz"
+    style = "auto"
     dummy_audio = b"\xff\xfb\x90\x44" * 10
 
-    assert await test_cache.get_audio_dub(source, voice, rate, pitch, context) is None
+    assert await test_cache.get_audio_dub(source, engine, voice, rate, pitch, style, context) is None
     await test_cache.set_audio_dub(
-        source, voice, rate, pitch, context, translated, dummy_audio
+        source, engine, voice, rate, pitch, style, context, translated, dummy_audio
     )
-    result = await test_cache.get_audio_dub(source, voice, rate, pitch, context)
+    result = await test_cache.get_audio_dub(source, engine, voice, rate, pitch, style, context)
     assert result is not None
     assert result[0] == translated
     assert result[1] == dummy_audio

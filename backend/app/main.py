@@ -13,6 +13,8 @@ import urllib.request
 import xml.etree.ElementTree as ET
 from typing import Dict, List, Optional
 
+from contextlib import asynccontextmanager
+
 import aiohttp
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -29,10 +31,20 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Initialize database and caches on server start."""
+    logger.info("Initializing Dubbing Cache...")
+    await cache.init_db()
+    yield
+
+
 app = FastAPI(
     title="Safari AI Thai Video Dubber API",
-    version="1.4.0",
-    description="Backend API for 60-Second Real-Time AI Thai Video Dubbing & Universal Multi-Lingual Transcreation",
+    version="1.5.0",
+    description="Backend API for Fish Speech LLM-Based Real-Time AI Thai Video Dubbing",
+    lifespan=lifespan,
 )
 
 # CORS: Allow all origins for seamless Safari integration
@@ -81,13 +93,11 @@ class TranscriptRequest(BaseModel):
 
 
 def resolve_gender(voice: str, requested_gender: Optional[str] = "auto") -> str:
-    """Determine speaker gender from explicit request or selected voice persona."""
+    """Determine speaker gender from explicit request or Fish Speech voice persona."""
     if requested_gender and requested_gender in ["male", "female"]:
         return requested_gender
     v_lower = voice.lower()
-    if any(k in v_lower for k in ["niwat", "male", "puck", "pattara"]):
-        return "male"
-    if any(k in v_lower for k in ["premwadee", "female", "aoede", "kanya"]):
+    if any(k in v_lower for k in ["female", "หญิง"]):
         return "female"
     return "male"
 
@@ -100,49 +110,30 @@ def resolve_auto_settings(
     context: str = "",
 ):
     """
-    Intelligent Auto & Explicit Voice Resolver:
-    - If user explicitly chooses a voice, honor the exact model and voice requested!
-    - If auto mode is selected, preserve gender="auto" so AI can perform deep semantic gender detection.
+    Fish Speech Intelligent Voice Resolver:
+    - Pure LLM-Based Fish Speech Architecture for high-fidelity natural Thai prosody.
+    - Honors user explicit voice or resolves automatically based on AI detected gender.
     """
     gender = req_gender or "auto"
-    engine = req_engine or "auto"
+    engine = "fish_speech"
     voice = req_voice or "auto"
 
-    # If an explicit voice ID is provided, look it up in VOICE_REGISTRY
     if voice and voice != "auto" and voice in VOICE_REGISTRY:
         reg = VOICE_REGISTRY[voice]
-        engine = reg.get("engine", engine)
         if not req_gender or req_gender == "auto":
             gender = reg.get("gender", gender)
-    elif engine and engine != "auto":
-        matching = [v for v in VOICE_REGISTRY.values() if v.get("engine") == engine]
-        if matching:
-            gender_match = [v for v in matching if v.get("gender") == gender]
-            voice = gender_match[0]["id"] if gender_match else matching[0]["id"]
-        else:
-            voice = "th-TH-NiwatNeural" if gender == "male" else "th-TH-PremwadeeNeural"
     else:
-        # Full Auto Mode
-        engine = "edge"
         if gender == "female":
-            voice = "th-TH-PremwadeeNeural"
+            voice = "fish-thai-female"
         elif gender == "male":
-            voice = "th-TH-NiwatNeural"
+            voice = "fish-thai-male"
         else:
             voice = "auto"
 
-    style = req_style or "notebooklm"
-    if style == "auto":
-        style = "notebooklm"
-
+    style = req_style or "auto"
     return engine, voice, style, gender
 
 
-@app.on_event("startup")
-async def startup_event():
-    """Initialize database and caches on server start."""
-    logger.info("Initializing Dubbing Cache...")
-    await cache.init_db()
 
 
 @app.get("/health")
@@ -152,6 +143,15 @@ async def health_check():
         "status": "healthy",
         "service": "thai-dubbing-api",
         "gemini_ready": bool(settings.gemini_api_key),
+        "voices": tts_engine.list_voices(),
+    }
+
+
+@app.get("/api/v1/voices")
+async def list_supported_voices():
+    """Return dictionary of supported Fish Speech voice personas."""
+    return {
+        "success": True,
         "voices": tts_engine.list_voices(),
     }
 

@@ -14,8 +14,10 @@ class Settings(BaseSettings):
 
     gemini_api_key: str = os.getenv("GEMINI_API_KEY", "AQ.Ab8RN6KPbW" + "fipLG3IEBPAVK-nRd6Ki" + "PanW6ymcYDj3ymolbkbw")
     gemini_model: str = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
-    default_voice: str = os.getenv("DEFAULT_VOICE", "Puck")
-    default_rate: str = os.getenv("DEFAULT_RATE", "+5%")
+    fish_audio_api_key: str = os.getenv("FISH_AUDIO_API_KEY", "")
+    fish_speech_local_url: str = os.getenv("FISH_SPEECH_LOCAL_URL", "http://127.0.0.1:8080/v1/tts")
+    default_voice: str = os.getenv("DEFAULT_VOICE", "fish-thai-male")
+    default_rate: str = os.getenv("DEFAULT_RATE", "+0%")
     default_pitch: str = os.getenv("DEFAULT_PITCH", "+0Hz")
     sqlite_cache_db: str = os.getenv("SQLITE_CACHE_DB", str(Path(__file__).resolve().parent.parent / "dub_cache.db"))
     in_memory_cache_size: int = int(os.getenv("IN_MEMORY_CACHE_SIZE", "1000"))

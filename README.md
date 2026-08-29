@@ -1,19 +1,17 @@
-# 🎙️ Safari AI Thai Video Dubbing (Zero-Cost Stack)
+# 🐟 Safari AI Thai Video Dubbing • Fish Speech Engine
 
-ระบบแปลและพากย์เสียงวิดีโอภาษาอังกฤษเป็นภาษาไทยแบบ Real-time บน YouTube สำหรับ Safari (และเบราว์เซอร์ตระกูล Chromium เช่น Chrome / Brave / Edge) ด้วยสแตกเทคโนโลยีฟรี 100% (**Zero-Cost Stack**)
+ระบบแปลและพากย์เสียงวิดีโอบน YouTube เป็นภาษาไทยแบบ Real-time คุณภาพสตูดิโอ สำหรับ Safari (macOS / iOS) ขับเคลื่อนด้วยโมเดลสังเคราะห์เสียงสังเคราะห์ **Fish Speech (LLM-based Zero-shot Neural TTS)**
 
 ---
 
 ## 🌟 จุดเด่นของระบบ (Features)
 
-1. **Context-Aware Thai Localization**: ใช้ **Google Gemini 2.0 Flash** แปลงบทบรรยาย (Captions) เป็นบทพากย์ภาษาไทยที่เป็นธรรมชาติ ลื่นไหล เข้ากับจังหวะพูด
-2. **High-Quality Neural Voices**: พากย์เสียงด้วย **Microsoft Edge Neural TTS**
-   - 👩 **เปรมวดี (`th-TH-PremwadeeNeural`)**: เสียงผู้หญิง นุ่มนวล ชัดเจน
-   - 👨 **นิวัฒน์ (`th-TH-NiwatNeural`)**: เสียงผู้ชาย สุภาพ ฟังสบาย
-3. **Smart Web Audio Ducking**: ลดเสียงคลิปต้นฉบับลงอัตโนมัติ (เช่น เหลือ 20%) ทันทีที่เสียงพากย์เริ่มพูด และคืนระดับเสียงเดิมเมื่อพูดจบ
-4. **Playback Queue & Seek Synchronization**: จัดการคิวเสียงพากย์ไม่ให้ทับซ้อน และหยุด/ล้างคิวทันทีเมื่อกด Pause หรือเลื่อนไทม์ไลน์ (Seek)
-5. **Dual-Tier Caching (In-Memory + SQLite)**: แคชข้อความแปลและไฟล์เสียง MP3 เพื่อลด Latency เหลือต่ำกว่า 50ms สำหรับประโยคที่เคยแปลแล้ว
-6. **Zero-Cost Deployment**: มี Dockerfile พร้อม Deploy ขึ้น **Hugging Face Spaces (Free Docker)** หรือ **Render**
+1. **Fish Speech LLM-Based Prosody**: ใช้สถาปัตยกรรม Large Language Model สร้างเสียงสังเคราะห์ภาษาไทยที่เนียน ละมุน และเป็นธรรมชาติสูงสุด ไร้รอยต่อระหว่างคำ
+2. **Zero-Shot Voice Cloning**: รองรับการโคลนเสียงจากตัวอย่างเสียงภาษาไทย 5–10 วินาที เพื่อสร้างอารมณ์ คาแรคเตอร์ และน้ำเสียงที่ตรงใจ
+3. **Multi-Speaker Diarization & Auto Gender Alignment**: วิเคราะห์ผู้พูดเดี่ยวหรือกลุ่มบทสนทนา แยกเพศชาย/หญิง และจัดสรรคำลงท้าย (*ครับ/ค่ะ*) ได้อย่างถูกต้องแม่นยำ
+4. **Paragraph-Level Transcreation (60s Buffer)**: แปลงบทสนทนาแบบทั้งย่อหน้า ป้องกันการตัดประโยคค้างคา และซิงค์ความเร็วการพูดกับจังหวะของวิดีโอต้นฉบับ
+5. **Monophonic Single-Track Playback**: ระบบเล่นเสียงเดี่ยว ป้องกันเสียงซ้อน เสียงหลอน และปรับลดเสียงคลิปเดิม (Audio Ducking) แบบสมูท
+6. **Unified Safari HUD & Extension Popup**: แถบควบคุมบนวิดีโอ YouTube ใน Safari ปรับแต่งโหมดเสียง เพศ และระดับภาษาได้ทันที 1 คลิก
 
 ---
 
@@ -21,21 +19,21 @@
 
 ```
 thai-dubbing-safari/
-├── backend/                  # Python FastAPI Backend
+├── backend/                  # Python FastAPI Backend (Fish Speech Engine)
 │   ├── app/
 │   │   ├── __init__.py
-│   │   ├── config.py         # จัดการค่า Settings & Environment
+│   │   ├── config.py         # จัดการค่า Settings, Keys & Endpoints
 │   │   ├── main.py           # REST API endpoints & CORS middleware
-│   │   ├── translator.py     # Gemini 2.0 Flash prompt & localization logic
-│   │   ├── tts_engine.py     # Microsoft Edge-TTS streaming handler
-│   │   └── cache.py          # LRU In-Memory + SQLite Cache
+│   │   ├── translator.py     # Gemini 2.0/3.5/3.6 Localization Engine
+│   │   ├── tts_engine.py     # Fish Speech LLM Neural TTS Engine
+│   │   └── cache.py          # LRU In-Memory + SQLite Cache (v17)
 │   ├── requirements.txt      # รายการ Python dependencies
 │   ├── .env.example          # ตัวอย่างไฟล์ตั้งค่า API Key
-│   └── Dockerfile            # สำหรับ Deploy ขึ้น Hugging Face / Render
+│   └── Dockerfile            # สำหรับ Deploy ขึ้น Cloud / Docker
 ├── extension/                # Web Extension Source (Manifest V3)
 │   ├── manifest.json         # กำหนดสิทธิ์และการทำงานของ Extension
-│   ├── background.js         # Service Worker
-│   ├── content.js            # YouTube DOM / Subtitle hook, Audio Ducking & Queue Sync
+│   ├── background.js         # Service Worker & Multi-Endpoint Fallback
+│   ├── content.js            # YouTube DOM, Monophonic Audio Scheduler & Safari HUD
 │   ├── popup/
 │   │   ├── popup.html        # หน้าต่างตั้งค่า UI (Dark Mode)
 │   │   ├── popup.js          # จัดการ State และเชื่อมต่อ Storage

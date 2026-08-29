@@ -16,7 +16,8 @@ async def test_health_check():
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "healthy"
-        assert "supported_voices" in data
+        assert "voices" in data
+        assert "fish-thai-male" in data["voices"]
 
 
 @pytest.mark.asyncio
@@ -27,8 +28,9 @@ async def test_list_voices():
         response = await ac.get("/api/v1/voices")
         assert response.status_code == 200
         data = response.json()
-        assert "th-TH-PremwadeeNeural" in data["voices"]
-        assert "th-TH-NiwatNeural" in data["voices"]
+        assert data["success"] is True
+        assert "fish-thai-male" in data["voices"]
+        assert "fish-thai-female" in data["voices"]
 
 
 @pytest.mark.asyncio
@@ -41,11 +43,13 @@ async def test_dub_endpoint_cached():
         ) as ac:
             payload = {
                 "text": "Hello world",
-                "voice": "th-TH-PremwadeeNeural",
-                "rate": "+5%",
+                "voice": "fish-thai-male",
+                "rate": "+0%",
             }
             response = await ac.post("/api/v1/dub", json=payload)
             assert response.status_code == 200
-            assert response.headers["content-type"] == "audio/mpeg"
-            assert response.headers["x-cache-hit"] == "true"
-            assert response.content == b"test_audio_bytes"
+            data = response.json()
+            assert data["success"] is True
+            assert data["translatedText"] == "สวัสดีครับ"
+            assert data["cached"] is True
+            assert len(data["base64Audio"]) > 0

@@ -5,14 +5,15 @@
 
 const DEFAULT_SETTINGS = {
   enabled: true,
-  engine: 'google',
-  voice: 'Puck',
+  engine: 'fish_speech',
+  voice: 'fish-thai-male',
   style: 'auto',
   rate: '+0%',
   dubVolume: 1.0,
   duckVolume: 0.2,
   backendUrl: 'http://127.0.0.1:8000',
   customGeminiKey: 'AQ.Ab8RN6KPbW' + 'fipLG3IEBPAVK-nRd6Ki' + 'PanW6ymcYDj3ymolbkbw',
+  fishApiKey: '',
 };
 
 chrome.runtime.onInstalled.addListener(async () => {
@@ -225,7 +226,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.type === 'FETCH_DUB_BATCH') {
     (async () => {
-      const { backendUrl, cues, context, engine, voice, style, gender, rate, customGeminiKey } = message.payload;
+      const { backendUrl, cues, context, engine, voice, style, gender, rate, customGeminiKey, fishApiKey } = message.payload;
       const endpointsToTry = [
         backendUrl,
         'http://127.0.0.1:8000',
@@ -235,12 +236,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       const payload = {
         cues,
         context: context || '',
-        engine: engine || 'auto',
+        engine: engine || 'fish_speech',
         voice: voice || 'auto',
         style: style || 'auto',
         gender: gender || 'auto',
         rate: rate || '+0%',
         customGeminiKey: customGeminiKey || '',
+        fishApiKey: fishApiKey || '',
       };
 
       for (const ep of endpointsToTry) {
@@ -267,7 +269,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.type === 'FETCH_DUB') {
     (async () => {
-      const { backendUrl, text, context, engine, voice, style, gender, rate, customGeminiKey } = message.payload;
+      const { backendUrl, text, context, engine, voice, style, gender, rate, customGeminiKey, fishApiKey } = message.payload;
       const endpointsToTry = [
         backendUrl,
         'http://127.0.0.1:8000',
@@ -277,12 +279,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       const payload = {
         text,
         context: context || '',
-        engine: engine || 'auto',
+        engine: engine || 'fish_speech',
         voice: voice || 'auto',
         style: style || 'auto',
         gender: gender || 'auto',
         rate: rate || '+0%',
         customGeminiKey: customGeminiKey || '',
+        fishApiKey: fishApiKey || '',
       };
 
       for (const ep of endpointsToTry) {
