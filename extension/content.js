@@ -706,6 +706,10 @@
 
   // --- 1-Click "Start Dubbing" Main Execution Pipeline (2-Minute Narrative Buffer) ---
   async function startDubbingProcess() {
+    if (state.isDubbingActive) {
+      console.log('[ThaiDubbing] Dubbing already active, ignoring double click.');
+      return;
+    }
     console.log('[ThaiDubbing] >>> 1. Start Dubbing clicked (120s buffer)');
     unlockAudio();
 
@@ -719,14 +723,31 @@
     state.isSyncBuffering = true;
     state.bufferedSeconds = 0;
 
-    // 1. Pause video immediately
+    // 1. Pause video immediately & ENFORCE pause aggressively while buffering
     pauseYouTubeVideo();
+    if (state.pauseEnforcerTimer) clearInterval(state.pauseEnforcerTimer);
+    state.pauseEnforcerTimer = setInterval(() => {
+      if (state.isSyncBuffering) {
+        const video = findVideoElement();
+        if (video && !video.paused) {
+          console.warn('[ThaiDubbing] Auto-play detected during buffering. Enforcing Pause...');
+          video.pause();
+          try {
+            const player = document.getElementById('movie_player') || document.querySelector('.html5-video-player');
+            if (player && typeof player.pauseVideo === 'function') player.pauseVideo();
+          } catch(e) {}
+        }
+      } else {
+        clearInterval(state.pauseEnforcerTimer);
+      }
+    }, 50);
 
     renderHUD();
     updateHUDStatus('⏳ วิดีโอหยุดชั่วคราว: กำลังวิเคราะห์และเรียบเรียงภาษาไทยล่วงหน้า 2 นาที...');
 
-    // 2. Fetch Structured Transcript via Background Proxy
-    const transcriptRes = await fetchTranscriptDirect(videoId);
+    try {
+      // 2. Fetch Structured Transcript via Background Proxy
+      const transcriptRes = await fetchTranscriptDirect(videoId);
     console.log('[ThaiDubbing] >>> 2. Transcript response:', transcriptRes);
 
     if (transcriptRes && transcriptRes.success && transcriptRes.cues && transcriptRes.cues.length > 0) {
@@ -783,6 +804,8 @@
       }
 
       // 4. 2-Minute buffer is ready -> Automatically Play Video & Start Background Lookahead!
+      state.bufferedSeconds = state.targetBufferSeconds; // Force UI progress to 100%
+      updateBufferGauge();
       onBufferSyncComplete();
       startLookaheadWorkers();
 
@@ -792,6 +815,11 @@
       showThaiCaptionToast('⚠️ วิดีโอนี้ไม่มี Subtitle ถอดเสียงสำเร็จ จึงเปิดโหมดพากย์สดอัตโนมัติ');
       onBufferSyncComplete();
       updateHUDStatus('🟢 โหมดพากย์สด (กำลังพากย์ตามซับ)');
+    }
+    } catch (err) {
+      console.error('[ThaiDubbing] Error during startDubbingProcess:', err);
+      stopDubbing();
+      showThaiCaptionToast('❌ เกิดข้อผิดพลาดในการโหลดระบบพากย์ โปรดลองใหม่อีกครั้ง');
     }
   }
 
