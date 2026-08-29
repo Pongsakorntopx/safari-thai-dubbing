@@ -128,12 +128,18 @@
       }
       if (data.duckVolume !== undefined) state.duckVolume = data.duckVolume;
 
-      let bUrl = data.backendUrl;
-      if (!bUrl || bUrl.includes('localhost') || bUrl.includes('127.0.0.1')) {
-        bUrl = 'https://thai-dubbing-api.onrender.com';
-        saveSetting('backendUrl', bUrl);
+      // Auto-detect local daemon (http://127.0.0.1:8000) for instant 0ms latency
+      try {
+        const localCheck = await fetch('http://127.0.0.1:8000/health', { signal: AbortSignal.timeout(600) });
+        if (localCheck.ok) {
+          state.backendUrl = 'http://127.0.0.1:8000';
+        } else {
+          state.backendUrl = data.backendUrl || 'https://thai-dubbing-api.onrender.com';
+        }
+      } catch (e) {
+        state.backendUrl = data.backendUrl || 'https://thai-dubbing-api.onrender.com';
       }
-      state.backendUrl = bUrl.replace(/\/+$/, '');
+      state.backendUrl = state.backendUrl.replace(/\/+$/, '');
 
       const defaultKey = 'AQ.Ab8RN6KPbW' + 'fipLG3IEBPAVK-nRd6Ki' + 'PanW6ymcYDj3ymolbkbw';
       if (data.customGeminiKey) {

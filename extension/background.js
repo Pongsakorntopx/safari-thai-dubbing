@@ -11,8 +11,8 @@ const DEFAULT_SETTINGS = {
   rate: '+0%',
   dubVolume: 1.0,
   duckVolume: 0.2,
-  backendUrl: 'https://thai-dubbing-api.onrender.com',
-  customGeminiKey: 'AQ.Ab8RN6JU' + '5uYt7rPyScAbw' + 'SGGJqlbMZIAAuYHONUmM6_79DBNkg',
+  backendUrl: 'http://127.0.0.1:8000',
+  customGeminiKey: 'AQ.Ab8RN6KPbW' + 'fipLG3IEBPAVK-nRd6Ki' + 'PanW6ymcYDj3ymolbkbw',
 };
 
 chrome.runtime.onInstalled.addListener(async () => {
@@ -23,9 +23,6 @@ chrome.runtime.onInstalled.addListener(async () => {
       if (existing[key] === undefined) {
         toSet[key] = value;
       }
-    }
-    if (existing.backendUrl && (existing.backendUrl.includes('localhost') || existing.backendUrl.includes('127.0.0.1'))) {
-      toSet.backendUrl = 'https://thai-dubbing-api.onrender.com';
     }
     if (Object.keys(toSet).length > 0) {
       await chrome.storage.local.set(toSet);

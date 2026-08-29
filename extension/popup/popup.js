@@ -89,11 +89,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       duckVolumeVal.textContent = `${pct}%`;
     }
 
-    let bUrl = data.backendUrl;
-    if (!bUrl || bUrl.includes('localhost') || bUrl.includes('127.0.0.1')) {
-      bUrl = 'https://thai-dubbing-api.onrender.com';
-      chrome.storage.local.set({ backendUrl: bUrl });
-    }
+    let bUrl = data.backendUrl || 'http://127.0.0.1:8000';
     backendUrlInput.value = bUrl;
 
     const defaultKey = 'AQ.Ab8RN6KPbW' + 'fipLG3IEBPAVK-nRd6Ki' + 'PanW6ymcYDj3ymolbkbw';
