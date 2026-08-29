@@ -834,6 +834,9 @@
     console.log('[ThaiDubbing] >>> Stop Dubbing clicked!');
     state.isDubbingActive = false;
     state.isSyncBuffering = false;
+    if (state.pauseEnforcerTimer) clearInterval(state.pauseEnforcerTimer);
+    if (state.lookaheadTimer) clearInterval(state.lookaheadTimer);
+    if (state.schedulerTimer) clearInterval(state.schedulerTimer);
     stopActivePlayback();
     restoreVideoVolume();
     renderHUD();
