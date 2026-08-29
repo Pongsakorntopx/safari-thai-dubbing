@@ -160,9 +160,11 @@ class TTSEngine:
         loop = asyncio.get_event_loop()
         def _run():
             try:
-                inputs = tok(clean, return_tensors="pt")
+                device = "mps" if torch.backends.mps.is_available() else "cpu"
+                mod.to(device)
+                inputs = tok(clean, return_tensors="pt").to(device)
                 with torch.no_grad():
-                    output = mod(**inputs).waveform.squeeze().numpy()
+                    output = mod(**inputs).waveform.squeeze().cpu().numpy()
                 buf = io.BytesIO()
                 scipy.io.wavfile.write(buf, rate=mod.config.sampling_rate, data=output)
                 return buf.getvalue()
