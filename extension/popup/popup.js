@@ -2,22 +2,23 @@
  * Safari AI Thai Video Dubber - Popup UI Controller (Unlock-TTS Integration)
  */
 
-const GOOGLE_VOICES = [
-  { id: 'Aoede', name: '👩‍💼 Aoede (หญิง นุ่มนวล พอดแคสต์ - ธรรมชาติมากที่สุด)' },
-  { id: 'Puck', name: '👨‍💼 Puck (ชาย ทุ้มนุ่ม เป็นกันเอง - ธรรมชาติมากที่สุด)' },
-  { id: 'Kore', name: '👧 Kore (หญิง สดใส เล่าเรื่อง มีอารมณ์ร่วม)' },
-  { id: 'Fenrir', name: '🧑‍💻 Fenrir (ชาย มั่นใจ ทรงพลัง วิดีโอสั้น)' },
-  { id: 'Charon', name: '🎙️ Charon (ชาย สุขุม นุ่มลึก สารคดี)' },
+const MMS_VOICES = [
+  { id: 'mms-thai', name: '🇹🇭 Meta MMS Thai (Open-Source Native VITS Neural Model)' },
 ];
 
 const EDGE_VOICES = [
-  { id: 'th-TH-PremwadeeNeural', name: '👩 เปรมวดี (Premwadee - หญิง ละมุน)' },
-  { id: 'th-TH-NiwatNeural', name: '👨 นิวัฒน์ (Niwat - ชาย สุภาพ)' },
+  { id: 'th-TH-NiwatNeural', name: '👨‍💼 นิวัฒน์ (Neural Studio - ชาย ทุ้มนุ่ม [ครับ])' },
+  { id: 'th-TH-PremwadeeNeural', name: '👩‍💼 เปรมวดี (Neural Studio - หญิง นุ่มนวล [ค่ะ])' },
 ];
 
-const APPLE_VOICES = [
-  { id: 'Pattara', name: '👨‍💼 Pattara / ภัทร (Apple Silicon ชาย ทุ้มนุ่ม - เร็ว 0ms)' },
-  { id: 'Kanya', name: '👩‍💼 Kanya / กัญญา (Apple Silicon หญิง นุ่มนวล - เร็ว 0ms)' },
+const KOKORO_VOICES = [
+  { id: 'kokoro-sarah', name: '🌟 Kokoro Sarah (82M Open-Source Studio Model - หญิง)' },
+  { id: 'kokoro-adam', name: '🌟 Kokoro Adam (82M Open-Source Studio Model - ชาย)' },
+];
+
+const GOOGLE_VOICES = [
+  { id: 'Puck', name: '🎙️ Puck (ชาย ทุ้มนุ่ม)' },
+  { id: 'Aoede', name: '🎙️ Aoede (หญิง นุ่มนวล)' },
 ];
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -42,11 +43,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     voiceSelect.innerHTML = '';
     let voices = [];
     if (engine === 'auto') {
-      voices = [{ id: 'auto', name: '🤖 อัตโนมัติ (AI เลือกเสียงที่เหมาะสมที่สุดตามคลิป)' }];
+      voices = [{ id: 'auto', name: '🤖 อัตโนมัติ (AI เลือกโมเดลและเสียงที่เหมาะสมที่สุดตามคลิป)' }];
+    } else if (engine === 'mms') {
+      voices = MMS_VOICES;
     } else if (engine === 'edge') {
       voices = EDGE_VOICES;
-    } else if (engine === 'apple') {
-      voices = APPLE_VOICES;
+    } else if (engine === 'kokoro') {
+      voices = KOKORO_VOICES;
     } else {
       voices = GOOGLE_VOICES;
     }

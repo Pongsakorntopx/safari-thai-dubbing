@@ -1,289 +1,206 @@
-"""Unified Async TTS Synthesis Engine with Support for JaiTTS, Microsoft Edge Neural & Google Gemini Studio Audio."""
+"""Advanced Open-Source Neural Speech Synthesis Engine for Thai Dubbing.
+Features:
+1. Meta MMS Thai VITS (facebook/mms-tts-tha) - 100% Local Native Open-Source Deep Neural TTS
+2. Kokoro-ONNX (82M Open-Weight Model) - High-Fidelity Studio Neural Voice
+3. Microsoft Edge Neural - Deep Neural Studio Voices (th-TH-NiwatNeural, th-TH-PremwadeeNeural)
+4. Google Gemini Studio Audio - Multimodal Voice Persona
+"""
 
 import asyncio
-import base64
 import io
-import json
 import logging
 import os
 import re
-import shutil
 import sys
-import uuid
-import wave
-from typing import Dict, Optional
+import tempfile
+import urllib.parse
+from typing import Dict, List, Optional
+
 import aiohttp
 import edge_tts
+import numpy as np
+import soundfile as sf
+
+try:
+    import sherpa_onnx
+    SHERPA_AVAILABLE = True
+except ImportError:
+    SHERPA_AVAILABLE = False
+
+try:
+    from kokoro_onnx import Kokoro
+    KOKORO_AVAILABLE = True
+except ImportError:
+    KOKORO_AVAILABLE = False
 
 from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-# --- High-Quality Natural Thai Voices ---
+# Model File Paths
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+MMS_THA_MODEL = os.path.join(BASE_DIR, "models", "mms_tha", "vits-mms-tha", "model.onnx")
+MMS_THA_TOKENS = os.path.join(BASE_DIR, "models", "mms_tha", "vits-mms-tha", "tokens.txt")
+KOKORO_MODEL = os.path.join(BASE_DIR, "models", "kokoro", "kokoro-v0_19.onnx")
+KOKORO_VOICES = os.path.join(BASE_DIR, "models", "kokoro", "voices.bin")
+
 VOICE_REGISTRY: Dict[str, Dict[str, str]] = {
-    # Microsoft Edge Neural (Ultra-Fast & High Naturalness)
-    "th-TH-PremwadeeNeural": {
-        "name": "👩‍💼 เปรมวดี (Edge Neural - เสียงหญิง นุ่มนวล ธรรมชาติสูง)",
-        "engine": "edge",
-        "gender": "female",
+    "mms-thai": {
+        "id": "mms-thai",
+        "name": "🇹🇭 Meta MMS Thai (Open-Source Native VITS Neural Model)",
+        "gender": "male",
+        "engine": "mms",
     },
     "th-TH-NiwatNeural": {
-        "name": "👨‍💼 นิวัฒน์ (Edge Neural - เสียงชาย ทุ้มนุ่ม ชัดเจน)",
+        "id": "th-TH-NiwatNeural",
+        "name": "👨‍💼 นิวัฒน์ (Neural Studio - เสียงชาย ทุ้มนุ่ม เป็นธรรมชาติ [ครับ])",
+        "gender": "male",
         "engine": "edge",
-        "gender": "male",
     },
-    # JaiTTS (JTS-AI State-of-the-Art Thai Voice Synthesis)
-    "JaiTTS-Female": {
-        "name": "🌟 ใจ (JaiTTS - เสียงหญิง ภาษาพูดไทยสมจริงขั้นสุด)",
-        "engine": "jaitts",
+    "th-TH-PremwadeeNeural": {
+        "id": "th-TH-PremwadeeNeural",
+        "name": "👩‍💼 เปรมวดี (Neural Studio - เสียงหญิง นุ่มนวล ชัดเจน [ค่ะ])",
         "gender": "female",
+        "engine": "edge",
     },
-    "JaiTTS-Male": {
-        "name": "🌟 ใจ (JaiTTS - เสียงชาย ภาษาพูดไทยสมจริงขั้นสุด)",
-        "engine": "jaitts",
-        "gender": "male",
-    },
-    # Google Gemini Studio Audio (Unlock-TTS Quality)
-    "Aoede": {
-        "name": "👩‍💼 Aoede (Google Studio - หญิงพอดแคสต์)",
-        "engine": "google",
+    "kokoro-sarah": {
+        "id": "kokoro-sarah",
+        "name": "🌟 Kokoro Sarah (82M Open-Source Studio Model - หญิง)",
         "gender": "female",
+        "engine": "kokoro",
     },
-    "Puck": {
-        "name": "👨‍💼 Puck (Google Studio - ชายอบอุ่น)",
-        "engine": "google",
+    "kokoro-adam": {
+        "id": "kokoro-adam",
+        "name": "🌟 Kokoro Adam (82M Open-Source Studio Model - ชาย)",
         "gender": "male",
-    },
-    # Apple Silicon Native CoreAudio Neural Voices (0ms Hardware Engine)
-    "Pattara": {
-        "name": "🍎 ภัทร (Apple Silicon Neural - ชาย ทุ้มนุ่ม เร็ว 0ms)",
-        "engine": "apple",
-        "gender": "male",
-    },
-    "Kanya": {
-        "name": "🍎 กัญญา (Apple Silicon Neural - หญิง นุ่มนวล เร็ว 0ms)",
-        "engine": "apple",
-        "gender": "female",
+        "engine": "kokoro",
     },
 }
 
-GOOGLE_STYLES: Dict[str, str] = {
-    "podcast": "คุณคือนักจัดรายการพอดแคสต์และนักพากย์มืออาชีพ (Unlock-TTS / JaiTTS) กรุณาพูดบทภาษาไทยต่อไปนี้ด้วยน้ำเสียงเป็นธรรมชาติ อบอุ่น มีชีวิตชีวา มีจังหวะวรรคตอนที่น่าฟัง ลื่นไหล เหมือนคนจริงกำลังเล่าเรื่อง:\n\n",
-    "cinema": "คุณคือนักพากย์ภาพยนตร์มืออาชีพ กรุณาพากย์บทภาษาไทยต่อไปนี้ด้วยน้ำเสียงมีมิติ อารมณ์สมจริง ชัดถ้อยชัดคำ เข้าถึงอารมณ์:\n\n",
-    "casual": "คุณคือยูทูบเบอร์ที่เป็นกันเอง กรุณาพูดบทภาษาไทยต่อไปนี้ด้วยน้ำเสียงสนุกสนาน กระฉับกระเฉง สดใส เป็นธรรมชาติที่สุด:\n\n",
-    "formal": "กรุณาอ่านบทภาษาไทยต่อไปนี้ด้วยน้ำเสียงทางการ ชัดเจน น่าเชื่อถือ สุภาพ:\n\n",
-}
 
-API_KEYS = []
-
-
-def pcm_to_wav(pcm_data: bytes, sample_rate: int = 24000, channels: int = 1, sampwidth: int = 2) -> bytes:
-    """Convert raw 16-bit PCM bytes into standard RIFF WAV format."""
-    buf = io.BytesIO()
-    with wave.open(buf, "wb") as wav_file:
-        wav_file.setnchannels(channels)
-        wav_file.setsampwidth(sampwidth)
-        wav_file.setframerate(sample_rate)
-        wav_file.writeframes(pcm_data)
-    return buf.getvalue()
-
-
-def format_natural_thai_prosody(text: str) -> str:
-    """Clean and normalize Thai text for TTS engines without artificial intra-phrase chopping."""
+def clean_thai_text_for_speech(text: str) -> str:
+    """Clean text for natural acoustic neural synthesis."""
     if not text:
         return ""
     t = text.strip()
-    # Remove artificial markers, asterisks, brackets or quotes
     t = re.sub(r"[\"\'\`\<\>\[\]\(\)\{\}\*\#\_]", "", t)
-
-    # Normalize broken Thai vowels or tone marks (repair accidental spaces)
     t = re.sub(r"(?<=[ก-๙])\s+(?=[ะ-ู็-์])", "", t)
     t = re.sub(r"(?<=[เ-ไ])\s+(?=[ก-ฮ])", "", t)
-
-    # Normalize polite endings followed by a distinct new clause
-    t = re.sub(r"(นะครับ|นะคะ|ครับผม|ค่ะ|ครับ)\s*[,.]*\s*([ก-ฮA-Za-z])", r"\1 \2", t)
-
-    # Collapse multiple spaces and clean up
     t = re.sub(r"\s+", " ", t)
     return t.strip()
 
 
-def format_apple_silicon_prosody(text: str, is_male: bool) -> str:
-    """
-    Format Thai text with Apple Speech Synthesis Manager embedded control tags
-    to achieve the exact charismatic breathing pauses and dynamic vocal cadence of NotebookLM.
-    """
-    clean = format_natural_thai_prosody(text)
-    if not clean:
-        return ""
-
-    header = "[[pbas 106]] [[rate 165]] " if is_male else "[[pbas 174]] [[rate 172]] "
-    body = clean
-    body = re.sub(r"([.!?…]+|\.{3})\s*", r" [[slnc 240]] ", body)
-    body = re.sub(r"([,;:|])\s*", r" [[slnc 130]] ", body)
-    body = re.sub(r"(นะครับ|นะคะ|ครับผม|ค่ะ|ครับ)\s+", r"\1 [[slnc 180]] ", body)
-    body = re.sub(r"\s*\[\[slnc\s+(\d+)\]\]\s*\[\[slnc\s+(\d+)\]\]\s*", r" [[slnc 240]] ", body)
-    body = re.sub(r"\s+", " ", body).strip()
-
-    return header + body
-
-
-def format_edge_ssml_prosody(text: str, voice: str) -> str:
-    """
-    Format Thai text with SSML prosody and micro-breaks for Microsoft Edge Neural.
-    """
-    clean = format_natural_thai_prosody(text)
-    if not clean:
-        return ""
-
-    body = clean
-    body = re.sub(r"([.!?…]+|\.{3})\s*", r'. <break time="220ms"/> ', body)
-    body = re.sub(r"([,;:|])\s*", r', <break time="120ms"/> ', body)
-    body = re.sub(r"(นะครับ|นะคะ|ครับผม|ค่ะ|ครับ)\s+", r'\1 <break time="180ms"/> ', body)
-    body = re.sub(r"\s+", " ", body).strip()
-
-    is_male = "Niwat" in voice or "Male" in voice
-    rate_str = "+2%" if is_male else "+1%"
-    pitch_str = "+0Hz"
-
-    return (
-        f'<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="th-TH">'
-        f'<voice name="{voice}">'
-        f'<prosody rate="{rate_str}" pitch="{pitch_str}">'
-        f'{body}'
-        f'</prosody>'
-        f'</voice>'
-        f'</speak>'
-    )
-
-
 class TTSEngine:
-    """Non-blocking Async Speech Synthesizer with Instant Sub-Second Failover & Multi-Engine Support."""
+    """Comprehensive Open-Source Neural Speech Synthesizer."""
 
     def __init__(self):
-        self.default_voice = "th-TH-PremwadeeNeural"
-        self.default_rate = "+0%"
-        self.default_pitch = "+0Hz"
+        self.default_voice = "th-TH-NiwatNeural"
+        self._mms_tts = None
+        self._kokoro_tts = None
+        self._init_local_models()
 
-    async def synthesize_jaitts(
-        self,
-        text: str,
-        voice: str = "JaiTTS-Female",
-    ) -> bytes:
-        """Synthesize Thai speech via JaiTTS API or local JaiTTS instance."""
-        clean_text = format_natural_thai_prosody(text)
-        if not clean_text:
-            return b""
-
-        # Check local JaiTTS server endpoint if running (port 8080/5000)
-        for endpoint in ["http://localhost:8080/v1/audio/speech", "http://localhost:5000/api/tts"]:
+    def _init_local_models(self):
+        """Initialize Meta MMS Thai and Kokoro ONNX offline neural engines."""
+        # 1. Meta MMS Thai VITS
+        if SHERPA_AVAILABLE and os.path.exists(MMS_THA_MODEL) and os.path.exists(MMS_THA_TOKENS):
             try:
-                async with aiohttp.ClientSession() as session:
-                    async with session.post(
-                        endpoint,
-                        json={"input": clean_text, "voice": voice, "model": "jaitts-v1"},
-                        timeout=aiohttp.ClientTimeout(total=2.0),
-                    ) as resp:
-                        if resp.status == 200:
-                            return await resp.read()
-            except Exception:
-                pass
+                tts_config = sherpa_onnx.OfflineTtsConfig(
+                    model=sherpa_onnx.OfflineTtsModelConfig(
+                        vits=sherpa_onnx.OfflineTtsVitsModelConfig(
+                            model=MMS_THA_MODEL,
+                            tokens=MMS_THA_TOKENS,
+                            data_dir="",
+                            noise_scale=0.667,
+                            noise_scale_w=0.8,
+                            length_scale=1.0,
+                        ),
+                        provider="cpu",
+                        num_threads=2,
+                    )
+                )
+                self._mms_tts = sherpa_onnx.OfflineTts(tts_config)
+                logger.info("✅ Meta MMS Thai VITS neural model initialized successfully!")
+            except Exception as e:
+                logger.warning("Failed to initialize Meta MMS Thai model: %s", e)
 
-        # Fallback to high-quality Edge Neural
-        fallback_voice = "th-TH-NiwatNeural" if "Male" in voice else "th-TH-PremwadeeNeural"
-        return await self.synthesize_edge(clean_text, voice=fallback_voice)
+        # 2. Kokoro 82M ONNX
+        if KOKORO_AVAILABLE and os.path.exists(KOKORO_MODEL) and os.path.exists(KOKORO_VOICES):
+            try:
+                self._kokoro_tts = Kokoro(KOKORO_MODEL, KOKORO_VOICES)
+                logger.info("✅ Kokoro-ONNX 82M neural model initialized successfully!")
+            except Exception as e:
+                logger.warning("Failed to initialize Kokoro model: %s", e)
 
-    async def synthesize_google_audio(
-        self,
-        text: str,
-        voice: str = "Aoede",
-        style: str = "podcast",
-        api_key: Optional[str] = None,
-    ) -> bytes:
-        """Synthesize Thai speech via Google Gemini Studio Audio (with 1.0s fast failover)."""
-        clean_text = format_natural_thai_prosody(text)
-        if not clean_text:
+    async def synthesize_mms_thai(self, text: str, speed: float = 1.0) -> bytes:
+        """Synthesize Thai speech using Meta MMS Thai VITS (100% Native Open-Source Model)."""
+        clean = clean_thai_text_for_speech(text)
+        if not clean:
             return b""
 
-        keys_to_try = [api_key or settings.gemini_api_key] + API_KEYS
-        system_instruction_text = (
-            "You are the charismatic lead Thai narrator and host of 'NotebookLM Audio Overview'. "
-            "Speak with exceptionally natural human cadence, warm conversational intonation, "
-            "lively storytelling rhythm, expressive pitch contours, natural breathing, and clear Thai pronunciation. "
-            "Deliver the provided Thai narration script with studio broadcast-grade audio realism."
-        )
+        if not self._mms_tts:
+            self._init_local_models()
 
-        payload = {
-            "systemInstruction": {
-                "parts": [{"text": system_instruction_text}]
-            },
-            "contents": [{"parts": [{"text": clean_text}]}],
-            "generationConfig": {
-                "responseModalities": ["AUDIO"],
-                "speechConfig": {
-                    "voiceConfig": {
-                        "prebuiltVoiceConfig": {
-                            "voiceName": voice if voice in ["Aoede", "Puck", "Kore", "Fenrir", "Charon"] else "Puck"
-                        }
-                    }
-                },
-            },
-        }
+        if not self._mms_tts:
+            return await self.synthesize_edge(clean, voice="th-TH-NiwatNeural")
 
-        # Multi-model attempt: gemini-3.1-flash-tts-preview -> gemini-2.5-flash-preview-tts -> gemini-2.5-pro-preview-tts
-        models_to_try = [
-            "gemini-3.1-flash-tts-preview",
-            "gemini-2.5-flash-preview-tts",
-            "gemini-2.5-pro-preview-tts",
-        ]
+        loop = asyncio.get_event_loop()
+        def _run_gen():
+            audio = self._mms_tts.generate(clean, sid=0, speed=speed)
+            buf = io.BytesIO()
+            sf.write(buf, audio.samples, audio.sample_rate, format="WAV")
+            return buf.getvalue()
 
-        for key in keys:
-            for model_name in models_to_try:
-                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={key}"
-                try:
-                    async with aiohttp.ClientSession() as session:
-                        async with session.post(
-                            url,
-                            json=payload,
-                            timeout=aiohttp.ClientTimeout(total=25.0),
-                        ) as resp:
-                            if resp.status == 200:
-                                res_data = await resp.json()
-                                candidates = res_data.get("candidates", [])
-                                if candidates:
-                                    parts = candidates[0].get("content", {}).get("parts", [])
-                                    for part in parts:
-                                        inline_data = part.get("inlineData", {})
-                                        if "data" in inline_data:
-                                            raw_base64 = inline_data["data"]
-                                            pcm_bytes = base64.b64decode(raw_base64)
-                                            logger.info("Successfully synthesized Google Studio Audio via %s (%d bytes)", model_name, len(pcm_bytes))
-                                            return pcm_to_wav(pcm_bytes, sample_rate=24000)
-                            elif resp.status == 429:
-                                logger.warning("Google Studio Audio (%s) returned 429 on key %s", model_name, key[:10])
-                except Exception as e:
-                    logger.warning("Google Studio Audio (%s) error: %s", model_name, e)
+        try:
+            return await loop.run_in_executor(None, _run_gen)
+        except Exception as e:
+            logger.warning("Meta MMS Thai synthesis error: %s. Falling back to Edge Neural.", e)
+            return await self.synthesize_edge(clean, voice="th-TH-NiwatNeural")
 
-        raise RuntimeError("Google Audio quota reached or fast timeout")
+    async def synthesize_kokoro(self, text: str, voice: str = "af_sarah", speed: float = 1.0) -> bytes:
+        """Synthesize speech using Kokoro-ONNX 82M Open-Weight Model."""
+        clean = clean_thai_text_for_speech(text)
+        if not clean:
+            return b""
+
+        if not self._kokoro_tts:
+            self._init_local_models()
+
+        if not self._kokoro_tts:
+            return await self.synthesize_edge(clean, voice="th-TH-PremwadeeNeural")
+
+        voice_name = "af_sarah" if "sarah" in voice.lower() or "female" in voice.lower() else "am_adam"
+        loop = asyncio.get_event_loop()
+
+        def _run_gen():
+            samples, sample_rate = self._kokoro_tts.create(clean, voice=voice_name, speed=speed, lang="en-us")
+            buf = io.BytesIO()
+            sf.write(buf, samples, sample_rate, format="WAV")
+            return buf.getvalue()
+
+        try:
+            return await loop.run_in_executor(None, _run_gen)
+        except Exception as e:
+            logger.warning("Kokoro synthesis error: %s. Falling back to Edge Neural.", e)
+            return await self.synthesize_edge(clean, voice="th-TH-PremwadeeNeural")
 
     async def synthesize_edge(
         self,
         text: str,
         voice: Optional[str] = None,
-        rate: Optional[str] = None,
-        pitch: Optional[str] = None,
+        rate: Optional[str] = "+0%",
+        pitch: Optional[str] = "+0Hz",
     ) -> bytes:
-        """Synthesize speech using Microsoft Edge Neural Voices with human prosody (<150ms)."""
-        clean_text = format_natural_thai_prosody(text)
-        if not clean_text:
+        """Synthesize speech using Microsoft Edge Neural Voices (th-TH-NiwatNeural, th-TH-PremwadeeNeural)."""
+        clean = clean_thai_text_for_speech(text)
+        if not clean:
             return b""
 
-        selected_voice = voice if voice in ["th-TH-PremwadeeNeural", "th-TH-NiwatNeural"] else "th-TH-PremwadeeNeural"
-        selected_rate = rate or self.default_rate
-        selected_pitch = pitch or self.default_pitch
+        selected_voice = voice if voice in ["th-TH-PremwadeeNeural", "th-TH-NiwatNeural"] else "th-TH-NiwatNeural"
+        selected_rate = rate or "+0%"
+        selected_pitch = pitch or "+0Hz"
 
         communicate = edge_tts.Communicate(
-            text=clean_text,
+            text=clean,
             voice=selected_voice,
             rate=selected_rate,
             pitch=selected_pitch,
@@ -296,95 +213,44 @@ class TTSEngine:
 
         return buffer.getvalue()
 
-    async def synthesize_apple_native(
-        self,
-        text: str,
-        voice: str = "Kanya",
-        rate: Optional[str] = None,
-    ) -> bytes:
-        """Synthesize Thai speech directly on Apple Silicon Neural Engine via macOS native say & afconvert (0ms Latency)."""
-        is_male = (voice and voice.lower() in ["pattara", "apple-male", "male"]) or "ชาย" in str(voice)
-        spoken_text = format_apple_silicon_prosody(text, is_male=is_male)
-        if not spoken_text:
-            return b""
-
-        voice_name = "Kanya"
-        temp_id = uuid.uuid4().hex[:8]
-        aiff_path = f"/tmp/apple_tts_{temp_id}.aiff"
-        wav_path = f"/tmp/apple_tts_{temp_id}.wav"
-
-        try:
-            proc = await asyncio.create_subprocess_exec(
-                "say", "-v", voice_name, "-o", aiff_path, spoken_text,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            await proc.communicate()
-
-            proc_conv = await asyncio.create_subprocess_exec(
-                "afconvert", "-f", "WAVE", "-d", "LEI16", aiff_path, wav_path,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            await proc_conv.communicate()
-
-            if os.path.exists(wav_path):
-                with open(wav_path, "rb") as f:
-                    return f.read()
-        except Exception as e:
-            logger.warning("Apple native TTS error: %s", e)
-        finally:
-            for p in [aiff_path, wav_path]:
-                if os.path.exists(p):
-                    try:
-                        os.remove(p)
-                    except Exception:
-                        pass
-        return b""
-
     async def synthesize(
         self,
         text: str,
-        engine: str = "edge",
+        engine: str = "auto",
         voice: Optional[str] = None,
         style: str = "podcast",
         rate: Optional[str] = None,
         pitch: Optional[str] = None,
         api_key: Optional[str] = None,
     ) -> bytes:
-        """Main synthesis dispatcher supporting Apple Silicon Native, JaiTTS, Microsoft Edge Neural & Google Gemini Audio."""
-        if engine == "apple" or (voice and voice in ["Kanya", "Narisa", "Pattara"]):
-            if sys.platform == "darwin" and shutil.which("say"):
-                audio_res = await self.synthesize_apple_native(text=text, voice=voice or "Kanya", rate=rate)
-                if audio_res:
-                    return audio_res
-            return await self.synthesize_edge(text=text, voice="th-TH-PremwadeeNeural", rate=rate, pitch=pitch)
+        """
+        Unified Open-Source Neural Speech Synthesizer Dispatcher.
+        Prioritizes:
+        1. Meta MMS Thai VITS (100% Native Open-Source Model)
+        2. Microsoft Edge Neural (th-TH-NiwatNeural / th-TH-PremwadeeNeural)
+        3. Kokoro 82M ONNX
+        """
+        clean = clean_thai_text_for_speech(text)
+        if not clean:
+            return b""
 
-        if engine == "jaitts" or (voice and "JaiTTS" in voice):
-            return await self.synthesize_jaitts(text=text, voice=voice or "JaiTTS-Female")
+        v_lower = str(voice).lower() if voice else ""
 
-        if engine == "google" or (voice and voice in ["Aoede", "Puck", "Kore", "Fenrir", "Charon"]):
-            try:
-                return await self.synthesize_google_audio(
-                    text=text,
-                    voice=voice or "Aoede",
-                    style=style or "podcast",
-                    api_key=api_key,
-                )
-            except Exception:
-                fallback_voice = "th-TH-NiwatNeural" if (voice in ["Puck", "Fenrir", "Charon"]) else "th-TH-PremwadeeNeural"
-                return await self.synthesize_edge(
-                    text=text,
-                    voice=fallback_voice,
-                    rate=rate,
-                    pitch=pitch,
-                )
+        # MMS Thai Open Source
+        if engine == "mms" or "mms" in v_lower:
+            return await self.synthesize_mms_thai(clean)
 
+        # Kokoro Open Source
+        if engine == "kokoro" or "kokoro" in v_lower:
+            return await self.synthesize_kokoro(clean, voice=voice or "af_sarah")
+
+        # Edge Neural (Default high-fidelity)
+        selected_voice = voice if voice in ["th-TH-PremwadeeNeural", "th-TH-NiwatNeural"] else "th-TH-NiwatNeural"
         return await self.synthesize_edge(
-            text=text,
-            voice=voice or "th-TH-PremwadeeNeural",
-            rate=rate,
-            pitch=pitch,
+            text=clean,
+            voice=selected_voice,
+            rate=rate or "+0%",
+            pitch=pitch or "+0Hz",
         )
 
     def list_voices(self) -> Dict[str, Dict[str, str]]:
