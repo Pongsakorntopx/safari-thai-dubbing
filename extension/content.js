@@ -497,7 +497,7 @@
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
-          signal: AbortSignal.timeout(12000),
+          signal: AbortSignal.timeout(30000),
         });
         if (resp.ok) {
           const data = await resp.json();
@@ -742,44 +742,46 @@
       const targetTime = cur + state.targetBufferSeconds;
       const batchCues = state.timedCues.filter((c) => c.end >= cur && c.start <= targetTime);
       const toFetch = (batchCues.length > 0 ? batchCues : state.timedCues).slice(0, 32);
-      toFetch.forEach((c) => (c.status = 'fetching'));
-      updateHUDStatus(`⏳ กำลังเรียบเรียงบทพากย์ภาษาไทยและสร้างเสียงพากย์ 2 นาที (${toFetch.length} ท่อน)...`);
 
-      const batchRes = await fetchDubBatchDirect(toFetch);
-      if (batchRes && batchRes.success && batchRes.results) {
-        // Display Gemini key warnings on HUD/Toast if necessary
-        if (batchRes.gemini_status === 'depleted') {
-          showThaiCaptionToast('⚠️ วงเงิน Gemini Key หมดลงแล้ว (429) ระบบจะแปลด้วยเครื่องทดแทนชั่วคราว');
-          updateHUDStatus('⚠️ คีย์ Gemini หมดวงเงิน (429) แปลปกติ');
-        } else if (batchRes.gemini_status === 'invalid') {
-          showThaiCaptionToast('⚠️ Gemini Key ไม่ถูกต้อง (400) ระบบจะแปลด้วยเครื่องทดแทนชั่วคราว');
-          updateHUDStatus('⚠️ คีย์ Gemini ไม่ถูกต้อง (400) แปลปกติ');
-        }
+      // Divide toFetch into progressive sub-batches of 6 cues for immediate responsive progress bar updates
+      const chunkSize = 6;
+      let totalFetchedCues = 0;
 
-        const ctx = getAudioContext();
-        for (const item of batchRes.results) {
-          const cue = state.timedCues.find((c) => c.id === item.id);
-          if (cue) {
-            cue.translated = item.translatedText || cue.text;
-            cue.isMasterTrack = !!item.isMasterTrack;
-            if (item.base64Audio) {
-              try {
-                if (ctx) {
+      for (let i = 0; i < toFetch.length; i += chunkSize) {
+        if (!state.isDubbingActive) break;
+        const chunk = toFetch.slice(i, i + chunkSize);
+        chunk.forEach((c) => (c.status = 'fetching'));
+
+        const progressPercent = Math.round((totalFetchedCues / toFetch.length) * 100);
+        updateHUDStatus(`⏳ กำลังเรียบเรียงและสร้างเสียงพากย์ (${progressPercent}% - ท่อนที่ ${i + 1}/${toFetch.length})...`);
+
+        const batchRes = await fetchDubBatchDirect(chunk);
+        if (batchRes && batchRes.success && batchRes.results) {
+          const ctx = getAudioContext();
+          for (const item of batchRes.results) {
+            const cue = state.timedCues.find((c) => c.id === item.id);
+            if (cue) {
+              cue.translated = item.translatedText || cue.text;
+              cue.isMasterTrack = !!item.isMasterTrack;
+              if (item.base64Audio && ctx) {
+                try {
                   const arrayBuf = base64ToArrayBuffer(item.base64Audio);
                   cue.audioBuffer = await ctx.decodeAudioData(arrayBuf);
-                  cue.status = 'ready';
+                } catch (decErr) {
+                  console.error('[ThaiDubbing] Audio decode error:', decErr);
                 }
-              } catch (decErr) {
-                console.error('[ThaiDubbing] Audio decode error:', decErr);
-                cue.status = 'ready';
               }
-            } else {
-              cue.audioBuffer = null;
               cue.status = 'ready';
+              totalFetchedCues++;
             }
           }
+          updateBufferGauge();
         }
-        updateBufferGauge();
+
+        // Fast Start: When at least 45 seconds of speech are ready, start playing while remaining chunks load
+        if (state.bufferedSeconds >= 45 && state.isSyncBuffering) {
+          onBufferSyncComplete();
+        }
       }
 
       // 4. 2-Minute buffer is ready -> Automatically Play Video & Start Background Lookahead!
