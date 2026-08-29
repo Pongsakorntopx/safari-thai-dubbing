@@ -889,12 +889,10 @@
       const currentTime = video.currentTime;
       for (let i = 0; i < state.timedCues.length; i++) {
         const cue = state.timedCues[i];
-        if (cue.status === 'ready' && currentTime >= cue.start && currentTime <= cue.start + 3.0) {
+        if (cue.status === 'ready' && currentTime >= cue.start - 0.25 && currentTime <= cue.end + 2.5) {
           cue.status = 'played';
           if (cue.audioBuffer) {
-            if (!state.isPlaying) {
-              schedulePlayAudio(cue);
-            }
+            schedulePlayAudio(cue);
           } else if (cue.translated) {
             showThaiCaptionToast(cue.translated);
             updateHUDStatus(`🔊 พากย์: "${cue.translated.slice(0, 16)}..."`);
@@ -908,8 +906,8 @@
   function stopActivePlayback() {
     if (state.currentSource) {
       try {
-        if (state.currentGainNode && state.audioContext) {
-          state.currentGainNode.gain.linearRampToValueAtTime(0.01, state.audioContext.currentTime + 0.05);
+        if (state.currentGainNode && state.audioCtx) {
+          state.currentGainNode.gain.linearRampToValueAtTime(0.01, state.audioCtx.currentTime + 0.05);
           const oldSrc = state.currentSource;
           setTimeout(() => {
             try { oldSrc.stop(); } catch (e) {}
@@ -930,7 +928,9 @@
     const ctx = getAudioContext();
     if (!ctx) return;
 
-    unlockAudio();
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
 
     const video = findVideoElement();
     const videoSpeed = (video && video.playbackRate) ? video.playbackRate : 1.0;
@@ -938,16 +938,16 @@
     // Per-cue gain node for smooth cross-fading and natural rhythm
     const cueGain = ctx.createGain();
     cueGain.gain.setValueAtTime(1.0, ctx.currentTime);
-    cueGain.connect(state.clarityFilter || state.audioGainNode);
+    cueGain.connect(state.clarityFilter || state.audioGainNode || ctx.destination);
 
     // Smoothly fade out previous voice if still playing (no harsh cuts)
     if (state.currentSource && state.currentGainNode) {
       try {
-        state.currentGainNode.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.05);
+        state.currentGainNode.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.04);
         const oldSrc = state.currentSource;
         setTimeout(() => {
           try { oldSrc.stop(); } catch (e) {}
-        }, 60);
+        }, 50);
       } catch (e) {}
     }
 
