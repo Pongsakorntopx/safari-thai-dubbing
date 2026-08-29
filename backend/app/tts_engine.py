@@ -133,35 +133,63 @@ class ThaiNeuralMasterEngine:
         return self._khanomtan_v11
 
     async def _synthesize_studio_neural(self, text: str, voice_name: str, rate: str = "+0%") -> bytes:
-        """Synthesize ultra-high fidelity Studio Thai Neural speech with natural pacing."""
+        """Synthesize ultra-high fidelity Studio Thai Neural speech converted to pristine WAV."""
         try:
-            rate_str = rate if rate and rate != "+0%" else "+0%"
+            rate_str = "+0%"
+            if rate and rate != "+0%":
+                m = re.match(r"^([+-]?\d+)", str(rate))
+                if m:
+                    val = int(m.group(1))
+                    rate_str = f"{val:+d}%"
+
             communicate = edge_tts.Communicate(text, voice_name, rate=rate_str)
-            audio_data = b""
+            mp3_data = b""
             async for chunk in communicate.stream():
                 if chunk["type"] == "audio":
-                    audio_data += chunk["data"]
-            return audio_data
+                    mp3_data += chunk["data"]
+
+            if not mp3_data:
+                # Retry with default rate if failed
+                communicate = edge_tts.Communicate(text, voice_name, rate="+0%")
+                async for chunk in communicate.stream():
+                    if chunk["type"] == "audio":
+                        mp3_data += chunk["data"]
+
+            if not mp3_data:
+                return b""
+
+            # Convert to standard 24kHz 16-bit PCM WAV for 100% distortion-free WebKit playback
+            data, sr = sf.read(io.BytesIO(mp3_data))
+            out_buf = io.BytesIO()
+            sf.write(out_buf, data, sr, format="WAV", subtype="PCM_16")
+            return out_buf.getvalue()
         except Exception as e:
             logger.error("Studio Neural TTS error (%s): %s", voice_name, e)
             return b""
 
     async def _synthesize_khanomtan(self, text: str, speaker_idx: str) -> bytes:
-        """Synthesize using local offline KhanomTan v1.1."""
+        """Synthesize using local offline KhanomTan v1.1 with 1.30x natural cadence calibration."""
         loop = asyncio.get_event_loop()
 
         def _run():
             try:
+                import scipy.signal
                 model = self._get_khanomtan()
                 wav_path = model.tts(text=text, speaker_idx=speaker_idx, preprocess=True)
                 if wav_path and os.path.exists(wav_path):
-                    with open(wav_path, "rb") as f:
-                        data = f.read()
+                    data, sr = sf.read(wav_path)
                     try:
                         os.remove(wav_path)
                     except Exception:
                         pass
-                    return data
+
+                    # Calibrate KhanomTan speech speed from 0.75x to 1.30x natural conversational tempo
+                    num_samples = int(len(data) / 1.30)
+                    speed_data = scipy.signal.resample(data, num_samples)
+
+                    out_buf = io.BytesIO()
+                    sf.write(out_buf, speed_data, sr, format="WAV", subtype="PCM_16")
+                    return out_buf.getvalue()
             except Exception as e:
                 logger.error("KhanomTan TTS error: %s", e)
                 return b""
