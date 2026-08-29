@@ -17,8 +17,10 @@ async def test_health_check():
         data = response.json()
         assert data["status"] == "healthy"
         assert "voices" in data
-        assert "vits-thai-community" in data["voices"]
-        assert "khanomtan-v1" in data["voices"]
+        assert "khanomtan-v1.1-female" in data["voices"]
+        assert "khanomtan-v1.1-male" in data["voices"]
+        assert "vits-thai-female" in data["voices"]
+        assert "vits-thai-male" in data["voices"]
 
 
 @pytest.mark.asyncio
@@ -30,8 +32,10 @@ async def test_list_voices():
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
-        assert "vits-thai-community" in data["voices"]
-        assert "khanomtan-v1" in data["voices"]
+        assert "khanomtan-v1.1-female" in data["voices"]
+        assert "khanomtan-v1.1-male" in data["voices"]
+        assert "vits-thai-female" in data["voices"]
+        assert "vits-thai-male" in data["voices"]
 
 
 @pytest.mark.asyncio
@@ -44,7 +48,7 @@ async def test_dub_endpoint_cached():
         ) as ac:
             payload = {
                 "text": "Hello world",
-                "voice": "khanomtan-v1",
+                "voice": "khanomtan-v1.1-female",
                 "rate": "+0%",
             }
             response = await ac.post("/api/v1/dub", json=payload)

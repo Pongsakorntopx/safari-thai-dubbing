@@ -110,13 +110,13 @@ def resolve_auto_settings(
     context: str = "",
 ):
     """
-    Thai VITS & KhanomTan Voice Resolver:
+    Thai VITS & KhanomTan v1.1 Voice Resolver:
     - Pure Open-Source Thai VITS Architecture (PyThaiNLP / AI Community / Wannaphong).
-    - Honors user selected voice (vits-thai-community, khanomtan-v1, khanomtan-v1.1).
+    - Supports Male and Female options for both KhanomTan v1.1 and VITS Thai.
     """
-    voice = req_voice if req_voice in VOICE_REGISTRY else "vits-thai-community"
-    reg = VOICE_REGISTRY.get(voice, VOICE_REGISTRY["vits-thai-community"])
-    engine = reg.get("engine", "vits_thai")
+    voice = req_voice if req_voice in VOICE_REGISTRY else "khanomtan-v1.1-female"
+    reg = VOICE_REGISTRY.get(voice, VOICE_REGISTRY["khanomtan-v1.1-female"])
+    engine = reg.get("engine", "khanomtan")
     gender = reg.get("gender", "female")
     style = req_style or "auto"
     return engine, voice, style, gender
@@ -334,11 +334,12 @@ async def dub_cues_batch(req: BatchDubRequest):
         custom_key=custom_key,
     )
 
-    # 2. Hard-Locked Selected Thai VITS Voice (100% consistent across entire video)
-    target_voice = voice if voice in VOICE_REGISTRY else "vits-thai-community"
-    voice_meta = VOICE_REGISTRY.get(target_voice, VOICE_REGISTRY["vits-thai-community"])
-    voice_display_name = voice_meta.get("name", "🇹🇭 VITS Thai Master")
-    target_engine = voice_meta.get("engine", "vits_thai")
+    # 2. Hard-Locked Selected Thai VITS / KhanomTan Voice (100% consistent across entire video)
+    target_voice = voice if voice in VOICE_REGISTRY else "khanomtan-v1.1-female"
+    voice_meta = VOICE_REGISTRY.get(target_voice, VOICE_REGISTRY["khanomtan-v1.1-female"])
+    voice_display_name = voice_meta.get("name", "🧁 ขนมตาล v1.1: หญิง")
+    target_engine = voice_meta.get("engine", "khanomtan")
+    speaker_gender = voice_meta.get("gender", "female")
 
     sem = asyncio.Semaphore(1)
 
@@ -349,7 +350,6 @@ async def dub_cues_batch(req: BatchDubRequest):
 
         cue_engine = target_engine
         cue_voice = target_voice
-        speaker_gender = "female"
 
         # 🎯 Original Video Speech Cadence & Exact Duration Pacing (WPS / WPM)
         words_count = len(cue.text.split())

@@ -1,11 +1,10 @@
 """
-Thai VITS & KhanomTan TTS Master Engine (โมเดล VITS ภาษาไทยแท้ & ขนมตาล)
-Models:
-  1. 🇹🇭 VITS Thai Community (facebook/mms-tts-tha) - End-to-End VITS Architecture
-     Trained on massive Thai speech data (TSync2, Lotus Corpus, Thai Common Voice)
-     Features: Ultra-precise 5 Thai tones (สามัญ เอก โท ตรี จัตวา) & vowel duration control.
-  2. 🧁 KhanomTan TTS v1.0 (wannaphong/khanomtan-tts-v1.0) - By Wannaphong (PyThaiNLP)
-  3. 🧁 KhanomTan TTS v1.1 (wannaphong/khanomtan-tts-v1.1) - Updated Open-Source VITS
+Thai VITS & KhanomTan TTS v1.1 Master Engine (โมเดล VITS ภาษาไทยแท้ & ขนมตาล v1.1)
+Voices:
+  1. 🧁 ขนมตาล v1.1: หญิง (khanomtan-v1.1-female) - Linda
+  2. 🧁 ขนมตาล v1.1: ชาย (khanomtan-v1.1-male) - Thorsten
+  3. 🇹🇭 VITS Thai: หญิง (vits-thai-female) - MMS VITS Standard
+  4. 🇹🇭 VITS Thai: ชาย (vits-thai-male) - MMS VITS Resonant Male
 """
 
 import asyncio
@@ -17,6 +16,8 @@ import tempfile
 import threading
 from typing import Dict, Optional
 
+import numpy as np
+import scipy.signal
 import soundfile as sf
 import torch
 
@@ -30,34 +31,43 @@ except Exception:
 
 try:
     from transformers import AutoTokenizer, VitsModel
-except Exception as e:
+except Exception:
     VitsModel = None
     AutoTokenizer = None
 
 logger = logging.getLogger(__name__)
 
-# Master Voice Registry for Thai VITS Models
+# Master Voice Registry for KhanomTan v1.1 and VITS Thai
 VOICE_REGISTRY: Dict[str, Dict[str, str]] = {
-    "vits-thai-community": {
-        "id": "vits-thai-community",
-        "name": "🇹🇭 VITS Thai Master (โมเดล VITS เสียงไทยแท้ • ชุมชน AI ไทย / PyThaiNLP)",
+    "khanomtan-v1.1-female": {
+        "id": "khanomtan-v1.1-female",
+        "name": "🧁 ขนมตาล v1.1: หญิง (KhanomTan Thai Female • Apache 2.0)",
+        "gender": "female",
+        "engine": "khanomtan",
+        "speaker_idx": "Linda",
+        "desc": "โมเดลเสียงขนมตาล v1.1 เสียงผู้หญิง นุ่มนวล ชัดเจน เป็นธรรมชาติ",
+    },
+    "khanomtan-v1.1-male": {
+        "id": "khanomtan-v1.1-male",
+        "name": "🧁 ขนมตาล v1.1: ชาย (KhanomTan Thai Male • Apache 2.0)",
+        "gender": "male",
+        "engine": "khanomtan",
+        "speaker_idx": "Thorsten",
+        "desc": "โมเดลเสียงขนมตาล v1.1 เสียงผู้ชาย อบอุ่น ทุ้มนุ่ม ชัดถ้อยชัดคำ",
+    },
+    "vits-thai-female": {
+        "id": "vits-thai-female",
+        "name": "🇹🇭 VITS Thai: หญิง (VITS Thai Female • AI Community)",
         "gender": "female",
         "engine": "vits_thai",
-        "desc": "สถาปัตยกรรม VITS เทรนบนชุดข้อมูลเสียงไทยขนาดใหญ่ (TSync2/Lotus) แม่นยำวรรณยุกต์ 5 เสียงและสระสั้นยาว",
+        "desc": "โมเดล VITS เสียงไทยแท้ เสียงผู้หญิง วรรณยุกต์ 5 เสียงเป๊ะ สระสั้น-ยาวแม่นยำ",
     },
-    "khanomtan-v1": {
-        "id": "khanomtan-v1",
-        "name": "🧁 ขนมตาล (KhanomTan TTS v1.0 • PyThaiNLP YourTTS/VITS)",
-        "gender": "female",
-        "engine": "khanomtan",
-        "desc": "โมเดลเสียงสังเคราะห์ภาษาไทยโอเพ่นซอร์ส KhanomTan v1.0 โดย วรรณพงษ์ ภัททิยไพบูลย์ (PyThaiNLP)",
-    },
-    "khanomtan-v1.1": {
-        "id": "khanomtan-v1.1",
-        "name": "🧁 ขนมตาล (KhanomTan TTS v1.1 • อัปเดตใหม่ Apache 2.0)",
-        "gender": "female",
-        "engine": "khanomtan",
-        "desc": "โมเดลเสียงสังเคราะห์ภาษาไทย KhanomTan v1.1 ปรับปรุงใหม่",
+    "vits-thai-male": {
+        "id": "vits-thai-male",
+        "name": "🇹🇭 VITS Thai: ชาย (VITS Thai Male • AI Community)",
+        "gender": "male",
+        "engine": "vits_thai",
+        "desc": "โมเดล VITS เสียงไทยแท้ เสียงผู้ชาย ทุ้มลึก สุภาพ ชัดเจน",
     },
 }
 
@@ -95,13 +105,26 @@ def clean_thai_text_for_speech(text: str) -> str:
     return t.strip()
 
 
+def pitch_shift_male(audio_np: np.ndarray, sr: int = 16000) -> np.ndarray:
+    """Pitch shift to create a resonant, warm, natural Thai male voice from VITS."""
+    try:
+        import librosa
+        shifted = librosa.effects.pitch_shift(audio_np, sr=sr, n_steps=-3.5)
+        return shifted
+    except Exception:
+        # Fallback DSP pitch shift using resample + linear interpolation
+        factor = 0.82
+        indices = np.round(np.arange(0, len(audio_np), factor)).astype(int)
+        indices = indices[indices < len(audio_np)]
+        return audio_np[indices]
+
+
 class ThaiVitsMasterEngine:
-    """Master Thai VITS & KhanomTan TTS Engine with resilient cloud-first loader."""
+    """Master Thai VITS & KhanomTan TTS v1.1 Engine."""
 
     def __init__(self):
         self._vits_model = None
         self._vits_tokenizer = None
-        self._khanomtan_v1 = None
         self._khanomtan_v11 = None
         self._lock = threading.Lock()
 
@@ -116,32 +139,22 @@ class ThaiVitsMasterEngine:
                     logger.info("✅ VITS Thai Community loaded successfully!")
         return self._vits_model, self._vits_tokenizer
 
-    def _get_khanomtan(self, version: str = "1.0"):
-        """Lazy load KhanomTan TTS (v1.0 or v1.1) with PyThaiTTS."""
-        if version == "1.1":
-            if self._khanomtan_v11 is None:
-                with self._lock:
-                    if self._khanomtan_v11 is None:
-                        logger.info("🧁 Loading KhanomTan TTS v1.1...")
-                        from pythaitts import TTS
-                        self._khanomtan_v11 = TTS(pretrained="khanomtan", version="1.1")
-                        logger.info("✅ KhanomTan TTS v1.1 loaded successfully!")
-            return self._khanomtan_v11
-        else:
-            if self._khanomtan_v1 is None:
-                with self._lock:
-                    if self._khanomtan_v1 is None:
-                        logger.info("🧁 Loading KhanomTan TTS v1.0...")
-                        from pythaitts import TTS
-                        self._khanomtan_v1 = TTS(pretrained="khanomtan", version="1.0")
-                        logger.info("✅ KhanomTan TTS v1.0 loaded successfully!")
-            return self._khanomtan_v1
+    def _get_khanomtan(self):
+        """Lazy load KhanomTan TTS v1.1."""
+        if self._khanomtan_v11 is None:
+            with self._lock:
+                if self._khanomtan_v11 is None:
+                    logger.info("🧁 Loading KhanomTan TTS v1.1...")
+                    from pythaitts import TTS
+                    self._khanomtan_v11 = TTS(pretrained="khanomtan", version="1.1")
+                    logger.info("✅ KhanomTan TTS v1.1 loaded successfully!")
+        return self._khanomtan_v11
 
     async def synthesize(
         self,
         text: str,
-        voice: str = "vits-thai-community",
-        engine: str = "vits_thai",
+        voice: str = "khanomtan-v1.1-female",
+        engine: str = "khanomtan",
         style: str = "auto",
         gender: str = "female",
         rate: str = "+0%",
@@ -149,20 +162,29 @@ class ThaiVitsMasterEngine:
         **kwargs,
     ) -> bytes:
         """
-        Synthesize Thai speech using selected Thai VITS or KhanomTan Model.
-        Returns WAV audio bytes.
+        Synthesize Thai speech using selected voice:
+        - khanomtan-v1.1-female (Linda)
+        - khanomtan-v1.1-male (Thorsten)
+        - vits-thai-female (VITS Female)
+        - vits-thai-male (VITS Male)
         """
         cleaned_text = clean_thai_text_for_speech(text)
         if not cleaned_text:
             return b""
 
+        # Normalize legacy voice aliases
+        if voice in ["khanomtan-v1.1", "khanomtan-v1", "khanomtan"]:
+            voice = "khanomtan-v1.1-female" if gender == "female" else "khanomtan-v1.1-male"
+        elif voice in ["vits-thai-community", "vits_thai"]:
+            voice = "vits-thai-female" if gender == "female" else "vits-thai-male"
+
         loop = asyncio.get_event_loop()
 
         def _run_tts() -> bytes:
-            # 1. KhanomTan TTS v1.1
-            if voice == "khanomtan-v1.1":
+            # 1. KhanomTan TTS v1.1: Female (Linda)
+            if voice == "khanomtan-v1.1-female":
                 try:
-                    model = self._get_khanomtan(version="1.1")
+                    model = self._get_khanomtan()
                     wav_path = model.tts(text=cleaned_text, speaker_idx="Linda", preprocess=True)
                     if wav_path and os.path.exists(wav_path):
                         with open(wav_path, "rb") as f:
@@ -173,13 +195,13 @@ class ThaiVitsMasterEngine:
                             pass
                         return data
                 except Exception as e:
-                    logger.warning("KhanomTan v1.1 fallback to MMS VITS: %s", e)
+                    logger.warning("KhanomTan v1.1 female fallback: %s", e)
 
-            # 2. KhanomTan TTS v1.0
-            elif voice == "khanomtan-v1":
+            # 2. KhanomTan TTS v1.1: Male (Thorsten)
+            elif voice == "khanomtan-v1.1-male":
                 try:
-                    model = self._get_khanomtan(version="1.0")
-                    wav_path = model.tts(text=cleaned_text, speaker_idx="Linda", preprocess=True)
+                    model = self._get_khanomtan()
+                    wav_path = model.tts(text=cleaned_text, speaker_idx="Thorsten", preprocess=True)
                     if wav_path and os.path.exists(wav_path):
                         with open(wav_path, "rb") as f:
                             data = f.read()
@@ -189,20 +211,37 @@ class ThaiVitsMasterEngine:
                             pass
                         return data
                 except Exception as e:
-                    logger.warning("KhanomTan v1.0 fallback to MMS VITS: %s", e)
+                    logger.warning("KhanomTan v1.1 male fallback: %s", e)
 
-            # 3. Default / Primary: VITS Thai Community (facebook/mms-tts-tha)
-            try:
-                model, tokenizer = self._get_vits_community()
-                inputs = tokenizer(cleaned_text, return_tensors="pt")
-                with torch.no_grad():
-                    output = model(**inputs).waveform
-                wav_np = output.squeeze().cpu().numpy()
-                buf = io.BytesIO()
-                sf.write(buf, wav_np, model.config.sampling_rate, format="WAV")
-                return buf.getvalue()
-            except Exception as e:
-                logger.error("VITS Thai synthesis error: %s", e)
+            # 3. VITS Thai: Male
+            elif voice == "vits-thai-male":
+                try:
+                    model, tokenizer = self._get_vits_community()
+                    inputs = tokenizer(cleaned_text, return_tensors="pt")
+                    with torch.no_grad():
+                        output = model(**inputs).waveform
+                    wav_np = output.squeeze().cpu().numpy()
+                    sr = model.config.sampling_rate
+                    wav_male = pitch_shift_male(wav_np, sr=sr)
+                    buf = io.BytesIO()
+                    sf.write(buf, wav_male, sr, format="WAV")
+                    return buf.getvalue()
+                except Exception as e:
+                    logger.error("VITS Thai male synthesis error: %s", e)
+
+            # 4. VITS Thai: Female (Default VITS)
+            else:
+                try:
+                    model, tokenizer = self._get_vits_community()
+                    inputs = tokenizer(cleaned_text, return_tensors="pt")
+                    with torch.no_grad():
+                        output = model(**inputs).waveform
+                    wav_np = output.squeeze().cpu().numpy()
+                    buf = io.BytesIO()
+                    sf.write(buf, wav_np, model.config.sampling_rate, format="WAV")
+                    return buf.getvalue()
+                except Exception as e:
+                    logger.error("VITS Thai female synthesis error: %s", e)
 
             return b""
 
@@ -222,7 +261,7 @@ class ThaiVitsMasterEngine:
         return b""
 
     def list_voices(self) -> Dict[str, Dict[str, str]]:
-        """List registered Thai VITS voice models."""
+        """List registered Thai VITS & KhanomTan voice models."""
         return VOICE_REGISTRY
 
 

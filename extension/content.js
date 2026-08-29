@@ -10,8 +10,8 @@
   // --- Runtime State ---
   const state = {
     enabled: true,
-    engine: 'vits_thai',
-    voice: 'vits-thai-community',
+    engine: 'khanomtan',
+    voice: 'khanomtan-v1.1-female',
     gender: 'female',
     style: 'auto',
     rate: '+0%',
@@ -44,9 +44,10 @@
   };
 
   const VOICES = [
-    { id: 'vits-thai-community', name: '🇹🇭 VITS Thai Master (โมเดล VITS เสียงไทยแท้ • ชุมชน AI ไทย / PyThaiNLP)', engine: 'vits_thai', gender: 'female' },
-    { id: 'khanomtan-v1', name: '🧁 ขนมตาล (KhanomTan TTS v1.0 • PyThaiNLP YourTTS/VITS)', engine: 'khanomtan', gender: 'female' },
-    { id: 'khanomtan-v1.1', name: '🧁 ขนมตาล (KhanomTan TTS v1.1 • อัปเดตใหม่ Apache 2.0)', engine: 'khanomtan', gender: 'female' },
+    { id: 'khanomtan-v1.1-female', name: '🧁 ขนมตาล v1.1: หญิง (Thai Female)', engine: 'khanomtan', gender: 'female' },
+    { id: 'khanomtan-v1.1-male', name: '🧁 ขนมตาล v1.1: ชาย (Thai Male)', engine: 'khanomtan', gender: 'male' },
+    { id: 'vits-thai-female', name: '🇹🇭 VITS Thai: หญิง (Thai Female)', engine: 'vits_thai', gender: 'female' },
+    { id: 'vits-thai-male', name: '🇹🇭 VITS Thai: ชาย (Thai Male)', engine: 'vits_thai', gender: 'male' },
   ];
 
   const STYLES = [

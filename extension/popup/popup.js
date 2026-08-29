@@ -3,9 +3,10 @@
  */
 
 const VITS_VOICES = [
-  { id: 'vits-thai-community', name: '🇹🇭 VITS Thai Master (โมเดล VITS เสียงไทยแท้ • ชุมชน AI ไทย / PyThaiNLP)' },
-  { id: 'khanomtan-v1', name: '🧁 ขนมตาล (KhanomTan TTS v1.0 • PyThaiNLP YourTTS/VITS)' },
-  { id: 'khanomtan-v1.1', name: '🧁 ขนมตาล (KhanomTan TTS v1.1 • อัปเดตใหม่ Apache 2.0)' },
+  { id: 'khanomtan-v1.1-female', name: '🧁 ขนมตาล v1.1: หญิง (Thai Female • Apache 2.0)' },
+  { id: 'khanomtan-v1.1-male', name: '🧁 ขนมตาล v1.1: ชาย (Thai Male • Apache 2.0)' },
+  { id: 'vits-thai-female', name: '🇹🇭 VITS Thai: หญิง (VITS Female • AI Community)' },
+  { id: 'vits-thai-male', name: '🇹🇭 VITS Thai: ชาย (VITS Male • AI Community)' },
 ];
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -56,11 +57,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     updateStatusBadge(enabledToggle.checked);
 
-    const activeEngine = data.engine || 'google';
-    engineSelect.value = activeEngine;
+    const activeEngine = data.engine || 'khanomtan';
+    engineSelect.value = 'vits_thai';
 
-    const defaultVoice = activeEngine === 'edge' ? 'th-TH-PremwadeeNeural' : 'Puck';
-    populateVoices(activeEngine, data.voice || defaultVoice);
+    const defaultVoice = 'khanomtan-v1.1-female';
+    populateVoices(data.voice || defaultVoice);
 
     if (data.style) styleSelect.value = data.style;
     if (data.rate) rateSelect.value = data.rate;
