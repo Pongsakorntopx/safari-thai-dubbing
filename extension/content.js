@@ -820,51 +820,77 @@
     }, 50);
   }
 
-  // --- Natural Pitch-Preserved Speech Audio Playback ---
+  function stopActivePlayback() {
+    if (state.currentSource) {
+      try {
+        if (state.currentGainNode && state.audioContext) {
+          state.currentGainNode.gain.linearRampToValueAtTime(0.01, state.audioContext.currentTime + 0.05);
+          const oldSrc = state.currentSource;
+          setTimeout(() => {
+            try { oldSrc.stop(); } catch (e) {}
+          }, 60);
+        } else {
+          state.currentSource.stop();
+        }
+      } catch (e) {}
+      state.currentSource = null;
+      state.currentGainNode = null;
+    }
+    state.isPlaying = false;
+  }
+
+  // --- Natural Pitch-Preserved Speech Audio Playback with Smooth Cross-Fading ---
   function schedulePlayAudio(cue) {
     if (!cue.audioBuffer) return;
     const ctx = getAudioContext();
     if (!ctx) return;
 
-    stopActivePlayback();
     unlockAudio();
 
     const video = findVideoElement();
-    const source = ctx.createBufferSource();
-    source.buffer = cue.audioBuffer;
-    source.connect(state.audioGainNode);
-    state.currentSource = source;
-    state.isPlaying = true;
-
-    // Couple playback rate strictly with YouTube video player speed (Default 1.0x)
     const videoSpeed = (video && video.playbackRate) ? video.playbackRate : 1.0;
 
-    // Never stretch/pitch-down human voice below 1.0x (prevents slow-motion tape distortion)
-    // If cue is very tight, apply only mild acceleration (max 1.12x)
-    const targetDuration = Math.max(0.5, cue.end - cue.start);
-    const actualDuration = cue.audioBuffer.duration;
-    
-    let rateFactor = 1.0;
-    if (actualDuration > targetDuration + 0.4) {
-      rateFactor = Math.min(1.12, actualDuration / targetDuration);
+    // Per-cue gain node for smooth cross-fading and natural rhythm
+    const cueGain = ctx.createGain();
+    cueGain.gain.setValueAtTime(1.0, ctx.currentTime);
+    cueGain.connect(state.audioGainNode);
+
+    // Smoothly fade out previous voice if still playing (no harsh cuts)
+    if (state.currentSource && state.currentGainNode) {
+      try {
+        state.currentGainNode.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.05);
+        const oldSrc = state.currentSource;
+        setTimeout(() => {
+          try { oldSrc.stop(); } catch (e) {}
+        }, 60);
+      } catch (e) {}
     }
 
-    const finalPlaybackRate = rateFactor * videoSpeed;
+    const source = ctx.createBufferSource();
+    source.buffer = cue.audioBuffer;
+    source.connect(cueGain);
+    
+    // Natural human voice tempo matching video speed (no pitch shifting)
     try {
-      source.playbackRate.setValueAtTime(finalPlaybackRate, ctx.currentTime);
-    } catch (rateErr) {
-      console.warn('[ThaiDubbing] Playback rate set error:', rateErr);
-    }
+      source.playbackRate.setValueAtTime(videoSpeed, ctx.currentTime);
+    } catch (rateErr) {}
+
+    state.currentSource = source;
+    state.currentGainNode = cueGain;
+    state.isPlaying = true;
 
     applyAudioDucking();
     showThaiCaptionToast(cue.translated);
     updateHUDStatus(`🔊 พากย์: "${cue.translated.slice(0, 16)}..."`);
 
     source.onended = () => {
-      state.currentSource = null;
-      state.isPlaying = false;
-      restoreVideoVolume();
-      updateBufferGauge();
+      if (state.currentSource === source) {
+        state.currentSource = null;
+        state.currentGainNode = null;
+        state.isPlaying = false;
+        restoreVideoVolume();
+        updateBufferGauge();
+      }
     };
 
     source.start(0);
