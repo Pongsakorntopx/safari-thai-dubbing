@@ -11,7 +11,7 @@ const DEFAULT_SETTINGS = {
   rate: '+0%',
   dubVolume: 1.0,
   duckVolume: 0.2,
-  backendUrl: 'https://pongsakorntopz-thai-dubbing-api.hf.space',
+  backendUrl: 'https://thai-dubbing-api.onrender.com',
   customGeminiKey: '',
 };
 

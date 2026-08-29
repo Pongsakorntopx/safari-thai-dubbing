@@ -18,7 +18,7 @@
     rate: '+0%',
     dubVolume: 1.0,
     duckVolume: 0.2,
-    backendUrl: 'https://pongsakorntopz-thai-dubbing-api.hf.space',
+    backendUrl: 'https://thai-dubbing-api.onrender.com',
     customGeminiKey: '',
     isCollapsed: false,
     showSettingsModal: false,
@@ -189,9 +189,88 @@
     return titleEl ? titleEl.textContent.trim() : document.title;
   }
 
+  // --- Client-Side YouTube Subtitle Extractor (100% Reliable Fallback for Cloud Backends) ---
+  async function extractClientSideSubtitles(videoId) {
+    try {
+      let captionTracks = [];
+      if (window.ytInitialPlayerResponse && window.ytInitialPlayerResponse.captions) {
+        const caps = window.ytInitialPlayerResponse.captions.playerCaptionsTracklistRenderer;
+        if (caps && caps.captionTracks) {
+          captionTracks = caps.captionTracks;
+        }
+      }
+
+      if (!captionTracks.length) {
+        const scripts = document.querySelectorAll('script');
+        for (const s of scripts) {
+          if (s.textContent && s.textContent.includes('ytInitialPlayerResponse')) {
+            const match = s.textContent.match(/ytInitialPlayerResponse\s*=\s*(\{.+?\});/);
+            if (match) {
+              try {
+                const parsed = JSON.parse(match[1]);
+                if (parsed && parsed.captions && parsed.captions.playerCaptionsTracklistRenderer) {
+                  captionTracks = parsed.captions.playerCaptionsTracklistRenderer.captionTracks || [];
+                  if (captionTracks.length) break;
+                }
+              } catch (pe) {}
+            }
+          }
+        }
+      }
+
+      if (!captionTracks.length) return null;
+
+      let chosenTrack = captionTracks.find((t) => t.languageCode === 'en' || t.languageCode === 'en-US') ||
+                        captionTracks.find((t) => t.languageCode === 'th') ||
+                        captionTracks[0];
+
+      if (!chosenTrack || !chosenTrack.baseUrl) return null;
+
+      const trackUrl = chosenTrack.baseUrl + '&fmt=json3';
+      const resp = await fetch(trackUrl);
+      if (!resp.ok) return null;
+      const data = await resp.json();
+
+      if (!data.events || !data.events.length) return null;
+
+      const rawCues = [];
+      let cueId = 1;
+      let curCue = null;
+
+      for (const ev of data.events) {
+        if (!ev.segs || !ev.segs.length) continue;
+        const text = ev.segs.map((s) => s.utf8 || '').join('').replace(/\n/g, ' ').trim();
+        if (!text || text.startsWith('[')) continue;
+
+        const start = (ev.tStartMs || 0) / 1000.0;
+        const dur = (ev.dDurationMs || 0) / 1000.0;
+        const end = start + dur;
+
+        if (!curCue) {
+          curCue = { id: cueId++, start: parseFloat(start.toFixed(2)), end: parseFloat(end.toFixed(2)), text };
+        } else {
+          curCue.text += ' ' + text;
+          curCue.end = parseFloat(end.toFixed(2));
+        }
+
+        const isEnd = /[.!?。！？]$/.test(text) || (curCue.end - curCue.start >= 4.5);
+        if (isEnd) {
+          rawCues.push(curCue);
+          curCue = null;
+        }
+      }
+      if (curCue) rawCues.push(curCue);
+
+      return rawCues.length ? { success: true, videoId, cues: rawCues } : null;
+    } catch (e) {
+      console.warn('[ThaiDubbing] Client-side subtitle extraction error:', e);
+      return null;
+    }
+  }
+
   // --- Background-Proxied API Requests (Bypasses Safari Mixed Content / CORS) ---
-  function fetchTranscriptDirect(videoId) {
-    return new Promise((resolve) => {
+  async function fetchTranscriptDirect(videoId) {
+    const backendResult = await new Promise((resolve) => {
       chrome.runtime.sendMessage(
         {
           type: 'FETCH_TRANSCRIPT',
@@ -201,15 +280,27 @@
           },
         },
         (res) => {
-          if (chrome.runtime.lastError || !res) {
-            console.warn('[ThaiDubbing] Transcript fetch error:', chrome.runtime.lastError);
-            resolve({ success: false, cues: [] });
+          if (chrome.runtime.lastError || !res || !res.success || !res.cues || res.cues.length === 0) {
+            resolve(null);
           } else {
             resolve(res);
           }
         }
       );
     });
+
+    if (backendResult && backendResult.cues && backendResult.cues.length > 0) {
+      return backendResult;
+    }
+
+    console.log('[ThaiDubbing] Using Client-side YouTube Subtitle Extractor fallback...');
+    const clientResult = await extractClientSideSubtitles(videoId);
+    if (clientResult && clientResult.cues && clientResult.cues.length > 0) {
+      console.log(`[ThaiDubbing] Client-side extractor loaded ${clientResult.cues.length} cues!`);
+      return clientResult;
+    }
+
+    return { success: false, cues: [] };
   }
 
   function fetchDubBatchDirect(cues) {
