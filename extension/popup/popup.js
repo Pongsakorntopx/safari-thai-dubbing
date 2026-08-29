@@ -5,8 +5,6 @@
 const VITS_VOICES = [
   { id: 'studio-thai-female', name: '🎙️ สตูดิโอ นิวรัล: หญิง (Premwadee • สมจริง 100% แนะนำ)' },
   { id: 'studio-thai-male', name: '🎙️ สตูดิโอ นิวรัล: ชาย (Niwat • ทุ้มนุ่ม มืออาชีพ 100%)' },
-  { id: 'khanomtan-v1.1-female', name: '🧁 ขนมตาล v1.1: หญิง (Linda • Thai Open-Source)' },
-  { id: 'khanomtan-v1.1-male', name: '🧁 ขนมตาล v1.1: ชาย (Thorsten • Thai Open-Source)' },
 ];
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -63,10 +61,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       subtitleToggle.checked = !!data.showSubtitles;
     }
 
-    const activeEngine = data.engine || 'khanomtan';
-    engineSelect.value = 'vits_thai';
+    const activeEngine = data.engine || 'studio_neural';
+    if (engineSelect) engineSelect.value = 'studio_neural';
 
-    const defaultVoice = 'khanomtan-v1.1-female';
+    const defaultVoice = 'studio-thai-female';
     populateVoices(data.voice || defaultVoice);
 
     if (data.style) styleSelect.value = data.style;

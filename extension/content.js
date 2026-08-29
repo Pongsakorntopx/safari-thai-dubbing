@@ -10,8 +10,8 @@
   // --- Runtime State ---
   const state = {
     enabled: true,
-    engine: 'khanomtan',
-    voice: 'khanomtan-v1.1-female',
+    engine: 'studio_neural',
+    voice: 'studio-thai-female',
     gender: 'female',
     style: 'auto',
     rate: '+0%',
@@ -46,8 +46,6 @@
   const VOICES = [
     { id: 'studio-thai-female', name: '🎙️ สตูดิโอ นิวรัล: หญิง (Premwadee • สมจริง 100%)', engine: 'studio_neural', gender: 'female' },
     { id: 'studio-thai-male', name: '🎙️ สตูดิโอ นิวรัล: ชาย (Niwat • ทุ้มนุ่ม มืออาชีพ 100%)', engine: 'studio_neural', gender: 'male' },
-    { id: 'khanomtan-v1.1-female', name: '🧁 ขนมตาล v1.1: หญิง (Linda)', engine: 'khanomtan', gender: 'female' },
-    { id: 'khanomtan-v1.1-male', name: '🧁 ขนมตาล v1.1: ชาย (Thorsten)', engine: 'khanomtan', gender: 'male' },
   ];
 
   const STYLES = [
@@ -94,21 +92,16 @@
     }
   }
 
+  let audioUnlocked = false;
   function unlockAudio() {
+    if (audioUnlocked || state.isPlaying) return;
     try {
       const audio = getGlobalAudioPlayer();
-      if (audio) {
-        audio.play().then(() => {
-          audio.pause();
-          audio.currentTime = 0;
-        }).catch(() => {});
+      if (audio && audio.paused) {
+        audioUnlocked = true;
       }
     } catch (e) {}
   }
-
-  ['click', 'touchstart', 'keydown'].forEach((evt) => {
-    document.addEventListener(evt, unlockAudio, { passive: true });
-  });
 
   // --- Settings Loader & Realtime Sync ---
   async function loadSettings() {
@@ -509,8 +502,8 @@
     const payload = {
       cues: cues.map((c) => ({ id: c.id, start: c.start, end: c.end, text: c.text })),
       context: getVideoTitle(),
-      engine: state.engine || 'khanomtan',
-      voice: state.voice || 'khanomtan-v1.1-female',
+      engine: state.engine || 'studio_neural',
+      voice: state.voice || 'studio-thai-female',
       gender: state.gender || 'auto',
       style: state.style || 'auto',
       rate: state.rate,

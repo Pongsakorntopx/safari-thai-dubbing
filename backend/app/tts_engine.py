@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 VOICE_REGISTRY: Dict[str, Dict[str, str]] = {
     "studio-thai-female": {
         "id": "studio-thai-female",
-        "name": "🎙️ สตูดิโอ นิวรัล: หญิง (Premwadee • พากย์หนัง นุ่มนวล สมจริง 100%)",
+        "name": "🎙️ สตูดิโอ นิวรัล: หญิง (Premwadee • สมจริง 100%)",
         "gender": "female",
         "engine": "studio_neural",
         "edge_voice": "th-TH-PremwadeeNeural",
@@ -32,32 +32,16 @@ VOICE_REGISTRY: Dict[str, Dict[str, str]] = {
     },
     "studio-thai-male": {
         "id": "studio-thai-male",
-        "name": "🎙️ สตูดิโอ นิวรัล: ชาย (Niwat • ทุ้มนุ่ม ชัดถ้อยชัดคำ มืออาชีพ 100%)",
+        "name": "🎙️ สตูดิโอ นิวรัล: ชาย (Niwat • ทุ้มนุ่ม มืออาชีพ 100%)",
         "gender": "male",
         "engine": "studio_neural",
         "edge_voice": "th-TH-NiwatNeural",
         "desc": "เสียงพากย์สตูดิโอนิวรัล เสียงผู้ชาย อบอุ่น ทุ้มนุ่ม ชัดเจน สไตล์สารคดี/ยูทูบเบอร์",
     },
-    "khanomtan-v1.1-female": {
-        "id": "khanomtan-v1.1-female",
-        "name": "🧁 ขนมตาล v1.1: หญิง (KhanomTan Linda • Apache 2.0)",
-        "gender": "female",
-        "engine": "khanomtan",
-        "speaker_idx": "Linda",
-        "desc": "โมเดลเสียงขนมตาล v1.1 เสียงผู้หญิง นุ่มนวล ชัดเจน",
-    },
-    "khanomtan-v1.1-male": {
-        "id": "khanomtan-v1.1-male",
-        "name": "🧁 ขนมตาล v1.1: ชาย (KhanomTan Thorsten • Apache 2.0)",
-        "gender": "male",
-        "engine": "khanomtan",
-        "speaker_idx": "Thorsten",
-        "desc": "โมเดลเสียงขนมตาล v1.1 เสียงผู้ชาย อบอุ่น ทุ้มนุ่ม",
-    },
     # Backwards compatibility mappings for older extension builds
     "vits-thai-female": {
         "id": "vits-thai-female",
-        "name": "🎙️ สตูดิโอ นิวรัล: หญิง (Premwadee • พากย์หนัง นุ่มนวล สมจริง 100%)",
+        "name": "🎙️ สตูดิโอ นิวรัล: หญิง (Premwadee • สมจริง 100%)",
         "gender": "female",
         "engine": "studio_neural",
         "edge_voice": "th-TH-PremwadeeNeural",
@@ -65,7 +49,7 @@ VOICE_REGISTRY: Dict[str, Dict[str, str]] = {
     },
     "vits-thai-male": {
         "id": "vits-thai-male",
-        "name": "🎙️ สตูดิโอ นิวรัล: ชาย (Niwat • ทุ้มนุ่ม ชัดถ้อยชัดคำ มืออาชีพ 100%)",
+        "name": "🎙️ สตูดิโอ นิวรัล: ชาย (Niwat • ทุ้มนุ่ม มืออาชีพ 100%)",
         "gender": "male",
         "engine": "studio_neural",
         "edge_voice": "th-TH-NiwatNeural",

@@ -123,13 +123,12 @@ def resolve_auto_settings(
     context: str = "",
 ):
     """
-    Thai VITS & KhanomTan v1.1 Voice Resolver:
-    - Pure Open-Source Thai VITS Architecture (PyThaiNLP / AI Community / Wannaphong).
-    - Supports Male and Female options for both KhanomTan v1.1 and VITS Thai.
+    Thai Studio Neural Voice Resolver:
+    - Supports Studio Neural Female (Premwadee) and Male (Niwat).
     """
-    voice = req_voice if req_voice in VOICE_REGISTRY else "khanomtan-v1.1-female"
-    reg = VOICE_REGISTRY.get(voice, VOICE_REGISTRY["khanomtan-v1.1-female"])
-    engine = reg.get("engine", "khanomtan")
+    voice = req_voice if req_voice in VOICE_REGISTRY else "studio-thai-female"
+    reg = VOICE_REGISTRY.get(voice, VOICE_REGISTRY["studio-thai-female"])
+    engine = reg.get("engine", "studio_neural")
     gender = reg.get("gender", "female")
     style = req_style or "auto"
     return engine, voice, style, gender
@@ -427,11 +426,11 @@ async def dub_cues_batch(req: BatchDubRequest):
     except Exception:
         pass
 
-    # 2. Hard-Locked Selected Thai VITS / KhanomTan Voice (100% consistent across entire video)
-    target_voice = voice if voice in VOICE_REGISTRY else "khanomtan-v1.1-female"
-    voice_meta = VOICE_REGISTRY.get(target_voice, VOICE_REGISTRY["khanomtan-v1.1-female"])
-    voice_display_name = voice_meta.get("name", "🧁 ขนมตาล v1.1: หญิง")
-    target_engine = voice_meta.get("engine", "khanomtan")
+    # 2. Hard-Locked Selected Thai Studio Neural Voice (100% consistent across entire video)
+    target_voice = voice if voice in VOICE_REGISTRY else "studio-thai-female"
+    voice_meta = VOICE_REGISTRY.get(target_voice, VOICE_REGISTRY["studio-thai-female"])
+    voice_display_name = voice_meta.get("name", "🎙️ สตูดิโอ นิวรัล: หญิง")
+    target_engine = voice_meta.get("engine", "studio_neural")
     speaker_gender = voice_meta.get("gender", "female")
 
     sem = asyncio.Semaphore(4)
