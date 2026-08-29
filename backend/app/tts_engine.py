@@ -125,37 +125,37 @@ class TTSEngine:
             return None, None
 
     async def synthesize_gtts(self, text: str) -> bytes:
-        """Synthesize Thai speech using Google Translate Native Neural Voice."""
+        """Synthesize Thai speech using Google Translate Native Neural Voice with retry."""
         clean = clean_thai_text_for_speech(text)
         if not clean:
             return b""
 
         loop = asyncio.get_event_loop()
         def _run():
-            try:
-                tts = gtts.gTTS(text=clean, lang="th", slow=False)
-                buf = io.BytesIO()
-                tts.write_to_fp(buf)
-                return buf.getvalue()
-            except Exception as e:
-                logger.warning("gTTS synthesis error: %s", e)
-                return b""
+            for attempt in range(3):
+                try:
+                    tts = gtts.gTTS(text=clean, lang="th", slow=False)
+                    buf = io.BytesIO()
+                    tts.write_to_fp(buf)
+                    val = buf.getvalue()
+                    if val:
+                        return val
+                except Exception as e:
+                    logger.warning("gTTS synthesis attempt %d failed: %s", attempt + 1, e)
+            return b""
 
-        res = await loop.run_in_executor(None, _run)
-        if res:
-            return res
-        return await self.synthesize_edge(clean, voice="th-TH-NiwatNeural")
+        return await loop.run_in_executor(None, _run)
 
     async def synthesize_vits(self, text: str, model_id: str) -> bytes:
-        """Synthesize speech using Hugging Face VITS Neural Thai Model."""
+        """Synthesize speech using Hugging Face VITS Neural Thai Model with MPS acceleration."""
         clean = clean_thai_text_for_speech(text)
         if not clean:
             return b""
 
         tok, mod = self._get_vits_model(model_id)
         if not tok or not mod:
-            logger.warning("VITS model not available, falling back to Google Thai.")
-            return await self.synthesize_gtts(clean)
+            logger.warning("VITS model not available for %s", model_id)
+            return b""
 
         loop = asyncio.get_event_loop()
         def _run():
@@ -172,10 +172,7 @@ class TTSEngine:
                 logger.warning("VITS synthesis error for %s: %s", model_id, e)
                 return b""
 
-        res = await loop.run_in_executor(None, _run)
-        if res:
-            return res
-        return await self.synthesize_gtts(clean)
+        return await loop.run_in_executor(None, _run)
 
     async def synthesize_edge(
         self,

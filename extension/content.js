@@ -785,6 +785,8 @@
             if (cue) {
               cue.translated = item.translatedText || cue.text;
               cue.isMasterTrack = !!item.isMasterTrack;
+              cue.orig_wpm = item.orig_wpm || 140;
+              cue.appliedRate = item.appliedRate || '+0%';
               if (item.base64Audio && ctx) {
                 try {
                   const arrayBuf = base64ToArrayBuffer(item.base64Audio);
@@ -1033,8 +1035,8 @@
     state.isPlaying = true;
 
     applyAudioDucking();
-    showThaiCaptionToast(cue.translated);
-    updateHUDStatus(`🔊 พากย์: "${cue.translated.slice(0, 16)}..."`);
+    const wpmText = cue.orig_wpm ? `⚡ ${cue.orig_wpm} WPM | ` : '';
+    updateHUDStatus(`🔊 ${wpmText}"${cue.translated.slice(0, 16)}..."`);
 
     source.onended = () => {
       if (state.activeSources) {

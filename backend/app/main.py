@@ -362,19 +362,29 @@ async def dub_cues_batch(req: BatchDubRequest):
     sem = asyncio.Semaphore(2)
 
     async def synth_cue(cue: CueItem, thai_text: str):
-        # Calculate adaptive speech rate so Thai text fits comfortably inside the video time slot
-        slot_duration = max(1.2, float(cue.end - cue.start))
+        # 🎯 Original Video Speech Cadence & Speed Analysis (WPS / WPM)
+        words_count = len(cue.text.split())
+        slot_duration = max(0.8, float(cue.end - cue.start))
+        orig_wps = words_count / slot_duration
+        orig_wpm = round(orig_wps * 60)
+
+        # Match Thai speech rate with Original Video Speaker's pacing:
         thai_chars = len(thai_text)
-        expected_sec = thai_chars / 11.5
+        expected_sec = thai_chars / 12.0
+        speed_ratio = expected_sec / slot_duration
 
         cue_rate = rate or "+0%"
         if cue_rate == "+0%" or not cue_rate:
-            if expected_sec > slot_duration * 1.35:
+            if speed_ratio > 1.30:
                 cue_rate = "+25%"
-            elif expected_sec > slot_duration * 1.20:
+            elif speed_ratio > 1.15:
                 cue_rate = "+15%"
-            elif expected_sec > slot_duration * 1.08:
+            elif speed_ratio > 1.05:
                 cue_rate = "+8%"
+            elif speed_ratio < 0.75:
+                cue_rate = "-5%"
+            else:
+                cue_rate = "+0%"
 
         cached = await cache.get_audio_dub(
             source_text=cue.text,
@@ -392,6 +402,9 @@ async def dub_cues_batch(req: BatchDubRequest):
                 "translatedText": thai_text,
                 "base64Audio": base64.b64encode(audio_bytes).decode("utf-8"),
                 "cached": True,
+                "orig_wpm": orig_wpm,
+                "slotDuration": slot_duration,
+                "appliedRate": cue_rate,
             }
 
         audio_bytes = b""
@@ -440,6 +453,9 @@ async def dub_cues_batch(req: BatchDubRequest):
                 "translatedText": thai_text,
                 "base64Audio": base64.b64encode(audio_bytes).decode("utf-8"),
                 "cached": False,
+                "orig_wpm": orig_wpm,
+                "slotDuration": slot_duration,
+                "appliedRate": cue_rate,
             }
 
         return {
@@ -447,6 +463,9 @@ async def dub_cues_batch(req: BatchDubRequest):
             "translatedText": thai_text,
             "base64Audio": "",
             "cached": False,
+            "orig_wpm": orig_wpm,
+            "slotDuration": slot_duration,
+            "appliedRate": cue_rate,
         }
 
     results = await asyncio.gather(*[synth_cue(c, t) for c, t in zip(req.cues, thai_texts)])
