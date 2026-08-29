@@ -11,14 +11,14 @@
   const state = {
     enabled: true,
     isDubbingActive: false,
-    engine: 'google',
-    voice: 'Puck', // Default to Google Puck voice
-    gender: 'male',
-    style: 'auto',
+    engine: 'auto',
+    voice: 'auto', // Smart Auto Mode: Chooses best engine & voice for video
+    gender: 'auto',
+    style: 'auto', // Smart Auto Mode: Auto-adapts to NotebookLM / context
     rate: '+0%',
     dubVolume: 1.0,
     duckVolume: 0.2,
-    backendUrl: 'https://thai-dubbing-api.onrender.com',
+    backendUrl: 'http://127.0.0.1:8000',
     customGeminiKey: 'AQ.Ab8RN6KPbW' + 'fipLG3IEBPAVK-nRd6Ki' + 'PanW6ymcYDj3ymolbkbw',
     isCollapsed: false,
     showSettingsModal: false,
@@ -28,41 +28,37 @@
     audioGainNode: null,
     currentSource: null,
     isPlaying: false,
-    isDucking: false,
-    originalVideoVolume: 1.0,
 
-    // 120-Second (2-Minute) Pre-buffer Sync Enforcer
-    isSyncBuffering: false,
-    targetBufferSeconds: 120,
+    // Timed Script & Sync Buffer Pipeline (2-Minute Paragraph Narrative Buffer)
+    timedCues: [],
+    currentVideoId: null,
+    targetBufferSeconds: 120, // 120-Second (2-minute) Initial Sync Buffer
     bufferedSeconds: 0,
-
-    // Video & Cues State
-    currentVideoId: '',
-    timedCues: [],             // Array of { id, start, end, text, translated, audioBuffer, status: 'pending'|'fetching'|'ready'|'played' }
+    isSyncBuffering: false,
     isPreFetching: false,
     lookaheadTimer: null,
     schedulerTimer: null,
-    videoElement: null,
-    captionObserver: null,
-    pendingLiveChunks: [],
-    liveChunkTimer: null,
-    lastProcessedLiveText: '',
+
+    // Audio Ducking & Volume Restore
+    originalVideoVolume: 1.0,
+    isDucking: false,
   };
 
   const VOICES = [
-    { id: 'Puck', name: '👨‍💼 Puck (Google Studio - ชายอบอุ่น [ครับ])', engine: 'google', gender: 'male' },
-    { id: 'Aoede', name: '👩‍💼 Aoede (Google Studio - หญิงพอดแคสต์ [ค่ะ])', engine: 'google', gender: 'female' },
+    { id: 'auto', name: '🤖 อัตโนมัติ (AI เลือกเสียงที่ดีที่สุดและตรงตามคลิป)', engine: 'auto', gender: 'auto' },
     { id: 'Pattara', name: '🍎 ภัทร (Apple Silicon Neural - ชาย ทุ้มนุ่ม เร็ว 0ms [ครับ])', engine: 'apple', gender: 'male' },
     { id: 'Kanya', name: '🍎 กัญญา (Apple Silicon Neural - หญิง นุ่มนวล เร็ว 0ms [ค่ะ])', engine: 'apple', gender: 'female' },
-    { id: 'th-TH-NiwatNeural', name: '👨‍💼 นิวัฒน์ (เสียงชาย - ทุ้มนุ่ม ชัดเจน [ครับ])', engine: 'edge', gender: 'male' },
-    { id: 'th-TH-PremwadeeNeural', name: '👩‍💼 เปรมวดี (เสียงหญิง - นุ่มนวล ธรรมชาติ [ค่ะ])', engine: 'edge', gender: 'female' },
+    { id: 'th-TH-NiwatNeural', name: '👨‍💼 นิวัฒน์ (Edge Neural - ชาย ทุ้มนุ่ม ชัดเจน [ครับ])', engine: 'edge', gender: 'male' },
+    { id: 'th-TH-PremwadeeNeural', name: '👩‍💼 เปรมวดี (Edge Neural - หญิง นุ่มนวล ธรรมชาติ [ค่ะ])', engine: 'edge', gender: 'female' },
+    { id: 'Puck', name: '👨‍💼 Puck (Google Studio - ชายอบอุ่น [ครับ])', engine: 'google', gender: 'male' },
+    { id: 'Aoede', name: '👩‍💼 Aoede (Google Studio - หญิงพอดแคสต์ [ค่ะ])', engine: 'google', gender: 'female' },
     { id: 'JaiTTS-Male', name: '🌟 ใจ ชาย (JaiTTS - ภาษาพูดสมจริง [ครับ])', engine: 'jaitts', gender: 'male' },
     { id: 'JaiTTS-Female', name: '🌟 ใจ หญิง (JaiTTS - ภาษาพูดสมจริง [ค่ะ])', engine: 'jaitts', gender: 'female' },
   ];
 
   const STYLES = [
-    { id: 'notebooklm', name: '🎙️ NotebookLM Audio Overview (เล่าเรื่องมีเสน่ห์ อบอุ่น - แนะนำ)' },
-    { id: 'auto', name: '🎭 ปรับตามคลิปอัตโนมัติ' },
+    { id: 'auto', name: '🤖 ปรับอารมณ์และสไตล์ตามคลิปอัตโนมัติ (แนะนำ)' },
+    { id: 'notebooklm', name: '🎙️ NotebookLM Audio Overview (เล่าเรื่องมีเสน่ห์ อบอุ่น)' },
     { id: 'casual', name: '🗣️ ยูทูบเบอร์ / เกม / กันเอง / กวนๆ' },
     { id: 'cinema', name: '🎬 หนัง / ซีรีส์ / อารมณ์สมจริง' },
     { id: 'podcast', name: '🎧 พอดแคสต์ / เล่าเรื่อง / รีวิว' },

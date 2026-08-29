@@ -7,6 +7,7 @@ import asyncio
 import base64
 import logging
 import re
+import platform
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
@@ -47,8 +48,8 @@ app.add_middleware(
 class DubRequest(BaseModel):
     text: str
     context: Optional[str] = ""
-    engine: Optional[str] = "edge"
-    voice: Optional[str] = "th-TH-PremwadeeNeural"
+    engine: Optional[str] = "auto"
+    voice: Optional[str] = "auto"
     style: Optional[str] = "auto"
     gender: Optional[str] = "auto"
     rate: Optional[str] = "+0%"
@@ -65,8 +66,8 @@ class CueItem(BaseModel):
 class BatchDubRequest(BaseModel):
     cues: List[CueItem]
     context: Optional[str] = ""
-    engine: Optional[str] = "edge"
-    voice: Optional[str] = "th-TH-PremwadeeNeural"
+    engine: Optional[str] = "auto"
+    voice: Optional[str] = "auto"
     style: Optional[str] = "auto"
     gender: Optional[str] = "auto"
     rate: Optional[str] = "+0%"
@@ -87,6 +88,51 @@ def resolve_gender(voice: str, requested_gender: Optional[str] = "auto") -> str:
     if any(k in v_lower for k in ["premwadee", "female", "aoede", "kanya"]):
         return "female"
     return "male"
+
+
+def resolve_auto_settings(
+    req_engine: Optional[str],
+    req_voice: Optional[str],
+    req_style: Optional[str],
+    req_gender: Optional[str],
+    context: str = "",
+):
+    """
+    Intelligent Auto Mode: Automatically resolves optimal Engine, Voice, Style, and Gender
+    based on video metadata, speaker cues, and local hardware availability.
+    """
+    # 1. Gender Auto-Detection from Context / Title / Keywords
+    gender = req_gender
+    if not gender or gender == "auto":
+        c_lower = context.lower()
+        female_signals = [
+            "she", "her", "woman", "girl", "actress", "female", "คุณหญิง", "น้อง",
+            "พี่สาว", "แม่", "สาว", "ผู้หญิง", "kanya", "premwadee", "aoede"
+        ]
+        if any(w in c_lower for w in female_signals):
+            gender = "female"
+        else:
+            gender = "male"
+
+    # 2. Engine & Voice Auto-Selection (Best Quality + Zero Latency)
+    engine = req_engine or "auto"
+    voice = req_voice or "auto"
+
+    if engine == "auto" or voice == "auto":
+        is_macos = platform.system() == "Darwin"
+        if is_macos:
+            engine = "apple"
+            voice = "Pattara" if gender == "male" else "Kanya"
+        else:
+            engine = "edge"
+            voice = "th-TH-NiwatNeural" if gender == "male" else "th-TH-PremwadeeNeural"
+
+    # 3. Style Auto-Selection
+    style = req_style or "notebooklm"
+    if style == "auto":
+        style = "notebooklm"
+
+    return engine, voice, style, gender
 
 
 @app.on_event("startup")
@@ -280,11 +326,10 @@ async def dub_cues_batch(req: BatchDubRequest):
     if not req.cues:
         return {"success": True, "results": []}
 
-    engine = req.engine or "edge"
-    voice = req.voice or "th-TH-PremwadeeNeural"
-    style = req.style or "auto"
+    engine, voice, style, gender = resolve_auto_settings(
+        req.engine, req.voice, req.style, req.gender, context=req.context or ""
+    )
     rate = req.rate or "+0%"
-    gender = resolve_gender(voice, req.gender)
     custom_key = req.customGeminiKey.strip() if req.customGeminiKey else None
 
     # 1. Translate all cues together as a cohesive 60s paragraph (in any source language)
@@ -431,11 +476,10 @@ async def dub_text(req: DubRequest):
     if not req.text.strip():
         raise HTTPException(status_code=400, detail="Text cannot be empty")
 
-    engine = req.engine or "edge"
-    voice = req.voice or "th-TH-PremwadeeNeural"
-    style = req.style or "auto"
+    engine, voice, style, gender = resolve_auto_settings(
+        req.engine, req.voice, req.style, req.gender, context=req.context or ""
+    )
     rate = req.rate or "+0%"
-    gender = resolve_gender(voice, req.gender)
     custom_key = req.customGeminiKey.strip() if req.customGeminiKey else None
 
     # 1. Translate

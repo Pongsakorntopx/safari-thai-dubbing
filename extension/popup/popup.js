@@ -40,9 +40,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function populateVoices(engine, selectedVoice) {
     voiceSelect.innerHTML = '';
-    let voices = GOOGLE_VOICES;
-    if (engine === 'edge') voices = EDGE_VOICES;
-    else if (engine === 'apple') voices = APPLE_VOICES;
+    let voices = [];
+    if (engine === 'auto') {
+      voices = [{ id: 'auto', name: '🤖 อัตโนมัติ (AI เลือกเสียงที่เหมาะสมที่สุดตามคลิป)' }];
+    } else if (engine === 'edge') {
+      voices = EDGE_VOICES;
+    } else if (engine === 'apple') {
+      voices = APPLE_VOICES;
+    } else {
+      voices = GOOGLE_VOICES;
+    }
 
     voices.forEach((v) => {
       const opt = document.createElement('option');
@@ -53,7 +60,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     if (styleGroup) {
-      styleGroup.style.display = engine === 'google' ? 'flex' : 'none';
+      styleGroup.style.display = (engine === 'google' || engine === 'auto') ? 'flex' : 'none';
     }
   }
 
