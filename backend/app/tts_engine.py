@@ -19,8 +19,20 @@ from typing import Dict, Optional
 
 import soundfile as sf
 import torch
-from pythaitts import TTS
-from transformers import AutoTokenizer, VitsModel
+
+# Compatibility patch for transformers with TTS library
+try:
+    import transformers.pytorch_utils
+    if not hasattr(transformers.pytorch_utils, "isin_mps_friendly"):
+        transformers.pytorch_utils.isin_mps_friendly = getattr(torch, "isin", None)
+except Exception:
+    pass
+
+try:
+    from transformers import AutoTokenizer, VitsModel
+except Exception as e:
+    VitsModel = None
+    AutoTokenizer = None
 
 logger = logging.getLogger(__name__)
 
@@ -84,7 +96,7 @@ def clean_thai_text_for_speech(text: str) -> str:
 
 
 class ThaiVitsMasterEngine:
-    """Master Thai VITS & KhanomTan TTS Engine."""
+    """Master Thai VITS & KhanomTan TTS Engine with resilient cloud-first loader."""
 
     def __init__(self):
         self._vits_model = None
@@ -105,12 +117,13 @@ class ThaiVitsMasterEngine:
         return self._vits_model, self._vits_tokenizer
 
     def _get_khanomtan(self, version: str = "1.0"):
-        """Lazy load KhanomTan TTS (v1.0 or v1.1)."""
+        """Lazy load KhanomTan TTS (v1.0 or v1.1) with PyThaiTTS."""
         if version == "1.1":
             if self._khanomtan_v11 is None:
                 with self._lock:
                     if self._khanomtan_v11 is None:
                         logger.info("🧁 Loading KhanomTan TTS v1.1...")
+                        from pythaitts import TTS
                         self._khanomtan_v11 = TTS(pretrained="khanomtan", version="1.1")
                         logger.info("✅ KhanomTan TTS v1.1 loaded successfully!")
             return self._khanomtan_v11
@@ -119,6 +132,7 @@ class ThaiVitsMasterEngine:
                 with self._lock:
                     if self._khanomtan_v1 is None:
                         logger.info("🧁 Loading KhanomTan TTS v1.0...")
+                        from pythaitts import TTS
                         self._khanomtan_v1 = TTS(pretrained="khanomtan", version="1.0")
                         logger.info("✅ KhanomTan TTS v1.0 loaded successfully!")
             return self._khanomtan_v1
@@ -145,8 +159,40 @@ class ThaiVitsMasterEngine:
         loop = asyncio.get_event_loop()
 
         def _run_tts() -> bytes:
-            # 1. VITS Thai Community (facebook/mms-tts-tha)
-            if voice == "vits-thai-community" or engine == "vits_thai":
+            # 1. KhanomTan TTS v1.1
+            if voice == "khanomtan-v1.1":
+                try:
+                    model = self._get_khanomtan(version="1.1")
+                    wav_path = model.tts(text=cleaned_text, speaker_idx="Linda", preprocess=True)
+                    if wav_path and os.path.exists(wav_path):
+                        with open(wav_path, "rb") as f:
+                            data = f.read()
+                        try:
+                            os.remove(wav_path)
+                        except Exception:
+                            pass
+                        return data
+                except Exception as e:
+                    logger.warning("KhanomTan v1.1 fallback to MMS VITS: %s", e)
+
+            # 2. KhanomTan TTS v1.0
+            elif voice == "khanomtan-v1":
+                try:
+                    model = self._get_khanomtan(version="1.0")
+                    wav_path = model.tts(text=cleaned_text, speaker_idx="Linda", preprocess=True)
+                    if wav_path and os.path.exists(wav_path):
+                        with open(wav_path, "rb") as f:
+                            data = f.read()
+                        try:
+                            os.remove(wav_path)
+                        except Exception:
+                            pass
+                        return data
+                except Exception as e:
+                    logger.warning("KhanomTan v1.0 fallback to MMS VITS: %s", e)
+
+            # 3. Default / Primary: VITS Thai Community (facebook/mms-tts-tha)
+            try:
                 model, tokenizer = self._get_vits_community()
                 inputs = tokenizer(cleaned_text, return_tensors="pt")
                 with torch.no_grad():
@@ -155,32 +201,8 @@ class ThaiVitsMasterEngine:
                 buf = io.BytesIO()
                 sf.write(buf, wav_np, model.config.sampling_rate, format="WAV")
                 return buf.getvalue()
-
-            # 2. KhanomTan TTS v1.1
-            elif voice == "khanomtan-v1.1":
-                model = self._get_khanomtan(version="1.1")
-                wav_path = model.tts(text=cleaned_text, speaker_idx="Linda", preprocess=True)
-                if wav_path and os.path.exists(wav_path):
-                    with open(wav_path, "rb") as f:
-                        data = f.read()
-                    try:
-                        os.remove(wav_path)
-                    except Exception:
-                        pass
-                    return data
-
-            # 3. KhanomTan TTS v1.0 (Default KhanomTan)
-            else:
-                model = self._get_khanomtan(version="1.0")
-                wav_path = model.tts(text=cleaned_text, speaker_idx="Linda", preprocess=True)
-                if wav_path and os.path.exists(wav_path):
-                    with open(wav_path, "rb") as f:
-                        data = f.read()
-                    try:
-                        os.remove(wav_path)
-                    except Exception:
-                        pass
-                    return data
+            except Exception as e:
+                logger.error("VITS Thai synthesis error: %s", e)
 
             return b""
 
