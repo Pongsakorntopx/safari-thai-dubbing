@@ -24,10 +24,13 @@ chrome.runtime.onInstalled.addListener(async () => {
         toSet[key] = value;
       }
     }
+    if (existing.backendUrl && (existing.backendUrl.includes('localhost') || existing.backendUrl.includes('127.0.0.1'))) {
+      toSet.backendUrl = 'https://thai-dubbing-api.onrender.com';
+    }
     if (Object.keys(toSet).length > 0) {
       await chrome.storage.local.set(toSet);
     }
-    console.log('[ThaiDubbing SW] Default settings initialized.');
+    console.log('[ThaiDubbing SW] Settings and cloud backend initialized.');
   } catch (err) {
     console.error('[ThaiDubbing SW] Error initializing settings:', err);
   }

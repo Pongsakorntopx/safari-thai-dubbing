@@ -127,7 +127,14 @@
         if (state.audioGainNode) state.audioGainNode.gain.value = state.dubVolume;
       }
       if (data.duckVolume !== undefined) state.duckVolume = data.duckVolume;
-      if (data.backendUrl) state.backendUrl = data.backendUrl.replace(/\/+$/, '');
+
+      let bUrl = data.backendUrl;
+      if (!bUrl || bUrl.includes('localhost') || bUrl.includes('127.0.0.1')) {
+        bUrl = 'https://thai-dubbing-api.onrender.com';
+        saveSetting('backendUrl', bUrl);
+      }
+      state.backendUrl = bUrl.replace(/\/+$/, '');
+
       if (data.customGeminiKey) state.customGeminiKey = data.customGeminiKey;
       if (data.isCollapsed !== undefined) state.isCollapsed = data.isCollapsed;
 
@@ -500,7 +507,7 @@
     }
 
     try {
-      const player = document.getElementById('movie_player');
+      const player = document.getElementById('movie_player') || document.querySelector('.html5-video-player');
       if (player && typeof player.pauseVideo === 'function') {
         player.pauseVideo();
       }
@@ -517,7 +524,7 @@
     }
 
     try {
-      const player = document.getElementById('movie_player');
+      const player = document.getElementById('movie_player') || document.querySelector('.html5-video-player');
       if (player && typeof player.playVideo === 'function') {
         player.playVideo();
       }
@@ -543,6 +550,11 @@
 
     video.addEventListener('play', () => {
       unlockAudio();
+      if (state.isSyncBuffering) {
+        console.log('[ThaiDubbing] Video play attempted during 60s pre-buffering, keeping paused...');
+        pauseYouTubeVideo();
+        return;
+      }
       if (state.audioCtx && state.audioCtx.state === 'suspended' && state.isPlaying) {
         state.audioCtx.resume();
       }
@@ -1245,7 +1257,7 @@
 
         <div style="display: flex; justify-content: space-between; align-items: center; gap: 4px;">
           <span style="font-size: 11px; color: #94a3b8; font-weight: 600;">Backend URL (Cloud/Local):</span>
-          <input type="text" id="hud-backend-input" placeholder="http://localhost:8000" value="${state.backendUrl || ''}" style="
+          <input type="text" id="hud-backend-input" placeholder="https://thai-dubbing-api.onrender.com" value="${state.backendUrl || 'https://thai-dubbing-api.onrender.com'}" style="
             background: #1e293b; color: #38bdf8; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; padding: 2px 6px; font-size: 10px; width: 170px; outline: none;
           ">
         </div>
