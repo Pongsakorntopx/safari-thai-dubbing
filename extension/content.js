@@ -189,28 +189,180 @@
     return titleEl ? titleEl.textContent.trim() : document.title;
   }
 
-  // --- Client-Side YouTube Subtitle Extractor (100% Reliable Fallback for Cloud Backends) ---
+  // --- Universal Client-Side Subtitle Extraction Pipeline (Zero IP Block Risk) ---
+  function getPlayerCaptionTracks() {
+    return new Promise((resolve) => {
+      const token = 'THAI_DUB_' + Math.random().toString(36).substring(2, 9);
+      const script = document.createElement('script');
+      script.textContent = `
+        (function() {
+          try {
+            let tracks = [];
+            const player = document.getElementById('movie_player') || document.querySelector('.html5-video-player');
+            if (player && typeof player.getPlayerResponse === 'function') {
+              const resp = player.getPlayerResponse();
+              if (resp && resp.captions && resp.captions.playerCaptionsTracklistRenderer) {
+                tracks = resp.captions.playerCaptionsTracklistRenderer.captionTracks || [];
+              }
+            }
+            if (!tracks.length && window.ytInitialPlayerResponse && window.ytInitialPlayerResponse.captions) {
+              const r = window.ytInitialPlayerResponse.captions.playerCaptionsTracklistRenderer;
+              if (r && r.captionTracks) tracks = r.captionTracks;
+            }
+            window.postMessage({ token: "${token}", type: 'THAI_DUB_CAPTION_TRACKS', tracks: tracks }, '*');
+          } catch (e) {
+            window.postMessage({ token: "${token}", type: 'THAI_DUB_CAPTION_TRACKS', tracks: [] }, '*');
+          }
+        })();
+      `;
+      const handler = (event) => {
+        if (event.data && event.data.type === 'THAI_DUB_CAPTION_TRACKS' && event.data.token === token) {
+          window.removeEventListener('message', handler);
+          script.remove();
+          resolve(event.data.tracks || []);
+        }
+      };
+      window.addEventListener('message', handler);
+      (document.head || document.documentElement).appendChild(script);
+      setTimeout(() => {
+        window.removeEventListener('message', handler);
+        try { script.remove(); } catch (e) {}
+        resolve([]);
+      }, 1500);
+    });
+  }
+
+  function fetchTrackContentInPage(trackUrl) {
+    return new Promise((resolve) => {
+      const token = 'THAI_DUB_' + Math.random().toString(36).substring(2, 9);
+      const script = document.createElement('script');
+      script.textContent = `
+        (async function() {
+          try {
+            const resp = await fetch("${trackUrl}", { credentials: 'include' });
+            const text = await resp.text();
+            window.postMessage({ token: "${token}", type: 'THAI_DUB_RAW_TRACK', data: text }, '*');
+          } catch (e) {
+            window.postMessage({ token: "${token}", type: 'THAI_DUB_RAW_TRACK', data: '' }, '*');
+          }
+        })();
+      `;
+      const handler = (event) => {
+        if (event.data && event.data.type === 'THAI_DUB_RAW_TRACK' && event.data.token === token) {
+          window.removeEventListener('message', handler);
+          script.remove();
+          resolve(event.data.data || '');
+        }
+      };
+      window.addEventListener('message', handler);
+      (document.head || document.documentElement).appendChild(script);
+      setTimeout(() => {
+        window.removeEventListener('message', handler);
+        try { script.remove(); } catch (e) {}
+        resolve('');
+      }, 3500);
+    });
+  }
+
+  function parseRawCaptionData(rawStr) {
+    if (!rawStr || !rawStr.trim()) return [];
+    const cues = [];
+    let cueId = 1;
+    let curCue = null;
+
+    // Strategy A: Parse JSON3 format
+    if (rawStr.trim().startsWith('{')) {
+      try {
+        const data = JSON.parse(rawStr);
+        if (data && data.events && data.events.length) {
+          for (const ev of data.events) {
+            if (!ev.segs || !ev.segs.length) continue;
+            const text = ev.segs.map((s) => s.utf8 || '').join('').replace(/[\r\n]+/g, ' ').trim();
+            if (!text || text.startsWith('[')) continue;
+
+            const start = (ev.tStartMs || 0) / 1000.0;
+            const dur = (ev.dDurationMs || 0) / 1000.0;
+            const end = start + dur;
+
+            if (!curCue) {
+              curCue = { id: cueId++, start: parseFloat(start.toFixed(2)), end: parseFloat(end.toFixed(2)), text };
+            } else {
+              curCue.text += ' ' + text;
+              curCue.end = parseFloat(end.toFixed(2));
+            }
+
+            const isEnd = /[.!?。！？]$/.test(text) || (curCue.end - curCue.start >= 4.5);
+            if (isEnd) {
+              cues.push(curCue);
+              curCue = null;
+            }
+          }
+          if (curCue) cues.push(curCue);
+          if (cues.length) return cues;
+        }
+      } catch (e) {}
+    }
+
+    // Strategy B: Parse XML format (<transcript><text start="1.2" dur="3.4">...</text></transcript>)
+    try {
+      const parser = new DOMParser();
+      const xmlDoc = parser.parseFromString(rawStr, 'text/xml');
+      const textNodes = xmlDoc.getElementsByTagName('text');
+      if (textNodes && textNodes.length) {
+        for (let i = 0; i < textNodes.length; i++) {
+          const node = textNodes[i];
+          const text = (node.textContent || '')
+            .replace(/&#39;/g, "'")
+            .replace(/&quot;/g, '"')
+            .replace(/&amp;/g, '&')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/[\r\n]+/g, ' ')
+            .trim();
+          if (!text || text.startsWith('[')) continue;
+
+          const start = parseFloat(node.getAttribute('start') || '0');
+          const dur = parseFloat(node.getAttribute('dur') || '0');
+          const end = start + dur;
+
+          if (!curCue) {
+            curCue = { id: cueId++, start: parseFloat(start.toFixed(2)), end: parseFloat(end.toFixed(2)), text };
+          } else {
+            curCue.text += ' ' + text;
+            curCue.end = parseFloat(end.toFixed(2));
+          }
+
+          const isEnd = /[.!?。！？]$/.test(text) || (curCue.end - curCue.start >= 4.5);
+          if (isEnd) {
+            cues.push(curCue);
+            curCue = null;
+          }
+        }
+        if (curCue) cues.push(curCue);
+        if (cues.length) return cues;
+      }
+    } catch (e) {}
+
+    return cues;
+  }
+
   async function extractClientSideSubtitles(videoId) {
     try {
-      let captionTracks = [];
-      if (window.ytInitialPlayerResponse && window.ytInitialPlayerResponse.captions) {
-        const caps = window.ytInitialPlayerResponse.captions.playerCaptionsTracklistRenderer;
-        if (caps && caps.captionTracks) {
-          captionTracks = caps.captionTracks;
-        }
-      }
+      console.log('[ThaiDubbing] Extracting subtitles from YouTube player in browser session...');
+      let captionTracks = await getPlayerCaptionTracks();
 
-      if (!captionTracks.length) {
+      if (!captionTracks || !captionTracks.length) {
+        // Search HTML DOM scripts for captionTracks
         const scripts = document.querySelectorAll('script');
         for (const s of scripts) {
-          if (s.textContent && s.textContent.includes('ytInitialPlayerResponse')) {
-            const match = s.textContent.match(/ytInitialPlayerResponse\s*=\s*(\{.+?\});/);
+          if (s.textContent && s.textContent.includes('captionTracks')) {
+            const match = s.textContent.match(/"captionTracks":\s*(\[.+?\])/);
             if (match) {
               try {
                 const parsed = JSON.parse(match[1]);
-                if (parsed && parsed.captions && parsed.captions.playerCaptionsTracklistRenderer) {
-                  captionTracks = parsed.captions.playerCaptionsTracklistRenderer.captionTracks || [];
-                  if (captionTracks.length) break;
+                if (Array.isArray(parsed) && parsed.length) {
+                  captionTracks = parsed;
+                  break;
                 }
               } catch (pe) {}
             }
@@ -218,50 +370,41 @@
         }
       }
 
-      if (!captionTracks.length) return null;
+      if (!captionTracks || !captionTracks.length) {
+        console.warn('[ThaiDubbing] No caption tracks metadata found in player or DOM.');
+        return null;
+      }
 
-      let chosenTrack = captionTracks.find((t) => t.languageCode === 'en' || t.languageCode === 'en-US') ||
-                        captionTracks.find((t) => t.languageCode === 'th') ||
-                        captionTracks[0];
+      console.log(`[ThaiDubbing] Found ${captionTracks.length} caption tracks on video:`, captionTracks.map((t) => t.languageCode));
+
+      // Prioritize English, then Thai, or any available track (Japanese, Korean, Spanish, etc.)
+      const chosenTrack = captionTracks.find((t) => t.languageCode === 'en' || t.languageCode === 'en-US') ||
+                          captionTracks.find((t) => t.languageCode === 'th') ||
+                          captionTracks[0];
 
       if (!chosenTrack || !chosenTrack.baseUrl) return null;
 
-      const trackUrl = chosenTrack.baseUrl + '&fmt=json3';
-      const resp = await fetch(trackUrl);
-      if (!resp.ok) return null;
-      const data = await resp.json();
+      console.log(`[ThaiDubbing] Fetching subtitle content for track: ${chosenTrack.languageCode}...`);
 
-      if (!data.events || !data.events.length) return null;
-
-      const rawCues = [];
-      let cueId = 1;
-      let curCue = null;
-
-      for (const ev of data.events) {
-        if (!ev.segs || !ev.segs.length) continue;
-        const text = ev.segs.map((s) => s.utf8 || '').join('').replace(/\n/g, ' ').trim();
-        if (!text || text.startsWith('[')) continue;
-
-        const start = (ev.tStartMs || 0) / 1000.0;
-        const dur = (ev.dDurationMs || 0) / 1000.0;
-        const end = start + dur;
-
-        if (!curCue) {
-          curCue = { id: cueId++, start: parseFloat(start.toFixed(2)), end: parseFloat(end.toFixed(2)), text };
-        } else {
-          curCue.text += ' ' + text;
-          curCue.end = parseFloat(end.toFixed(2));
-        }
-
-        const isEnd = /[.!?。！？]$/.test(text) || (curCue.end - curCue.start >= 4.5);
-        if (isEnd) {
-          rawCues.push(curCue);
-          curCue = null;
-        }
+      // Try fetching both XML standard and &fmt=json3
+      let rawData = await fetchTrackContentInPage(chosenTrack.baseUrl + '&fmt=json3');
+      if (!rawData || !rawData.trim()) {
+        rawData = await fetchTrackContentInPage(chosenTrack.baseUrl);
       }
-      if (curCue) rawCues.push(curCue);
+      if (!rawData || !rawData.trim()) {
+        try {
+          const directResp = await fetch(chosenTrack.baseUrl);
+          rawData = await directResp.text();
+        } catch (de) {}
+      }
 
-      return rawCues.length ? { success: true, videoId, cues: rawCues } : null;
+      const cues = parseRawCaptionData(rawData);
+      if (cues && cues.length) {
+        console.log(`[ThaiDubbing] Successfully parsed ${cues.length} structured sentence cues!`);
+        return { success: true, videoId, cues };
+      }
+
+      return null;
     } catch (e) {
       console.warn('[ThaiDubbing] Client-side subtitle extraction error:', e);
       return null;
@@ -270,6 +413,14 @@
 
   // --- Background-Proxied API Requests (Bypasses Safari Mixed Content / CORS) ---
   async function fetchTranscriptDirect(videoId) {
+    // 1. Try Client-side Extraction first (Instant, directly inside user's authenticated Safari session, 0 IP blocks)
+    const clientResult = await extractClientSideSubtitles(videoId);
+    if (clientResult && clientResult.cues && clientResult.cues.length > 0) {
+      return clientResult;
+    }
+
+    // 2. Fallback to Cloud Backend proxy
+    console.log('[ThaiDubbing] Trying Backend API transcript fetch fallback...');
     const backendResult = await new Promise((resolve) => {
       chrome.runtime.sendMessage(
         {
@@ -291,13 +442,6 @@
 
     if (backendResult && backendResult.cues && backendResult.cues.length > 0) {
       return backendResult;
-    }
-
-    console.log('[ThaiDubbing] Using Client-side YouTube Subtitle Extractor fallback...');
-    const clientResult = await extractClientSideSubtitles(videoId);
-    if (clientResult && clientResult.cues && clientResult.cues.length > 0) {
-      console.log(`[ThaiDubbing] Client-side extractor loaded ${clientResult.cues.length} cues!`);
-      return clientResult;
     }
 
     return { success: false, cues: [] };
