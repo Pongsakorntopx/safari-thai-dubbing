@@ -177,13 +177,16 @@ async def fetch_youtube_innertube_cues_async(video_id: str) -> List[Dict]:
                                                 current_cue = {"id": cue_id, "start": start, "end": end, "text": text}
                                                 cue_id += 1
                                             else:
+                                                gap = start - current_cue["end"]
+                                                if current_cue["text"].endswith(text):
+                                                    continue
                                                 current_cue["text"] += " " + text
-                                                current_cue["end"] = end
+                                                current_cue["end"] = max(current_cue["end"], end)
 
-                                            is_end = bool(re.search(r"[.!?。！？]$", text)) or (current_cue["end"] - current_cue["start"] >= 4.5)
-                                            if is_end:
-                                                cues.append(current_cue)
-                                                current_cue = None
+                                                is_end = bool(re.search(r"[.!?。！？]$", text)) or gap > 0.8 or (current_cue["end"] - current_cue["start"] >= 5.5)
+                                                if is_end:
+                                                    cues.append(current_cue)
+                                                    current_cue = None
 
                                         if current_cue:
                                             cues.append(current_cue)
@@ -207,13 +210,16 @@ async def fetch_youtube_innertube_cues_async(video_id: str) -> List[Dict]:
                                                     current_cue = {"id": cue_id, "start": start, "end": end, "text": text}
                                                     cue_id += 1
                                                 else:
+                                                    gap = start - current_cue["end"]
+                                                    if current_cue["text"].endswith(text):
+                                                        continue
                                                     current_cue["text"] += " " + text
-                                                    current_cue["end"] = end
+                                                    current_cue["end"] = max(current_cue["end"], end)
 
-                                                is_end = bool(re.search(r"[.!?。！？]$", text)) or (current_cue["end"] - current_cue["start"] >= 4.5)
-                                                if is_end:
-                                                    cues.append(current_cue)
-                                                    current_cue = None
+                                                    is_end = bool(re.search(r"[.!?。！？]$", text)) or gap > 0.8 or (current_cue["end"] - current_cue["start"] >= 5.5)
+                                                    if is_end:
+                                                        cues.append(current_cue)
+                                                        current_cue = None
 
                                             if current_cue:
                                                 cues.append(current_cue)

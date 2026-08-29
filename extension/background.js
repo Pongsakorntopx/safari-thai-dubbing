@@ -118,13 +118,21 @@ async function fetchYouTubeTranscriptDirect(videoId) {
       if (!currentCue) {
         currentCue = { id: cueId++, start, end, text };
       } else {
+        const gap = start - currentCue.end;
+        if (currentCue.text.endsWith(text)) {
+          continue;
+        }
         currentCue.text += ' ' + text;
-        currentCue.end = end;
-      }
+        currentCue.end = Math.max(currentCue.end, end);
 
-      if (/[.!?。！？]$/.test(text) || (currentCue.end - currentCue.start >= 4.5)) {
-        cues.push(currentCue);
-        currentCue = null;
+        const isPunctuation = /[.!?。！？]$/.test(text);
+        const isSpeechPause = gap > 0.8;
+        const isGoodDuration = (currentCue.end - currentCue.start >= 5.5);
+
+        if (isPunctuation || isSpeechPause || isGoodDuration) {
+          cues.push(currentCue);
+          currentCue = null;
+        }
       }
     }
 
@@ -152,13 +160,21 @@ async function fetchYouTubeTranscriptDirect(videoId) {
         if (!currentCue) {
           currentCue = { id: cueId++, start, end, text };
         } else {
+          const gap = start - currentCue.end;
+          if (currentCue.text.endsWith(text)) {
+            continue;
+          }
           currentCue.text += ' ' + text;
-          currentCue.end = end;
-        }
+          currentCue.end = Math.max(currentCue.end, end);
 
-        if (/[.!?。！？]$/.test(text) || (currentCue.end - currentCue.start >= 4.5)) {
-          cues.push(currentCue);
-          currentCue = null;
+          const isPunctuation = /[.!?。！？]$/.test(text);
+          const isSpeechPause = gap > 0.8;
+          const isGoodDuration = (currentCue.end - currentCue.start >= 5.5);
+
+          if (isPunctuation || isSpeechPause || isGoodDuration) {
+            cues.push(currentCue);
+            currentCue = null;
+          }
         }
       }
       if (currentCue) cues.push(currentCue);
