@@ -938,7 +938,7 @@
     // Per-cue gain node for smooth cross-fading and natural rhythm
     const cueGain = ctx.createGain();
     cueGain.gain.setValueAtTime(1.0, ctx.currentTime);
-    cueGain.connect(state.audioGainNode);
+    cueGain.connect(state.clarityFilter || state.audioGainNode);
 
     // Smoothly fade out previous voice if still playing (no harsh cuts)
     if (state.currentSource && state.currentGainNode) {
