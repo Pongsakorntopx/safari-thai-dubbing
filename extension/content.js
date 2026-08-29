@@ -59,35 +59,31 @@
     { id: 'formal', name: '📻 ทางการ / สารคดี / ข่าว' },
   ];
 
-  // --- Hardware-Accelerated CoreAudio DSP Chain ---
-  function getAudioContext() {
-    if (!state.audioCtx) {
-      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-      if (AudioContextClass) {
-        state.audioCtx = new AudioContextClass();
-        state.audioGainNode = state.audioCtx.createGain();
-        state.audioGainNode.gain.setValueAtTime(state.dubVolume !== undefined ? state.dubVolume : 1.0, state.audioCtx.currentTime);
-        state.audioGainNode.connect(state.audioCtx.destination);
+  // --- Dedicated Native HTML5 Audio Player Engine (100% Audible & Compatible on Safari macOS/iOS) ---
+  let globalAudioPlayer = null;
+
+  function getGlobalAudioPlayer() {
+    if (!globalAudioPlayer) {
+      globalAudioPlayer = document.getElementById('thai-dub-audio-player');
+      if (!globalAudioPlayer) {
+        globalAudioPlayer = document.createElement('audio');
+        globalAudioPlayer.id = 'thai-dub-audio-player';
+        globalAudioPlayer.style.display = 'none';
+        globalAudioPlayer.preload = 'auto';
+        (document.body || document.documentElement).appendChild(globalAudioPlayer);
       }
     }
-    if (state.audioCtx && state.audioCtx.state === 'suspended') {
-      state.audioCtx.resume().catch(() => {});
-    }
-    return state.audioCtx;
+    return globalAudioPlayer;
   }
 
   function unlockAudio() {
     try {
-      const ctx = getAudioContext();
-      if (ctx) {
-        if (ctx.state === 'suspended') {
-          ctx.resume().catch(() => {});
-        }
-        // Play an inaudible 1-sample buffer to permanently unlock Safari WebKit AudioContext
-        const osc = ctx.createBufferSource();
-        osc.buffer = ctx.createBuffer(1, 1, 22050);
-        osc.connect(ctx.destination);
-        osc.start(0);
+      const audio = getGlobalAudioPlayer();
+      if (audio) {
+        audio.play().then(() => {
+          audio.pause();
+          audio.currentTime = 0;
+        }).catch(() => {});
       }
     } catch (e) {}
   }
@@ -509,8 +505,8 @@
     };
 
     const endpointsToTry = [
-      state.backendUrl,
       'http://127.0.0.1:8000',
+      state.backendUrl,
       'https://thai-dubbing-api.onrender.com',
     ].filter(Boolean);
 
@@ -555,26 +551,34 @@
   }
 
   async function fetchDubDirect(payload) {
-    const targetUrl = (state.backendUrl || 'https://thai-dubbing-api.onrender.com').replace(/\/+$/, '') + '/api/v1/dub';
-    try {
-      const resp = await fetch(targetUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text: payload.text,
-          context: payload.context || getVideoTitle(),
-          engine: payload.engine || state.engine,
-          voice: payload.voice || state.voice,
-          gender: payload.gender || state.gender || 'male',
-          style: payload.style || state.style,
-          rate: payload.rate || state.rate,
-          customGeminiKey: payload.customGeminiKey || state.customGeminiKey,
-        }),
-      });
-      if (resp.ok) {
-        return await resp.json();
-      }
-    } catch (e) {}
+    const endpointsToTry = [
+      'http://127.0.0.1:8000',
+      state.backendUrl,
+      'https://thai-dubbing-api.onrender.com',
+    ].filter(Boolean);
+
+    for (const ep of endpointsToTry) {
+      try {
+        const targetUrl = ep.replace(/\/+$/, '') + '/api/v1/dub';
+        const resp = await fetch(targetUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text: payload.text,
+            context: payload.context || getVideoTitle(),
+            engine: payload.engine || state.engine,
+            voice: payload.voice || state.voice,
+            gender: payload.gender || state.gender || 'male',
+            style: payload.style || state.style,
+            rate: payload.rate || state.rate,
+            customGeminiKey: payload.customGeminiKey || state.customGeminiKey,
+          }),
+        });
+        if (resp.ok) {
+          return await resp.json();
+        }
+      } catch (e) {}
+    }
 
     return new Promise((resolve) => {
       chrome.runtime.sendMessage(
@@ -798,7 +802,6 @@
 
           const batchRes = await fetchDubBatchDirect(chunk);
           if (batchRes && batchRes.success && batchRes.results) {
-            const ctx = getAudioContext();
             for (const item of batchRes.results) {
               const cue = state.timedCues.find((c) => c.id === item.id);
               if (cue) {
@@ -808,13 +811,9 @@
                 cue.emotion = item.emotion || 'normal';
                 cue.orig_wpm = item.orig_wpm || 140;
                 cue.appliedRate = item.appliedRate || '+0%';
-                if (item.base64Audio && ctx) {
-                  try {
-                    const arrayBuf = base64ToArrayBuffer(item.base64Audio);
-                    cue.audioBuffer = await decodeAudioBuffer(ctx, arrayBuf);
-                  } catch (decErr) {
-                    console.error('[ThaiDubbing] Audio decode error:', decErr);
-                  }
+                if (item.base64Audio) {
+                  cue.audioBase64 = item.base64Audio;
+                  cue.audioUrl = `data:audio/wav;base64,${item.base64Audio}`;
                 }
                 cue.status = 'ready';
                 totalFetchedCues++;
@@ -911,7 +910,6 @@
               renderHUD();
             }
 
-            const ctx = getAudioContext();
             for (const item of batchRes.results) {
               const cue = state.timedCues.find((c) => c.id === item.id);
               if (cue) {
@@ -922,17 +920,12 @@
                 cue.orig_wpm = item.orig_wpm || 140;
                 cue.appliedRate = item.appliedRate || '+0%';
                 if (item.base64Audio) {
-                  try {
-                    if (ctx) {
-                      const arrayBuf = base64ToArrayBuffer(item.base64Audio);
-                      cue.audioBuffer = await decodeAudioBuffer(ctx, arrayBuf);
-                      cue.status = 'ready';
-                    }
-                  } catch (e) {
-                    cue.status = 'ready';
-                  }
+                  cue.audioBase64 = item.base64Audio;
+                  cue.audioUrl = `data:audio/wav;base64,${item.base64Audio}`;
+                  cue.status = 'ready';
                 } else {
-                  cue.audioBuffer = null;
+                  cue.audioUrl = null;
+                  cue.audioBase64 = null;
                   cue.status = 'ready';
                 }
               }
@@ -961,15 +954,14 @@
       if (video.paused) return;
 
       const currentTime = video.currentTime;
-      const ctx = getAudioContext();
 
       // 🎯 VIDEO-AUDIO PHASE-LOCK SYNC (PLL):
       // If the Thai voice is still speaking previous sentence and the video is racing ahead,
       // dynamically slow down or micro-pause the video so the audio and video stay perfectly in sync!
-      if (state.isPlaying && state.nextSpeechTime && ctx) {
-        const audioRemaining = state.nextSpeechTime - ctx.currentTime;
-        if (state.lastScheduledCue) {
-          const videoSlotRemaining = state.lastScheduledCue.end - currentTime;
+      if (state.isPlaying && state.lastScheduledCue) {
+        const audio = getGlobalAudioPlayer();
+        if (audio && !audio.paused && audio.duration && !isNaN(audio.duration)) {
+          const audioRemaining = audio.duration - audio.currentTime;
           // If video has raced past the subtitle boundary while voice is still speaking:
           if (currentTime >= state.lastScheduledCue.end + 0.15 && audioRemaining > 0.25) {
             if (!video.paused) {
@@ -994,7 +986,7 @@
           }
           cue.status = 'played';
           state.lastScheduledCue = cue;
-          if (cue.audioBuffer) {
+          if (cue.audioUrl || cue.audioBase64) {
             schedulePlayAudio(cue);
           } else if (cue.translated) {
             const durMs = Math.max(800, Math.round((cue.end - cue.start) * 1000 + 400));
@@ -1008,65 +1000,37 @@
   }
 
   function stopActivePlayback() {
-    if (state.currentSource) {
+    const audio = getGlobalAudioPlayer();
+    if (audio) {
       try {
-        state.currentSource.stop();
-        state.currentSource.disconnect();
-      } catch (e) {}
-      state.currentSource = null;
-    }
-    if (state.activeSources && state.activeSources.length > 0) {
-      state.activeSources.forEach((src) => {
-        try { src.stop(); src.disconnect(); } catch (e) {}
-      });
-      state.activeSources = [];
-    }
-    if (state.currentGainNode && state.audioCtx) {
-      try {
-        state.currentGainNode.gain.setValueAtTime(0.0, state.audioCtx.currentTime);
+        audio.pause();
+        audio.currentTime = 0;
       } catch (e) {}
     }
-    state.currentSource = null;
-    state.currentGainNode = null;
     state.isPlaying = false;
     state.nextSpeechTime = 0;
   }
 
   // --- Strict Single-Track Monophonic Speech Engine (Zero Overlap & Zero Ghost Voices) ---
   function schedulePlayAudio(cue) {
-    if (!cue.audioBuffer) return;
-    const ctx = getAudioContext();
-    if (!ctx) return;
+    if (!cue.audioUrl && !cue.audioBase64) return;
 
-    if (ctx.state === 'suspended') {
-      ctx.resume().catch(() => {});
-    }
-
-    // Stop and disconnect any existing active audio before starting new cue
     stopActivePlayback();
 
     const video = findVideoElement();
     const videoSpeed = (video && video.playbackRate) ? video.playbackRate : 1.0;
 
-    // Per-cue isolated gain node
-    const cueGain = ctx.createGain();
-    const targetVol = (typeof state.dubVolume === 'number' && !isNaN(state.dubVolume)) ? state.dubVolume : 1.0;
-    cueGain.gain.setValueAtTime(targetVol, ctx.currentTime);
+    const audio = getGlobalAudioPlayer();
+    if (!audio) return;
 
-    const source = ctx.createBufferSource();
-    source.buffer = cue.audioBuffer;
-    source.connect(cueGain);
-    cueGain.connect(ctx.destination);
-
-    // Natural Human Pitch & Cadence Preservation: Match video playback speed without distorting voice pitch
+    const audioSrc = cue.audioUrl || `data:audio/wav;base64,${cue.audioBase64}`;
+    audio.src = audioSrc;
+    audio.volume = (typeof state.dubVolume === 'number' && !isNaN(state.dubVolume)) ? state.dubVolume : 1.0;
     try {
-      source.playbackRate.setValueAtTime(videoSpeed, ctx.currentTime);
+      audio.playbackRate = videoSpeed;
     } catch (rateErr) {}
 
-    state.currentSource = source;
-    state.currentGainNode = cueGain;
     state.isPlaying = true;
-
     applyAudioDucking();
 
     if (state.showSubtitles) {
@@ -1079,24 +1043,28 @@
     const rhythmTag = cue.orig_wpm ? `⚡ ${cue.orig_wpm} WPM (${cue.appliedRate || '+0%'}) | ` : '';
     updateHUDStatus(`🔊 ${rhythmTag}"${cue.translated.slice(0, 18)}..."`);
 
-    source.onended = () => {
-      if (state.currentSource === source) {
-        state.currentSource = null;
-        state.currentGainNode = null;
-        state.isPlaying = false;
-        clearCinemaSubtitle();
-        restoreVideoVolume();
-        updateBufferGauge();
-      }
+    audio.onended = () => {
+      state.isPlaying = false;
+      clearCinemaSubtitle();
+      restoreVideoVolume();
+      updateBufferGauge();
     };
 
-    source.start(0);
+    audio.onerror = (err) => {
+      console.error('[ThaiDubbing] Audio error:', err);
+      state.isPlaying = false;
+      restoreVideoVolume();
+    };
+
+    audio.play().catch((playErr) => {
+      console.warn('[ThaiDubbing] Audio play caught:', playErr);
+    });
   }
 
   function updateBufferGauge() {
     const video = findVideoElement();
     const cur = video ? video.currentTime : 0;
-    const readyCues = state.timedCues.filter((c) => c.status === 'ready' && c.end >= cur - 1.0);
+    const readyCues = state.timedCues.filter((c) => c.status === 'ready' && (c.audioUrl || c.audioBase64) && c.end >= cur - 1.0);
 
     if (readyCues.length > 0) {
       const readyDuration = readyCues.reduce((acc, c) => acc + (c.end - c.start), 0);
@@ -1201,64 +1169,53 @@
       } else if (dubRes.gemini_status === 'invalid') {
         showSystemToast('⚠️ Gemini Key ไม่ถูกต้อง (400) แปลสดชั่วคราว');
       }
-      const ctx = getAudioContext();
-      if (ctx) {
-        const arrayBuf = base64ToArrayBuffer(dubRes.base64Audio);
-        const buf = await decodeAudioBuffer(ctx, arrayBuf);
-        if (buf) {
-          playDirectLiveBuffer(buf, dubRes.translatedText);
-        }
-      }
+      playDirectLiveBuffer(dubRes.base64Audio, dubRes.translatedText);
     }
   }
 
-  function playDirectLiveBuffer(buffer, translatedText) {
-    const ctx = getAudioContext();
-    if (!ctx || !buffer) return;
+  function playDirectLiveBuffer(audioBase64, translatedText) {
+    if (!audioBase64) return;
 
     stopActivePlayback();
-    unlockAudio();
 
     const video = findVideoElement();
-    const cueGain = ctx.createGain();
-    const targetVol = (typeof state.dubVolume === 'number' && !isNaN(state.dubVolume)) ? state.dubVolume : 1.0;
-    cueGain.gain.setValueAtTime(targetVol, ctx.currentTime);
-
-    const source = ctx.createBufferSource();
-    source.buffer = buffer;
-    source.connect(cueGain);
-    cueGain.connect(ctx.destination);
-    state.currentSource = source;
-    state.currentGainNode = cueGain;
-    state.isPlaying = true;
-
-    // Apply playback rate according to video playback rate (Default 1.0x)
     const videoSpeed = (video && video.playbackRate) ? video.playbackRate : 1.0;
-    try {
-      source.playbackRate.setValueAtTime(videoSpeed, ctx.currentTime);
-    } catch(e) {}
 
+    const audio = getGlobalAudioPlayer();
+    if (!audio) return;
+
+    const audioSrc = audioBase64.startsWith('data:') ? audioBase64 : `data:audio/wav;base64,${audioBase64}`;
+    audio.src = audioSrc;
+    audio.volume = (typeof state.dubVolume === 'number' && !isNaN(state.dubVolume)) ? state.dubVolume : 1.0;
+    try {
+      audio.playbackRate = videoSpeed;
+    } catch (e) {}
+
+    state.isPlaying = true;
     applyAudioDucking();
 
     if (state.showSubtitles) {
-      const durationMs = Math.max(800, Math.round((buffer.duration || 3) * 1000 + 400));
-      renderCinemaSubtitle(translatedText, durationMs);
+      renderCinemaSubtitle(translatedText, 3500);
     } else {
       clearCinemaSubtitle();
     }
 
     updateHUDStatus(`🔊 พากย์: "${translatedText.slice(0, 15)}..."`);
 
-    source.onended = () => {
-      state.currentSource = null;
-      state.currentGainNode = null;
+    audio.onended = () => {
       state.isPlaying = false;
       clearCinemaSubtitle();
       restoreVideoVolume();
       updateHUDStatus('🟢 กำลังพากย์สด');
     };
 
-    source.start(0);
+    audio.onerror = (err) => {
+      console.error('[ThaiDubbing] Live audio error:', err);
+      state.isPlaying = false;
+      restoreVideoVolume();
+    };
+
+    audio.play().catch((err) => console.warn('[ThaiDubbing] Live play caught:', err));
   }
 
   // --- Hide YouTube Native Captions during Dubbing ---
@@ -1842,16 +1799,9 @@
         rate: state.rate,
         customGeminiKey: state.customGeminiKey,
       },
-    }, async (response) => {
+    }, (response) => {
       if (response && response.success && response.base64Audio) {
-        const ctx = getAudioContext();
-        if (ctx) {
-          const arrayBuf = base64ToArrayBuffer(response.base64Audio);
-          const buf = await decodeAudioBuffer(ctx, arrayBuf);
-          if (buf) {
-            playDirectLiveBuffer(buf, response.translatedText || sampleText);
-          }
-        }
+        playDirectLiveBuffer(response.base64Audio, response.translatedText || sampleText);
       } else {
         updateHUDStatus('❌ เชื่อมต่อ Backend ไม่ได้');
         alert(`เกิดข้อผิดพลาด: ${response ? response.error : 'กรุณารัน ./run_backend.sh'}`);
