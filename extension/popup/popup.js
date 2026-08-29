@@ -16,11 +16,6 @@ const KOKORO_VOICES = [
   { id: 'kokoro-adam', name: '🌟 Kokoro Adam (82M Open-Source Studio Model - ชาย)' },
 ];
 
-const GOOGLE_VOICES = [
-  { id: 'Puck', name: '🎙️ Puck (ชาย ทุ้มนุ่ม)' },
-  { id: 'Aoede', name: '🎙️ Aoede (หญิง นุ่มนวล)' },
-];
-
 document.addEventListener('DOMContentLoaded', async () => {
   // DOM Elements
   const enabledToggle = document.getElementById('enabledToggle');
@@ -48,10 +43,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       voices = MMS_VOICES;
     } else if (engine === 'edge') {
       voices = EDGE_VOICES;
-    } else if (engine === 'kokoro') {
-      voices = KOKORO_VOICES;
     } else {
-      voices = GOOGLE_VOICES;
+      voices = KOKORO_VOICES;
     }
 
     voices.forEach((v) => {

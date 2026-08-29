@@ -45,14 +45,12 @@
   };
 
   const VOICES = [
-    { id: 'auto', name: '🤖 อัตโนมัติ (AI เลือกเสียงที่เหมือนคนที่สุดตามคลิป)', engine: 'auto', gender: 'auto' },
+    { id: 'auto', name: '🤖 อัตโนมัติ (AI เลือกโมเดล Open-Source ที่ดีที่สุด)', engine: 'auto', gender: 'auto' },
     { id: 'mms-thai', name: '🇹🇭 Meta MMS Thai (Open-Source Native VITS Neural Model)', engine: 'mms', gender: 'male' },
     { id: 'th-TH-NiwatNeural', name: '👨‍💼 นิวัฒน์ (Neural Studio - เสียงชาย เหมือนคนจริง ทุ้มนุ่ม [ครับ])', engine: 'edge', gender: 'male' },
     { id: 'th-TH-PremwadeeNeural', name: '👩‍💼 เปรมวดี (Neural Studio - เสียงหญิง เหมือนคนจริง นุ่มนวล [ค่ะ])', engine: 'edge', gender: 'female' },
     { id: 'kokoro-sarah', name: '🌟 Kokoro Sarah (82M Open-Source Studio Model - หญิง)', engine: 'kokoro', gender: 'female' },
     { id: 'kokoro-adam', name: '🌟 Kokoro Adam (82M Open-Source Studio Model - ชาย)', engine: 'kokoro', gender: 'male' },
-    { id: 'Puck', name: '🎙️ Puck (Google Studio - เสียงชาย)', engine: 'google', gender: 'male' },
-    { id: 'Aoede', name: '🎙️ Aoede (Google Studio - เสียงหญิง)', engine: 'google', gender: 'female' },
   ];
 
   const STYLES = [
