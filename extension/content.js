@@ -61,7 +61,8 @@
   ];
 
   const STYLES = [
-    { id: 'auto', name: '🎭 ปรับตามคลิปอัตโนมัติ (แนะนำ)' },
+    { id: 'notebooklm', name: '🎙️ NotebookLM Audio Overview (เล่าเรื่องมีเสน่ห์ อบอุ่น - แนะนำ)' },
+    { id: 'auto', name: '🎭 ปรับตามคลิปอัตโนมัติ' },
     { id: 'casual', name: '🗣️ ยูทูบเบอร์ / เกม / กันเอง / กวนๆ' },
     { id: 'cinema', name: '🎬 หนัง / ซีรีส์ / อารมณ์สมจริง' },
     { id: 'podcast', name: '🎧 พอดแคสต์ / เล่าเรื่อง / รีวิว' },

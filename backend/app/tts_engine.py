@@ -157,19 +157,24 @@ class TTSEngine:
             return b""
 
         keys_to_try = [api_key or settings.gemini_api_key] + API_KEYS
-        keys = [k for k in keys_to_try if k]
-
-        style_prompt = GOOGLE_STYLES.get(style, GOOGLE_STYLES["podcast"])
-        full_prompt = f"{style_prompt}{clean_text}"
+        system_instruction_text = (
+            "You are the charismatic lead Thai narrator and host of 'NotebookLM Audio Overview'. "
+            "Speak with exceptionally natural human cadence, warm conversational intonation, "
+            "lively storytelling rhythm, expressive pitch contours, natural breathing, and clear Thai pronunciation. "
+            "Deliver the provided Thai narration script with studio broadcast-grade audio realism."
+        )
 
         payload = {
-            "contents": [{"parts": [{"text": full_prompt}]}],
+            "systemInstruction": {
+                "parts": [{"text": system_instruction_text}]
+            },
+            "contents": [{"parts": [{"text": clean_text}]}],
             "generationConfig": {
                 "responseModalities": ["AUDIO"],
                 "speechConfig": {
                     "voiceConfig": {
                         "prebuiltVoiceConfig": {
-                            "voiceName": voice if voice in ["Aoede", "Puck", "Kore", "Fenrir", "Charon"] else "Aoede"
+                            "voiceName": voice if voice in ["Aoede", "Puck", "Kore", "Fenrir", "Charon"] else "Puck"
                         }
                     }
                 },
