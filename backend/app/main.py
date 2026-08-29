@@ -373,15 +373,12 @@ async def dub_cues_batch(req: BatchDubRequest):
             if speaker == "female_1" or speaker_gender == "female":
                 cue_engine = "edge"
                 cue_voice = "th-TH-PremwadeeNeural"
-            elif speaker == "male_2":
-                cue_engine = "vits"
-                cue_voice = "mms-male-v2"
-            elif speaker == "female_2":
-                cue_engine = "gtts"
-                cue_voice = "google-thai"
             else:
                 cue_engine = "edge"
                 cue_voice = "th-TH-NiwatNeural"
+        else:
+            cue_engine = engine
+            cue_voice = voice
 
         # 🎯 Original Video Speech Cadence & Exact Duration Pacing (WPS / WPM)
         words_count = len(cue.text.split())
@@ -505,18 +502,16 @@ async def dub_cues_batch(req: BatchDubRequest):
         spk_id = d.get("speaker", "male_1")
         if spk_id not in unique_speakers:
             spk_gender = d.get("gender", "male")
-            if spk_id == "female_1" or spk_gender == "female":
-                v_name = "เปรมวดี (Studio HD หญิง)"
-                v_code = "th-TH-PremwadeeNeural"
-            elif spk_id == "male_2":
-                v_name = "Thai Male V2 (ชาย)"
-                v_code = "mms-male-v2"
-            elif spk_id == "female_2":
-                v_name = "Google Thai (หญิง)"
-                v_code = "google-thai"
+            if not req.voice or req.voice == "auto":
+                if spk_id == "female_1" or spk_gender == "female":
+                    v_name = "เปรมวดี (Studio HD หญิง)"
+                    v_code = "th-TH-PremwadeeNeural"
+                else:
+                    v_name = "นิวัฒน์ (Studio HD ชาย)"
+                    v_code = "th-TH-NiwatNeural"
             else:
-                v_name = "นิวัฒน์ (Studio HD ชาย)"
-                v_code = "th-TH-NiwatNeural"
+                v_name = voice
+                v_code = voice
 
             unique_speakers[spk_id] = {
                 "id": spk_id,

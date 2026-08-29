@@ -1417,9 +1417,9 @@
           </div>
         </div>
 
-        <!-- Multi-Speaker Diarization Badge -->
-        ${state.isDubbingActive && state.speakerCount > 0 ? `
-          <div id="hud-speaker-badge" title="${state.speakers.map(s => s.id + ': ' + s.voice_name).join('\n')}" style="
+        <!-- Multi-Speaker Diarization & Voice Lock Badge -->
+        ${state.isDubbingActive ? `
+          <div id="hud-speaker-badge" title="${state.speakers && state.speakers.length > 0 ? state.speakers.map(s => s.id + ': ' + s.voice_name).join('\n') : 'กำลังวิเคราะห์ผู้พูด'}" style="
             background: rgba(99, 102, 241, 0.25);
             border: 1px solid rgba(99, 102, 241, 0.6);
             border-radius: 12px;
@@ -1432,8 +1432,16 @@
             color: #a5b4fc;
             white-space: nowrap;
           ">
-            <span>👥</span>
-            <span>${state.speakerCount} ผู้พูด (ชาย ${state.maleCount} / หญิง ${state.femaleCount})</span>
+            <span>${state.speakerCount > 1 ? '👥' : '🎙️'}</span>
+            <span>${
+              state.voice !== 'auto'
+                ? `🔒 ล็อกเสียง: ${(VOICES.find(v => v.id === state.voice) || {}).name ? (VOICES.find(v => v.id === state.voice).name.slice(0, 14) + '...') : state.voice}`
+                : (state.speakerCount > 1
+                    ? `${state.speakerCount} ผู้พูด (ชาย: นิวัฒน์ | หญิง: เปรมวดี)`
+                    : (state.speakerCount === 1
+                        ? `1 ผู้พูด (เดี่ยว) ➔ ${state.maleCount > 0 ? 'นิวัฒน์ (ชาย)' : 'เปรมวดี (หญิง)'}`
+                        : 'กำลังตรวจจับผู้พูด...'))
+            }</span>
           </div>
         ` : ''}
 
