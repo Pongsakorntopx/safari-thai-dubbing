@@ -780,11 +780,6 @@
           }
           updateBufferGauge();
         }
-
-        // Fast Start: When at least 45 seconds of speech are ready, start playing while remaining chunks load
-        if (state.bufferedSeconds >= 45 && state.isSyncBuffering) {
-          onBufferSyncComplete();
-        }
       }
 
       // 4. 2-Minute buffer is ready -> Automatically Play Video & Start Background Lookahead!
@@ -886,7 +881,18 @@
     state.schedulerTimer = setInterval(() => {
       if (!state.isDubbingActive || state.timedCues.length === 0) return;
       const video = findVideoElement();
-      if (!video || video.paused || state.isSyncBuffering) return;
+      if (!video) return;
+
+      // 🛑 ENFORCE BUFFER PAUSE: If YouTube tries to auto-play while we are still buffering, force pause it!
+      if (state.isSyncBuffering) {
+        if (!video.paused) {
+          console.warn('[ThaiDubbing] Auto-play detected during buffering. Enforcing pause...');
+          video.pause();
+        }
+        return;
+      }
+
+      if (video.paused) return;
 
       const currentTime = video.currentTime;
       for (let i = 0; i < state.timedCues.length; i++) {
