@@ -24,7 +24,7 @@
     isDubbingActive: false,
     timedCues: [],
     currentVideoId: null,
-    targetBufferSeconds: 120, // 120-Second (2-minute) Initial Sync Buffer
+    targetBufferSeconds: 180, // 180-Second (3-minute) Golden Buffer
     lastScheduledCue: null,
     nextSpeechTime: 0,
     syncInterval: null,
@@ -737,91 +737,83 @@
     }, 50);
 
     renderHUD();
-    updateHUDStatus('⏳ วิดีโอหยุดชั่วคราว: กำลังวิเคราะห์และเรียบเรียงภาษาไทยล่วงหน้า 2 นาที...');
+    updateHUDStatus('⏳ วิดีโอหยุดชั่วคราว: กำลังวิเคราะห์และเรียบเรียงภาษาไทยล่วงหน้า 3 นาที...');
 
     try {
       // 2. Fetch Structured Transcript via Background Proxy
       const transcriptRes = await fetchTranscriptDirect(videoId);
-    console.log('[ThaiDubbing] >>> 2. Transcript response:', transcriptRes);
+      console.log('[ThaiDubbing] >>> 2. Transcript response:', transcriptRes);
 
-    if (transcriptRes && transcriptRes.success && transcriptRes.cues && transcriptRes.cues.length > 0) {
-      state.timedCues = transcriptRes.cues.map((c) => ({
-        ...c,
-        translated: '',
-        audioBuffer: null,
-        status: 'pending',
-      }));
-      state.currentVideoId = videoId;
-      console.log(`[ThaiDubbing] Loaded ${state.timedCues.length} cues. Pre-buffering 120 seconds...`);
+      if (transcriptRes && transcriptRes.success && transcriptRes.cues && transcriptRes.cues.length > 0) {
+        state.timedCues = transcriptRes.cues.map((c) => ({
+          ...c,
+          translated: '',
+          audioBuffer: null,
+          status: 'pending',
+        }));
+        state.currentVideoId = videoId;
+        console.log(`[ThaiDubbing] Loaded ${state.timedCues.length} cues. Pre-buffering 180 seconds...`);
 
-      // 3. Select all cues spanning the first 120 seconds (approx 24-32 cues)
-      const video = findVideoElement();
-      const cur = video ? video.currentTime : 0;
-      const targetTime = cur + state.targetBufferSeconds;
-      const batchCues = state.timedCues.filter((c) => c.end >= cur && c.start <= targetTime);
-      const toFetch = (batchCues.length > 0 ? batchCues : state.timedCues).slice(0, 32);
+        // 3. Select all cues spanning the first 180 seconds (approx 36-48 cues)
+        const video = findVideoElement();
+        const cur = video ? video.currentTime : 0;
+        const targetTime = cur + state.targetBufferSeconds;
+        const batchCues = state.timedCues.filter((c) => c.end >= cur && c.start <= targetTime);
+        const toFetch = (batchCues.length > 0 ? batchCues : state.timedCues).slice(0, 48);
 
-      // Divide toFetch into progressive sub-batches of 6 cues for immediate responsive progress bar updates
-      const chunkSize = 6;
-      let totalFetchedCues = 0;
+        // Divide toFetch into progressive sub-batches of 8 cues for responsive progress updates
+        const chunkSize = 8;
+        let totalFetchedCues = 0;
 
-      for (let i = 0; i < toFetch.length; i += chunkSize) {
-        if (!state.isDubbingActive) break;
-        const chunk = toFetch.slice(i, i + chunkSize);
-        chunk.forEach((c) => (c.status = 'fetching'));
+        for (let i = 0; i < toFetch.length; i += chunkSize) {
+          if (!state.isDubbingActive) break;
+          const chunk = toFetch.slice(i, i + chunkSize);
+          chunk.forEach((c) => (c.status = 'fetching'));
 
-        const progressPercent = Math.round((totalFetchedCues / toFetch.length) * 100);
-        updateHUDStatus(`⏳ กำลังเรียบเรียงและสร้างเสียงพากย์ (${progressPercent}% - ท่อนที่ ${i + 1}/${toFetch.length})...`);
+          const progressPercent = Math.round((totalFetchedCues / toFetch.length) * 100);
+          updateHUDStatus(`⏳ กำลังเรียบเรียงและสร้างเสียงพากย์ (${progressPercent}% - ท่อนที่ ${i + 1}/${toFetch.length})...`);
 
-        const batchRes = await fetchDubBatchDirect(chunk);
-        if (batchRes && batchRes.success && batchRes.results) {
-          if (batchRes.speaker_count !== undefined) {
-            state.speakerCount = batchRes.speaker_count;
-            state.maleCount = batchRes.male_count || 0;
-            state.femaleCount = batchRes.female_count || 0;
-            state.speakers = batchRes.speakers || [];
-            renderHUD();
-          }
-
-          const ctx = getAudioContext();
-          for (const item of batchRes.results) {
-            const cue = state.timedCues.find((c) => c.id === item.id);
-            if (cue) {
-              cue.translated = item.translatedText || cue.text;
-              cue.isMasterTrack = !!item.isMasterTrack;
-              cue.speaker = item.speaker || 'Host';
-              cue.emotion = item.emotion || 'normal';
-              cue.orig_wpm = item.orig_wpm || 140;
-              cue.appliedRate = item.appliedRate || '+0%';
-              if (item.base64Audio && ctx) {
-                try {
-                  const arrayBuf = base64ToArrayBuffer(item.base64Audio);
-                  cue.audioBuffer = await ctx.decodeAudioData(arrayBuf);
-                } catch (decErr) {
-                  console.error('[ThaiDubbing] Audio decode error:', decErr);
+          const batchRes = await fetchDubBatchDirect(chunk);
+          if (batchRes && batchRes.success && batchRes.results) {
+            const ctx = getAudioContext();
+            for (const item of batchRes.results) {
+              const cue = state.timedCues.find((c) => c.id === item.id);
+              if (cue) {
+                cue.translated = item.translatedText || cue.text;
+                cue.isMasterTrack = !!item.isMasterTrack;
+                cue.speaker = item.speaker || 'Host';
+                cue.emotion = item.emotion || 'normal';
+                cue.orig_wpm = item.orig_wpm || 140;
+                cue.appliedRate = item.appliedRate || '+0%';
+                if (item.base64Audio && ctx) {
+                  try {
+                    const arrayBuf = base64ToArrayBuffer(item.base64Audio);
+                    cue.audioBuffer = await ctx.decodeAudioData(arrayBuf);
+                  } catch (decErr) {
+                    console.error('[ThaiDubbing] Audio decode error:', decErr);
+                  }
                 }
+                cue.status = 'ready';
+                totalFetchedCues++;
               }
-              cue.status = 'ready';
-              totalFetchedCues++;
             }
+            updateBufferGauge();
           }
-          updateBufferGauge();
         }
+
+        // 4. 3-Minute buffer is ready -> Automatically Play Video & Start Background Lookahead!
+        state.bufferedSeconds = state.targetBufferSeconds; // Force UI progress to 100%
+        updateBufferGauge();
+        onBufferSyncComplete();
+        startLookaheadWorkers();
+
+      } else {
+        console.warn('[ThaiDubbing] Video has no transcripts. Switching to Live Subtitle mode.');
+        enableYouTubeCaptionsButton();
+        showThaiCaptionToast('⚠️ วิดีโอนี้ไม่มี Subtitle ถอดเสียงสำเร็จ จึงเปิดโหมดพากย์สดอัตโนมัติ');
+        onBufferSyncComplete();
+        updateHUDStatus('🟢 โหมดพากย์สด (กำลังพากย์ตามซับ)');
       }
-
-      // 4. 2-Minute buffer is ready -> Automatically Play Video & Start Background Lookahead!
-      state.bufferedSeconds = state.targetBufferSeconds; // Force UI progress to 100%
-      updateBufferGauge();
-      onBufferSyncComplete();
-      startLookaheadWorkers();
-
-    } else {
-      console.warn('[ThaiDubbing] Video has no transcripts. Switching to Live Subtitle mode.');
-      enableYouTubeCaptionsButton();
-      showThaiCaptionToast('⚠️ วิดีโอนี้ไม่มี Subtitle ถอดเสียงสำเร็จ จึงเปิดโหมดพากย์สดอัตโนมัติ');
-      onBufferSyncComplete();
-      updateHUDStatus('🟢 โหมดพากย์สด (กำลังพากย์ตามซับ)');
-    }
     } catch (err) {
       console.error('[ThaiDubbing] Error during startDubbingProcess:', err);
       stopDubbing();
@@ -851,13 +843,13 @@
 
   function onBufferSyncComplete() {
     if (!state.isSyncBuffering) return;
-    console.log('[ThaiDubbing] >>> 120s Buffer Ready! Resuming video playback...');
+    console.log('[ThaiDubbing] >>> 180s Buffer Ready! Resuming video playback...');
     state.isSyncBuffering = false;
 
     // Automatically Resume Video Immediately
     resumeYouTubeVideo();
     renderHUD();
-    updateHUDStatus('🟢 บัฟเฟอร์ 2 นาทีพร้อมแล้ว! วิดีโอกำลังเล่น');
+    updateHUDStatus('🟢 บัฟเฟอร์ 3 นาทีพร้อมแล้ว! วิดีโอกำลังเล่น');
   }
 
   // --- Continuous Lookahead Worker & Audio Scheduler ---
@@ -865,15 +857,15 @@
     if (state.lookaheadTimer) clearInterval(state.lookaheadTimer);
     if (state.schedulerTimer) clearInterval(state.schedulerTimer);
 
-    // Continuous Worker: Maintains 80-120s paragraph buffer ahead throughout entire video
+    // Continuous Worker: Maintains 100-180s paragraph buffer ahead throughout entire video
     state.lookaheadTimer = setInterval(async () => {
       if (!state.isDubbingActive || state.timedCues.length === 0 || state.isPreFetching) return;
       const video = findVideoElement();
       const currentTime = video ? video.currentTime : 0;
       updateBufferGauge();
 
-      // If buffer drops below 80s, fetch next batch in background
-      if (state.bufferedSeconds < 80) {
+      // If buffer drops below 100s, fetch next batch in background
+      if (state.bufferedSeconds < 100) {
         const upcomingCues = state.timedCues.filter((c) => c.end >= currentTime - 1.0);
         const pendingCues = upcomingCues.filter((c) => c.status === 'pending');
 
@@ -1351,7 +1343,7 @@
             box-shadow: 0 2px 10px rgba(79, 70, 229, 0.5);
           ">
             <span>🚀</span>
-            <span>เริ่มพากย์ไทย (2 นาที)</span>
+            <span>เริ่มพากย์ไทย (3 นาที)</span>
           </button>
         ` : (state.isSyncBuffering ? `
           <button id="hud-skip-sync-btn" type="button" title="ข้ามการรอและเล่นวิดีโอทันที" style="
@@ -1389,43 +1381,15 @@
           </button>
         `)}
 
-        <!-- 60-Second Buffer Gauge Indicator -->
-        <div style="display: flex; flex-direction: column; gap: 2px; min-width: 130px;">
+        <!-- 180-Second Golden Buffer Gauge Indicator -->
+        <div style="display: flex; flex-direction: column; gap: 2px; min-width: 135px;">
           <span id="hud-buffer-text" style="font-size: 10px; font-weight: 600; color: ${state.isSyncBuffering ? '#f59e0b' : '#38bdf8'};">
-            ${state.isSyncBuffering ? `⏳ ซิงค์ 2 นาที: ${state.bufferedSeconds}s/${state.targetBufferSeconds}s` : (state.isDubbingActive ? `⚡ บัฟเฟอร์ล่วงหน้า: ${state.bufferedSeconds}s` : 'พร้อมแปล (กดปุ่มเริ่ม)')}
+            ${state.isSyncBuffering ? `⏳ ซิงค์ 3 นาที: ${state.bufferedSeconds}s/${state.targetBufferSeconds}s` : (state.isDubbingActive ? `⚡ บัฟเฟอร์ล่วงหน้า: ${state.bufferedSeconds}s` : 'พร้อมแปล (กดปุ่มเริ่ม)')}
           </span>
           <div style="width: 100%; height: 3px; background: rgba(255,255,255,0.15); border-radius: 2px; overflow: hidden;">
             <div id="hud-buffer-bar" style="width: ${state.isDubbingActive ? bufferPercent : 0}%; height: 100%; background: ${state.isSyncBuffering ? '#f59e0b' : '#10b981'}; transition: width 0.3s ease;"></div>
           </div>
         </div>
-
-        <!-- Multi-Speaker Diarization & Voice Lock Badge -->
-        ${state.isDubbingActive ? `
-          <div id="hud-speaker-badge" title="${state.speakers && state.speakers.length > 0 ? state.speakers.map(s => s.id + ': ' + s.voice_name).join('\n') : 'กำลังวิเคราะห์ผู้พูด'}" style="
-            background: rgba(99, 102, 241, 0.25);
-            border: 1px solid rgba(99, 102, 241, 0.6);
-            border-radius: 12px;
-            padding: 3px 8px;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            font-size: 10px;
-            font-weight: 700;
-            color: #a5b4fc;
-            white-space: nowrap;
-          ">
-            <span>${state.speakerCount > 1 ? '👥' : '🎙️'}</span>
-            <span>${
-              state.voice !== 'auto'
-                ? `🔒 ล็อกเสียง: ${(VOICES.find(v => v.id === state.voice) || {}).name ? (VOICES.find(v => v.id === state.voice).name.slice(0, 14) + '...') : state.voice}`
-                : (state.speakerCount > 1
-                    ? `${state.speakerCount} ผู้พูด (ชาย: นิวัฒน์ | หญิง: เปรมวดี)`
-                    : (state.speakerCount === 1
-                        ? `1 ผู้พูด (เดี่ยว) ➔ ${state.maleCount > 0 ? 'นิวัฒน์ (ชาย)' : 'เปรมวดี (หญิง)'}`
-                        : 'กำลังตรวจจับผู้พูด...'))
-            }</span>
-          </div>
-        ` : ''}
 
         <!-- Voice Selector Dropdown -->
         <select id="hud-voice-select" style="
