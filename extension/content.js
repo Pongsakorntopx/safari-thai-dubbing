@@ -46,14 +46,12 @@
 
   const VOICES = [
     { id: 'auto', name: '🤖 อัตโนมัติ (AI วิเคราะห์คลิปและเลือกโมเดลที่ดีที่สุด)', engine: 'auto', gender: 'auto' },
-    { id: 'vachana-m1', name: '🇹🇭 Vachana ชาย 1 (Open-Source Deep Neural ภาษาไทยแท้)', engine: 'vachana', gender: 'male' },
-    { id: 'vachana-f1', name: '🇹🇭 Vachana หญิง 1 (Open-Source Deep Neural ภาษาไทยแท้)', engine: 'vachana', gender: 'female' },
-    { id: 'vachana-m2', name: '🇹🇭 Vachana ชาย 2 (Open-Source Deep Neural - สไตล์บรรยาย)', engine: 'vachana', gender: 'male' },
-    { id: 'vachana-f2', name: '🇹🇭 Vachana หญิง 2 (Open-Source Deep Neural - สไตล์สดใส)', engine: 'vachana', gender: 'female' },
-    { id: 'lunarlist', name: '🇹🇭 PyThaiNLP Lunarlist (Open-Source ONNX Acoustic)', engine: 'lunarlist', gender: 'male' },
-    { id: 'th-TH-NiwatNeural', name: '🎙️ นิวัฒน์ (Neural Studio - เสียงชาย ทุ้มนุ่ม 48kHz [ครับ])', engine: 'edge', gender: 'male' },
-    { id: 'th-TH-PremwadeeNeural', name: '🎙️ เปรมวดี (Neural Studio - เสียงหญิง นุ่มนวล 48kHz [ค่ะ])', engine: 'edge', gender: 'female' },
-    { id: 'mms-thai', name: '🇹🇭 Meta MMS Thai (Open-Source Native VITS Neural Model)', engine: 'mms', gender: 'male' },
+    { id: 'google-thai', name: '🇹🇭 Google Native Thai (เสียงภาษาไทยแท้ มาตรฐาน Google ชัดเจนเป็นธรรมชาติ)', engine: 'gtts', gender: 'female' },
+    { id: 'th-TH-NiwatNeural', name: '🎙️ นิวัฒน์ (Studio Neural HD 48kHz - เสียงชาย ทุ้มนุ่ม พอดแคสต์ สารคดี [ครับ])', engine: 'edge', gender: 'male' },
+    { id: 'th-TH-PremwadeeNeural', name: '🎙️ เปรมวดี (Studio Neural HD 48kHz - เสียงหญิง นุ่มนวล คมชัด สดใส [ค่ะ])', engine: 'edge', gender: 'female' },
+    { id: 'mms-narrator', name: '🇹🇭 ผู้บรรยายสารคดี (Documentary Narrator - VITS Neural Model ภาษาไทย)', engine: 'vits', gender: 'male' },
+    { id: 'mms-female-v2', name: '🇹🇭 หญิง V2 ธรรมชาติ (Thai Female V2 - Deep Neural Model ภาษาไทยแท้)', engine: 'vits', gender: 'female' },
+    { id: 'mms-male-v2', name: '🇹🇭 ชาย V2 ธรรมชาติ (Thai Male V2 - Deep Neural Model ภาษาไทยแท้)', engine: 'vits', gender: 'male' },
   ];
 
   const STYLES = [

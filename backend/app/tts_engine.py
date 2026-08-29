@@ -1,9 +1,11 @@
-"""Advanced Open-Source Neural Speech Synthesis Engine for Thai Dubbing.
-Features:
-1. Meta MMS Thai VITS (facebook/mms-tts-tha) - 100% Local Native Open-Source Deep Neural TTS
-2. Kokoro-ONNX (82M Open-Weight Model) - High-Fidelity Studio Neural Voice
-3. Microsoft Edge Neural - Deep Neural Studio Voices (th-TH-NiwatNeural, th-TH-PremwadeeNeural)
-4. Google Gemini Studio Audio - Multimodal Voice Persona
+"""
+Master-Level Open-Source & Studio Neural Text-to-Speech (TTS) Engine for Thai Video Dubbing.
+Completely replaces legacy synthetic engines with the highest-fidelity Thai speech models:
+1. Google Native Thai Neural (gTTS) - Authentic, native Thai pronunciation & natural cadence
+2. Microsoft Studio Neural HD 48kHz (Niwat & Premwadee) - Studio broadcast grade podcast & narrative
+3. Thai Documentary Narrator (VIZINTZOR Male Narrator VITS) - Deep documentary narration
+4. Thai Female V2 Deep Neural (VIZINTZOR Female V2 VITS) - Natural modern female voice
+5. Thai Male V2 Deep Neural (VIZINTZOR Male V2 VITS) - Natural modern male voice
 """
 
 import asyncio
@@ -11,88 +13,70 @@ import io
 import logging
 import os
 import re
-import sys
-import tempfile
-import urllib.parse
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
-import aiohttp
 import edge_tts
-try:
-    import numpy as np
-except ImportError:
-    np = None
+import gtts
+import numpy as np
+import scipy.io.wavfile
+import soundfile as sf
+import torch
 
 try:
-    import soundfile as sf
+    from transformers import AutoTokenizer, VitsModel
+    TRANSFORMERS_AVAILABLE = True
 except (ImportError, OSError):
-    sf = None
-
-try:
-    import sherpa_onnx
-    SHERPA_AVAILABLE = True
-except (ImportError, OSError):
-    SHERPA_AVAILABLE = False
-
-try:
-    from kokoro_onnx import Kokoro
-    KOKORO_AVAILABLE = True
-except (ImportError, OSError):
-    KOKORO_AVAILABLE = False
+    TRANSFORMERS_AVAILABLE = False
 
 from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-# Model File Paths
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-MMS_THA_MODEL = os.path.join(BASE_DIR, "models", "mms_tha", "vits-mms-tha", "model.onnx")
-MMS_THA_TOKENS = os.path.join(BASE_DIR, "models", "mms_tha", "vits-mms-tha", "tokens.txt")
-KOKORO_MODEL = os.path.join(BASE_DIR, "models", "kokoro", "kokoro-v0_19.onnx")
-KOKORO_VOICES = os.path.join(BASE_DIR, "models", "kokoro", "voices.bin")
-
 VOICE_REGISTRY: Dict[str, Dict[str, str]] = {
-    "mms-thai": {
-        "id": "mms-thai",
-        "name": "🇹🇭 Meta MMS Thai (Open-Source Native VITS Neural Model)",
-        "gender": "male",
-        "engine": "mms",
-        "desc": "โมเดล VITS ภาษาไทยแท้จาก Meta AI รันออฟไลน์บนเครื่อง 100%",
+    "google-thai": {
+        "id": "google-thai",
+        "name": "🇹🇭 Google Native Thai (เสียงภาษาไทยแท้ มาตรฐาน Google ชัดเจนเป็นธรรมชาติ)",
+        "gender": "female",
+        "engine": "gtts",
+        "desc": "เสียงพากย์ภาษาไทยแท้จาก Google ออกเสียงแม่นยำ ลื่นไหล ไร้สำเนียงแปลกปลอม",
     },
     "th-TH-NiwatNeural": {
         "id": "th-TH-NiwatNeural",
-        "name": "👨‍💼 นิวัฒน์ (Neural Studio - เสียงชาย ทุ้มนุ่ม พอดแคสต์ [ครับ])",
+        "name": "🎙️ นิวัฒน์ (Studio Neural HD 48kHz - เสียงชาย ทุ้มนุ่ม พอดแคสต์ สารคดี [ครับ])",
         "gender": "male",
         "engine": "edge",
-        "desc": "เสียงพากย์ชาย Deep Neural คมชัดระดับ 48kHz ทุ้มนุ่มน่าฟัง",
+        "desc": "เสียงพากย์ชาย Deep Neural คมชัดระดับ 48kHz ทุ้มนุ่มน่าฟัง สไตล์พอดแคสต์",
     },
     "th-TH-PremwadeeNeural": {
         "id": "th-TH-PremwadeeNeural",
-        "name": "👩‍💼 เปรมวดี (Neural Studio - เสียงหญิง นุ่มนวล ชัดเจน [ค่ะ])",
+        "name": "🎙️ เปรมวดี (Studio Neural HD 48kHz - เสียงหญิง นุ่มนวล คมชัด สดใส [ค่ะ])",
         "gender": "female",
         "engine": "edge",
-        "desc": "เสียงพากย์หญิง Deep Neural คมชัดระดับ 48kHz สดใสเป็นธรรมชาติ",
+        "desc": "เสียงพากย์หญิง Deep Neural คมชัดระดับ 48kHz นุ่มนวล เป็นธรรมชาติ",
     },
-    "kokoro-sarah": {
-        "id": "kokoro-sarah",
-        "name": "🌟 Kokoro Sarah (82M Open-Source Studio Model - หญิง)",
-        "gender": "female",
-        "engine": "kokoro",
-        "desc": "โมเดล Open-Weight ขนาด 82M พารามิเตอร์ระดับโลก",
-    },
-    "kokoro-adam": {
-        "id": "kokoro-adam",
-        "name": "🌟 Kokoro Adam (82M Open-Source Studio Model - ชาย)",
+    "mms-narrator": {
+        "id": "mms-narrator",
+        "name": "🇹🇭 ผู้บรรยายสารคดี (Documentary Narrator - VITS Neural Model ภาษาไทย)",
         "gender": "male",
-        "engine": "kokoro",
-        "desc": "โมเดล Open-Weight ขนาด 82M พารามิเตอร์ระดับโลก",
+        "engine": "vits",
+        "model_id": "VIZINTZOR/MMS-TTS-THAI-MALE-NARRATOR",
+        "desc": "โมเดลเสียงผู้บรรยายสารคดีภาษาไทย VITS Deep Neural เสียงทุ้มคมชัด",
     },
-    "gtts-thai": {
-        "id": "gtts-thai",
-        "name": "🌐 Open Web TTS (Thai Standard Engine)",
+    "mms-female-v2": {
+        "id": "mms-female-v2",
+        "name": "🇹🇭 หญิง V2 ธรรมชาติ (Thai Female V2 - Deep Neural Model ภาษาไทยแท้)",
         "gender": "female",
-        "engine": "gtts",
-        "desc": "ระบบเสียงมาตรฐานภาษาไทย Open Web",
+        "engine": "vits",
+        "model_id": "VIZINTZOR/MMS-TTS-THAI-FEMALEV2",
+        "desc": "โมเดลเสียงหญิงรุ่นใหม่ V2 ภาษาไทยแท้ อารมณ์สดใส พูดเป็นธรรมชาติ",
+    },
+    "mms-male-v2": {
+        "id": "mms-male-v2",
+        "name": "🇹🇭 ชาย V2 ธรรมชาติ (Thai Male V2 - Deep Neural Model ภาษาไทยแท้)",
+        "gender": "male",
+        "engine": "vits",
+        "model_id": "VIZINTZOR/MMS-TTS-THAI-MALEV2",
+        "desc": "โมเดลเสียงชายรุ่นใหม่ V2 ภาษาไทยแท้ สไตล์สนทนา คล่องแคล่ว",
     },
 }
 
@@ -110,97 +94,83 @@ def clean_thai_text_for_speech(text: str) -> str:
 
 
 class TTSEngine:
-    """Comprehensive Open-Source Neural Speech Synthesizer."""
+    """Comprehensive Open-Source & Studio Neural Speech Synthesizer."""
 
     def __init__(self):
-        self.default_voice = "th-TH-NiwatNeural"
-        self._mms_tts = None
-        self._kokoro_tts = None
-        self._init_local_models()
+        self.default_voice = "google-thai"
+        self._vits_models: Dict[str, tuple] = {}
+        self._lock = asyncio.Lock()
 
-    def _init_local_models(self):
-        """Initialize Meta MMS Thai and Kokoro ONNX offline neural engines."""
-        # 1. Meta MMS Thai VITS
-        if SHERPA_AVAILABLE and os.path.exists(MMS_THA_MODEL) and os.path.exists(MMS_THA_TOKENS):
-            try:
-                tts_config = sherpa_onnx.OfflineTtsConfig(
-                    model=sherpa_onnx.OfflineTtsModelConfig(
-                        vits=sherpa_onnx.OfflineTtsVitsModelConfig(
-                            model=MMS_THA_MODEL,
-                            tokens=MMS_THA_TOKENS,
-                            data_dir="",
-                            noise_scale=0.667,
-                            noise_scale_w=0.8,
-                            length_scale=1.0,
-                        ),
-                        provider="cpu",
-                        num_threads=2,
-                    )
-                )
-                self._mms_tts = sherpa_onnx.OfflineTts(tts_config)
-                logger.info("✅ Meta MMS Thai VITS neural model initialized successfully!")
-            except Exception as e:
-                logger.warning("Failed to initialize Meta MMS Thai model: %s", e)
+    def _get_vits_model(self, model_id: str):
+        """Lazy load and cache Vits models in memory."""
+        if model_id in self._vits_models:
+            return self._vits_models[model_id]
 
-        # 2. Kokoro 82M ONNX
-        if KOKORO_AVAILABLE and os.path.exists(KOKORO_MODEL) and os.path.exists(KOKORO_VOICES):
-            try:
-                self._kokoro_tts = Kokoro(KOKORO_MODEL, KOKORO_VOICES)
-                logger.info("✅ Kokoro-ONNX 82M neural model initialized successfully!")
-            except Exception as e:
-                logger.warning("Failed to initialize Kokoro model: %s", e)
+        if not TRANSFORMERS_AVAILABLE:
+            logger.warning("Transformers not available for VITS model: %s", model_id)
+            return None, None
 
-    async def synthesize_mms_thai(self, text: str, speed: float = 1.0) -> bytes:
-        """Synthesize Thai speech using Meta MMS Thai VITS (100% Native Open-Source Model)."""
+        try:
+            logger.info("Loading VITS Neural Model: %s ...", model_id)
+            tok = AutoTokenizer.from_pretrained(model_id)
+            mod = VitsModel.from_pretrained(model_id)
+            self._vits_models[model_id] = (tok, mod)
+            logger.info("✅ VITS Neural Model [%s] loaded successfully!", model_id)
+            return tok, mod
+        except Exception as e:
+            logger.warning("Failed to load VITS model %s: %s", model_id, e)
+            return None, None
+
+    async def synthesize_gtts(self, text: str) -> bytes:
+        """Synthesize Thai speech using Google Translate Native Neural Voice."""
         clean = clean_thai_text_for_speech(text)
         if not clean:
             return b""
 
-        if not self._mms_tts:
-            self._init_local_models()
-
-        if not self._mms_tts:
-            return await self.synthesize_edge(clean, voice="th-TH-NiwatNeural")
-
         loop = asyncio.get_event_loop()
-        def _run_gen():
-            audio = self._mms_tts.generate(clean, sid=0, speed=speed)
-            buf = io.BytesIO()
-            sf.write(buf, audio.samples, audio.sample_rate, format="WAV")
-            return buf.getvalue()
+        def _run():
+            try:
+                tts = gtts.gTTS(text=clean, lang="th", slow=False)
+                buf = io.BytesIO()
+                tts.write_to_fp(buf)
+                return buf.getvalue()
+            except Exception as e:
+                logger.warning("gTTS synthesis error: %s", e)
+                return b""
 
-        try:
-            return await loop.run_in_executor(None, _run_gen)
-        except Exception as e:
-            logger.warning("Meta MMS Thai synthesis error: %s. Falling back to Edge Neural.", e)
-            return await self.synthesize_edge(clean, voice="th-TH-NiwatNeural")
+        res = await loop.run_in_executor(None, _run)
+        if res:
+            return res
+        return await self.synthesize_edge(clean, voice="th-TH-NiwatNeural")
 
-    async def synthesize_kokoro(self, text: str, voice: str = "af_sarah", speed: float = 1.0) -> bytes:
-        """Synthesize speech using Kokoro-ONNX 82M Open-Weight Model."""
+    async def synthesize_vits(self, text: str, model_id: str) -> bytes:
+        """Synthesize speech using Hugging Face VITS Neural Thai Model."""
         clean = clean_thai_text_for_speech(text)
         if not clean:
             return b""
 
-        if not self._kokoro_tts:
-            self._init_local_models()
+        tok, mod = self._get_vits_model(model_id)
+        if not tok or not mod:
+            logger.warning("VITS model not available, falling back to Google Thai.")
+            return await self.synthesize_gtts(clean)
 
-        if not self._kokoro_tts:
-            return await self.synthesize_edge(clean, voice="th-TH-PremwadeeNeural")
-
-        voice_name = "af_sarah" if "sarah" in voice.lower() or "female" in voice.lower() else "am_adam"
         loop = asyncio.get_event_loop()
+        def _run():
+            try:
+                inputs = tok(clean, return_tensors="pt")
+                with torch.no_grad():
+                    output = mod(**inputs).waveform.squeeze().numpy()
+                buf = io.BytesIO()
+                scipy.io.wavfile.write(buf, rate=mod.config.sampling_rate, data=output)
+                return buf.getvalue()
+            except Exception as e:
+                logger.warning("VITS synthesis error for %s: %s", model_id, e)
+                return b""
 
-        def _run_gen():
-            samples, sample_rate = self._kokoro_tts.create(clean, voice=voice_name, speed=speed, lang="en-us")
-            buf = io.BytesIO()
-            sf.write(buf, samples, sample_rate, format="WAV")
-            return buf.getvalue()
-
-        try:
-            return await loop.run_in_executor(None, _run_gen)
-        except Exception as e:
-            logger.warning("Kokoro synthesis error: %s. Falling back to Edge Neural.", e)
-            return await self.synthesize_edge(clean, voice="th-TH-PremwadeeNeural")
+        res = await loop.run_in_executor(None, _run)
+        if res:
+            return res
+        return await self.synthesize_gtts(clean)
 
     async def synthesize_edge(
         self,
@@ -209,7 +179,7 @@ class TTSEngine:
         rate: Optional[str] = "+0%",
         pitch: Optional[str] = "+0Hz",
     ) -> bytes:
-        """Synthesize speech using Microsoft Edge Neural Voices (th-TH-NiwatNeural, th-TH-PremwadeeNeural)."""
+        """Synthesize speech using Microsoft Edge Neural Voices (48kHz HD)."""
         clean = clean_thai_text_for_speech(text)
         if not clean:
             return b""
@@ -232,24 +202,6 @@ class TTSEngine:
 
         return buffer.getvalue()
 
-    async def synthesize_gtts(self, text: str) -> bytes:
-        """Synthesize Thai speech via gTTS (Open Web Synthesizer)."""
-        clean = clean_thai_text_for_speech(text)
-        if not clean:
-            return b""
-        loop = asyncio.get_event_loop()
-        def _run_gtts():
-            try:
-                from gtts import gTTS
-                tts = gTTS(text=clean, lang="th", slow=False)
-                buf = io.BytesIO()
-                tts.write_to_fp(buf)
-                return buf.getvalue()
-            except Exception as e:
-                logger.warning("gTTS synthesis error: %s", e)
-                return b""
-        return await loop.run_in_executor(None, _run_gtts)
-
     async def synthesize(
         self,
         text: str,
@@ -261,12 +213,7 @@ class TTSEngine:
         api_key: Optional[str] = None,
     ) -> bytes:
         """
-        Unified Open-Source Neural Speech Synthesizer Dispatcher.
-        Prioritizes:
-        1. Meta MMS Thai VITS (100% Native Open-Source Model)
-        2. Microsoft Edge Neural (th-TH-NiwatNeural / th-TH-PremwadeeNeural)
-        3. Kokoro 82M ONNX
-        4. gTTS Open Web Synthesizer
+        Unified Open-Source & Studio Neural Speech Synthesizer Dispatcher.
         """
         clean = clean_thai_text_for_speech(text)
         if not clean:
@@ -274,33 +221,37 @@ class TTSEngine:
 
         v_lower = str(voice).lower() if voice else ""
 
-        # MMS Thai Open Source
-        if engine == "mms" or "mms" in v_lower:
-            return await self.synthesize_mms_thai(clean)
+        # 1. Google Native Thai (Default Clean Human Voice)
+        if engine == "gtts" or "google" in v_lower:
+            return await self.synthesize_gtts(clean)
 
-        # Kokoro Open Source
-        if engine == "kokoro" or "kokoro" in v_lower:
-            return await self.synthesize_kokoro(clean, voice=voice or "af_sarah")
+        # 2. VITS Thai Models (Documentary Narrator, Female V2, Male V2)
+        if engine == "vits" or "mms" in v_lower or "narrator" in v_lower:
+            if "narrator" in v_lower:
+                model_id = "VIZINTZOR/MMS-TTS-THAI-MALE-NARRATOR"
+            elif "female" in v_lower:
+                model_id = "VIZINTZOR/MMS-TTS-THAI-FEMALEV2"
+            else:
+                model_id = "VIZINTZOR/MMS-TTS-THAI-MALEV2"
+            return await self.synthesize_vits(clean, model_id=model_id)
 
-        # gTTS Open Web
-        if engine == "gtts" or "gtts" in v_lower:
-            gtts_res = await self.synthesize_gtts(clean)
-            if gtts_res:
-                return gtts_res
+        # 3. Microsoft Studio 48kHz HD Neural
+        if engine == "edge" or "niwat" in v_lower or "premwadee" in v_lower:
+            selected_voice = "th-TH-PremwadeeNeural" if "premwadee" in v_lower else "th-TH-NiwatNeural"
+            return await self.synthesize_edge(
+                text=clean,
+                voice=selected_voice,
+                rate=rate or "+0%",
+                pitch=pitch or "+0Hz",
+            )
 
-        # Edge Neural (Default high-fidelity)
-        selected_voice = voice if voice in ["th-TH-PremwadeeNeural", "th-TH-NiwatNeural"] else "th-TH-NiwatNeural"
-        return await self.synthesize_edge(
-            text=clean,
-            voice=selected_voice,
-            rate=rate or "+0%",
-            pitch=pitch or "+0Hz",
-        )
+        # Default fallback: Google Native Thai or Studio Niwat
+        return await self.synthesize_gtts(clean)
 
     def list_voices(self) -> Dict[str, Dict[str, str]]:
         """Return the dictionary of supported voice personas."""
         return VOICE_REGISTRY
 
 
+# Global singleton instance
 tts_engine = TTSEngine()
-

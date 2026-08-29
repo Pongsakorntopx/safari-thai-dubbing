@@ -2,22 +2,19 @@
  * Safari AI Thai Video Dubber - Popup UI Controller (Unlock-TTS Integration)
  */
 
-const MMS_VOICES = [
-  { id: 'mms-thai', name: '🇹🇭 Meta MMS Thai (Open-Source Native VITS Neural Model)' },
+const GOOGLE_VOICES = [
+  { id: 'google-thai', name: '🇹🇭 Google Native Thai (เสียงภาษาไทยแท้ มาตรฐาน Google ชัดเจนเป็นธรรมชาติ)' },
 ];
 
 const EDGE_VOICES = [
-  { id: 'th-TH-NiwatNeural', name: '👨‍💼 นิวัฒน์ (Neural Studio - ชาย ทุ้มนุ่ม [ครับ])' },
-  { id: 'th-TH-PremwadeeNeural', name: '👩‍💼 เปรมวดี (Neural Studio - หญิง นุ่มนวล [ค่ะ])' },
+  { id: 'th-TH-NiwatNeural', name: '🎙️ นิวัฒน์ (Studio Neural HD 48kHz - เสียงชาย ทุ้มนุ่ม [ครับ])' },
+  { id: 'th-TH-PremwadeeNeural', name: '🎙️ เปรมวดี (Studio Neural HD 48kHz - เสียงหญิง นุ่มนวล [ค่ะ])' },
 ];
 
-const KOKORO_VOICES = [
-  { id: 'kokoro-sarah', name: '🌟 Kokoro Sarah (82M Open-Source Studio Model - หญิง)' },
-  { id: 'kokoro-adam', name: '🌟 Kokoro Adam (82M Open-Source Studio Model - ชาย)' },
-];
-
-const GTTS_VOICES = [
-  { id: 'gtts-thai', name: '🌐 Open Web TTS (Thai Standard Engine)' },
+const VITS_VOICES = [
+  { id: 'mms-narrator', name: '🇹🇭 ผู้บรรยายสารคดี (Documentary Narrator VITS)' },
+  { id: 'mms-female-v2', name: '🇹🇭 หญิง V2 ธรรมชาติ (Thai Female V2 Deep Neural)' },
+  { id: 'mms-male-v2', name: '🇹🇭 ชาย V2 ธรรมชาติ (Thai Male V2 Deep Neural)' },
 ];
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -42,15 +39,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     voiceSelect.innerHTML = '';
     let voices = [];
     if (engine === 'auto') {
-      voices = [{ id: 'auto', name: '🤖 อัตโนมัติ (AI เลือกโมเดลและเสียงที่เหมาะสมที่สุดตามคลิป)' }];
-    } else if (engine === 'mms') {
-      voices = MMS_VOICES;
+      voices = [{ id: 'auto', name: '🤖 อัตโนมัติ (AI วิเคราะห์คลิปและเลือกโมเดลที่ดีที่สุด)' }];
+    } else if (engine === 'gtts') {
+      voices = GOOGLE_VOICES;
     } else if (engine === 'edge') {
       voices = EDGE_VOICES;
-    } else if (engine === 'kokoro') {
-      voices = KOKORO_VOICES;
     } else {
-      voices = GTTS_VOICES;
+      voices = VITS_VOICES;
     }
 
     voices.forEach((v) => {
