@@ -412,16 +412,8 @@
   }
 
   // --- Background-Proxied API Requests (Bypasses Safari Mixed Content / CORS) ---
-  async function fetchTranscriptDirect(videoId) {
-    // 1. Try Client-side Extraction first (Instant, directly inside user's authenticated Safari session, 0 IP blocks)
-    const clientResult = await extractClientSideSubtitles(videoId);
-    if (clientResult && clientResult.cues && clientResult.cues.length > 0) {
-      return clientResult;
-    }
-
-    // 2. Fallback to Cloud Backend proxy
-    console.log('[ThaiDubbing] Trying Backend API transcript fetch fallback...');
-    const backendResult = await new Promise((resolve) => {
+  function fetchTranscriptDirect(videoId) {
+    return new Promise((resolve) => {
       chrome.runtime.sendMessage(
         {
           type: 'FETCH_TRANSCRIPT',
@@ -432,19 +424,14 @@
         },
         (res) => {
           if (chrome.runtime.lastError || !res || !res.success || !res.cues || res.cues.length === 0) {
-            resolve(null);
+            console.warn('[ThaiDubbing] Transcript fetch response:', chrome.runtime.lastError || res);
+            resolve({ success: false, cues: [] });
           } else {
             resolve(res);
           }
         }
       );
     });
-
-    if (backendResult && backendResult.cues && backendResult.cues.length > 0) {
-      return backendResult;
-    }
-
-    return { success: false, cues: [] };
   }
 
   function fetchDubBatchDirect(cues) {
