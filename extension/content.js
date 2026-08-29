@@ -44,10 +44,10 @@
   };
 
   const VOICES = [
-    { id: 'khanomtan-v1.1-female', name: '🧁 ขนมตาล v1.1: หญิง (Thai Female)', engine: 'khanomtan', gender: 'female' },
-    { id: 'khanomtan-v1.1-male', name: '🧁 ขนมตาล v1.1: ชาย (Thai Male)', engine: 'khanomtan', gender: 'male' },
-    { id: 'vits-thai-female', name: '🇹🇭 VITS Thai: หญิง (Thai Female)', engine: 'vits_thai', gender: 'female' },
-    { id: 'vits-thai-male', name: '🇹🇭 VITS Thai: ชาย (Thai Male)', engine: 'vits_thai', gender: 'male' },
+    { id: 'studio-thai-female', name: '🎙️ สตูดิโอ นิวรัล: หญิง (Premwadee • สมจริง 100%)', engine: 'studio_neural', gender: 'female' },
+    { id: 'studio-thai-male', name: '🎙️ สตูดิโอ นิวรัล: ชาย (Niwat • ทุ้มนุ่ม มืออาชีพ 100%)', engine: 'studio_neural', gender: 'male' },
+    { id: 'khanomtan-v1.1-female', name: '🧁 ขนมตาล v1.1: หญิง (Linda)', engine: 'khanomtan', gender: 'female' },
+    { id: 'khanomtan-v1.1-male', name: '🧁 ขนมตาล v1.1: ชาย (Thorsten)', engine: 'khanomtan', gender: 'male' },
   ];
 
   const STYLES = [
@@ -715,37 +715,50 @@
         state.currentVideoId = videoId;
         console.log(`[ThaiDubbing] Loaded ${state.timedCues.length} cues. Pre-buffering 180 seconds...`);
 
-        // 3. Ultra-Fast Start: Buffer first 4 sentences for instant ~1.0s playback start!
+        // 3. 3-Minute Golden Buffer: Pre-buffer 180 seconds for cohesive storytelling & flawless audio
         const video = findVideoElement();
         const cur = video ? video.currentTime : 0;
-        const upcomingCues = state.timedCues.filter((c) => c.end >= cur);
-        const fastStartCues = (upcomingCues.length > 0 ? upcomingCues : state.timedCues).slice(0, 4);
+        const targetTime = cur + state.targetBufferSeconds;
+        const batchCues = state.timedCues.filter((c) => c.end >= cur && c.start <= targetTime);
+        const toFetch = (batchCues.length > 0 ? batchCues : state.timedCues).slice(0, 48);
 
-        updateHUDStatus('⚡ เริ่มต้นพากย์ไทยทันที (กำลังเตรียม 4 ท่อนแรก ~1 วิ)...');
-        fastStartCues.forEach((c) => (c.status = 'fetching'));
+        const chunkSize = 8;
+        let totalFetchedCues = 0;
 
-        const batchRes = await fetchDubBatchDirect(fastStartCues);
-        if (batchRes && batchRes.success && batchRes.results) {
-          for (const item of batchRes.results) {
-            const cue = state.timedCues.find((c) => c.id === item.id);
-            if (cue) {
-              cue.translated = item.translatedText || cue.text;
-              cue.isMasterTrack = !!item.isMasterTrack;
-              cue.speaker = item.speaker || 'Host';
-              cue.emotion = item.emotion || 'normal';
-              cue.orig_wpm = item.orig_wpm || 140;
-              cue.appliedRate = item.appliedRate || '+0%';
-              if (item.base64Audio) {
-                cue.audioBase64 = item.base64Audio;
-                cue.audioUrl = base64ToBlobUrl(item.base64Audio);
+        for (let i = 0; i < toFetch.length; i += chunkSize) {
+          if (!state.isDubbingActive) break;
+          const chunk = toFetch.slice(i, i + chunkSize);
+          chunk.forEach((c) => (c.status = 'fetching'));
+
+          const progressPercent = Math.round((totalFetchedCues / toFetch.length) * 100);
+          updateHUDStatus(`⏳ กำลังเรียบเรียงและสร้างเสียงพากย์ล่วงหน้า 3 นาที (${progressPercent}% - ท่อนที่ ${i + 1}/${toFetch.length})...`);
+
+          const batchRes = await fetchDubBatchDirect(chunk);
+          if (batchRes && batchRes.success && batchRes.results) {
+            for (const item of batchRes.results) {
+              const cue = state.timedCues.find((c) => c.id === item.id);
+              if (cue) {
+                cue.translated = item.translatedText || cue.text;
+                cue.isMasterTrack = !!item.isMasterTrack;
+                cue.speaker = item.speaker || 'Host';
+                cue.emotion = item.emotion || 'normal';
+                cue.orig_wpm = item.orig_wpm || 140;
+                cue.appliedRate = item.appliedRate || '+0%';
+                if (item.base64Audio) {
+                  cue.audioBase64 = item.base64Audio;
+                  cue.audioUrl = base64ToBlobUrl(item.base64Audio);
+                }
+                cue.status = 'ready';
+                totalFetchedCues++;
               }
-              cue.status = 'ready';
             }
+            updateBufferGauge();
           }
-          updateBufferGauge();
         }
 
-        // 4. Instant Start Video & Run Background Lookahead Streamer ahead of playback!
+        // 4. 3-Minute buffer is ready -> Automatically Play Video & Start Background Lookahead!
+        state.bufferedSeconds = state.targetBufferSeconds;
+        updateBufferGauge();
         onBufferSyncComplete();
         startLookaheadWorkers();
 

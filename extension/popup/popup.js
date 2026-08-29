@@ -3,10 +3,10 @@
  */
 
 const VITS_VOICES = [
-  { id: 'khanomtan-v1.1-female', name: '🧁 ขนมตาล v1.1: หญิง (Thai Female • Apache 2.0)' },
-  { id: 'khanomtan-v1.1-male', name: '🧁 ขนมตาล v1.1: ชาย (Thai Male • Apache 2.0)' },
-  { id: 'vits-thai-female', name: '🇹🇭 VITS Thai: หญิง (VITS Female • AI Community)' },
-  { id: 'vits-thai-male', name: '🇹🇭 VITS Thai: ชาย (VITS Male • AI Community)' },
+  { id: 'studio-thai-female', name: '🎙️ สตูดิโอ นิวรัล: หญิง (Premwadee • สมจริง 100% แนะนำ)' },
+  { id: 'studio-thai-male', name: '🎙️ สตูดิโอ นิวรัล: ชาย (Niwat • ทุ้มนุ่ม มืออาชีพ 100%)' },
+  { id: 'khanomtan-v1.1-female', name: '🧁 ขนมตาล v1.1: หญิง (Linda • Thai Open-Source)' },
+  { id: 'khanomtan-v1.1-male', name: '🧁 ขนมตาล v1.1: ชาย (Thorsten • Thai Open-Source)' },
 ];
 
 document.addEventListener('DOMContentLoaded', async () => {
