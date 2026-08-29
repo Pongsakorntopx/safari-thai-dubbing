@@ -219,6 +219,7 @@ class CascadeTranslator:
 
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key or settings.gemini_api_key
+        self.last_status = "ok"
 
     async def translate_batch(
         self,
@@ -276,6 +277,7 @@ class CascadeTranslator:
                             timeout=aiohttp.ClientTimeout(total=6.0),
                         ) as resp:
                             if resp.status == 200:
+                                self.last_status = "ok"
                                 data = await resp.json()
                                 candidates = data.get("candidates", [])
                                 if candidates:
@@ -286,6 +288,12 @@ class CascadeTranslator:
                                         if parsed and len(parsed) == len(cues_text):
                                             logger.info("Successfully transcreated 60s batch using Gemini: %s", model)
                                             return parsed
+                            elif resp.status == 429:
+                                logger.warning("Gemini API Key depleted prepayment credits / quota exceeded (429).")
+                                self.last_status = "depleted"
+                            elif resp.status == 400:
+                                logger.warning("Gemini API Key invalid (400).")
+                                self.last_status = "invalid"
                 except Exception as e:
                     logger.debug("Gemini attempt error for %s: %s", model, e)
                     continue

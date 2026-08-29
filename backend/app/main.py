@@ -365,6 +365,7 @@ async def dub_cues_batch(req: BatchDubRequest):
     return {
         "success": True,
         "results": results,
+        "gemini_status": translator.last_status,
     }
 
 
@@ -452,4 +453,5 @@ async def dub_text(req: DubRequest):
         "translatedText": thai_text,
         "base64Audio": base64.b64encode(audio_bytes).decode("utf-8"),
         "cached": False,
+        "gemini_status": translator.last_status,
     }

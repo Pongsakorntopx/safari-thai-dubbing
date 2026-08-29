@@ -691,6 +691,15 @@
 
       const batchRes = await fetchDubBatchDirect(toFetch);
       if (batchRes && batchRes.success && batchRes.results) {
+        // Display Gemini key warnings on HUD/Toast if necessary
+        if (batchRes.gemini_status === 'depleted') {
+          showThaiCaptionToast('⚠️ วงเงิน Gemini Key หมดลงแล้ว (429) ระบบจะแปลด้วยเครื่องทดแทนชั่วคราว');
+          updateHUDStatus('⚠️ คีย์ Gemini หมดวงเงิน (429) แปลปกติ');
+        } else if (batchRes.gemini_status === 'invalid') {
+          showThaiCaptionToast('⚠️ Gemini Key ไม่ถูกต้อง (400) ระบบจะแปลด้วยเครื่องทดแทนชั่วคราว');
+          updateHUDStatus('⚠️ คีย์ Gemini ไม่ถูกต้อง (400) แปลปกติ');
+        }
+
         const ctx = getAudioContext();
         for (const item of batchRes.results) {
           const cue = state.timedCues.find((c) => c.id === item.id);
@@ -1002,6 +1011,11 @@
     });
 
     if (dubRes && dubRes.success && dubRes.base64Audio) {
+      if (dubRes.gemini_status === 'depleted') {
+        showThaiCaptionToast('⚠️ วงเงิน Gemini Key หมดลงแล้ว (429) แปลสดชั่วคราว');
+      } else if (dubRes.gemini_status === 'invalid') {
+        showThaiCaptionToast('⚠️ Gemini Key ไม่ถูกต้อง (400) แปลสดชั่วคราว');
+      }
       const ctx = getAudioContext();
       if (ctx) {
         const arrayBuf = base64ToArrayBuffer(dubRes.base64Audio);
