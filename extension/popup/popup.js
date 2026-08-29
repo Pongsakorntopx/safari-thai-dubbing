@@ -163,6 +163,72 @@ document.addEventListener('DOMContentLoaded', async () => {
     saveSetting('customGeminiKey', customKeyInput.value.trim());
   });
 
+  // --- AI Self-Learning Lexicon Handlers ---
+  const learnedCountBadge = document.getElementById('learnedCountBadge');
+  const learnTermInput = document.getElementById('learnTermInput');
+  const learnPhoneticInput = document.getElementById('learnPhoneticInput');
+  const learnSubmitBtn = document.getElementById('learnSubmitBtn');
+  const learnResult = document.getElementById('learnResult');
+
+  async function refreshLearnedCount() {
+    const baseUrl = backendUrlInput.value.trim().replace(/\/+$/, '') || 'http://127.0.0.1:8000';
+    try {
+      const res = await fetch(`${baseUrl}/api/v1/learning/lexicon`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.count && learnedCountBadge) {
+          learnedCountBadge.textContent = `เรียนรู้แล้ว ${data.count} คำ`;
+        }
+      }
+    } catch (e) {}
+  }
+
+  refreshLearnedCount();
+
+  if (learnSubmitBtn) {
+    learnSubmitBtn.addEventListener('click', async () => {
+      const term = (learnTermInput.value || '').trim();
+      const phonetic = (learnPhoneticInput.value || '').trim();
+      if (!term || !phonetic) {
+        alert('กรุณากรอกทั้งคำเดิมและคำอ่านภาษาไทย');
+        return;
+      }
+
+      learnSubmitBtn.disabled = true;
+      learnSubmitBtn.textContent = '⏳ กำลังบันทึก...';
+      const baseUrl = backendUrlInput.value.trim().replace(/\/+$/, '') || 'http://127.0.0.1:8000';
+
+      try {
+        const res = await fetch(`${baseUrl}/api/v1/learning/learn`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ term, phonetic_thai: phonetic, category: 'user_taught' }),
+        });
+
+        if (res.ok) {
+          learnResult.style.display = 'block';
+          learnResult.style.color = '#4ade80';
+          learnResult.textContent = `✅ AI เรียนรู้คำว่า "${term}" ➔ "${phonetic}" เรียบร้อยแล้ว!`;
+          learnTermInput.value = '';
+          learnPhoneticInput.value = '';
+          refreshLearnedCount();
+        } else {
+          throw new Error('บันทึกล้มเหลว');
+        }
+      } catch (err) {
+        learnResult.style.display = 'block';
+        learnResult.style.color = '#f87171';
+        learnResult.textContent = `❌ เกิดข้อผิดพลาด: ${err.message}`;
+      } finally {
+        learnSubmitBtn.disabled = false;
+        learnSubmitBtn.textContent = '➕ สอน AI และบันทึกคำอ่าน';
+        setTimeout(() => {
+          if (learnResult) learnResult.style.display = 'none';
+        }, 4000);
+      }
+    });
+  }
+
   // --- Test Connection Handler ---
   testBtn.addEventListener('click', async () => {
     const baseUrl = backendUrlInput.value.trim().replace(/\/+$/, '');
@@ -179,8 +245,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         ? '✅ พร้อมใช้งาน (Gemini 2.0 & Unlock-TTS Ready)'
         : '⚠️ เชื่อมต่อได้ แต่ยังไม่ได้ตั้ง GEMINI_API_KEY';
 
+      const learnStats = data.learned_terms_count ? `<br>🧠 AI เรียนรู้คลังคำศัพท์แล้ว: ${data.learned_terms_count} คำ` : '';
+
       connResult.className = 'conn-status success';
-      connResult.innerHTML = `<strong>เชื่อมต่อสำเร็จ!</strong><br>${geminiStatus}`;
+      connResult.innerHTML = `<strong>เชื่อมต่อสำเร็จ!</strong><br>${geminiStatus}${learnStats}`;
+      refreshLearnedCount();
     } catch (err) {
       connResult.className = 'conn-status error';
       connResult.innerHTML = `<strong>เชื่อมต่อล้มเหลว:</strong><br>${err.message}. ตรวจสอบว่า Backend รันอยู่หรือไม่`;

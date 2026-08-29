@@ -73,13 +73,13 @@ VOICE_REGISTRY: Dict[str, Dict[str, str]] = {
 
 
 def clean_thai_text_for_speech(text: str) -> str:
-    """Clean text for natural, fluent Thai speech synthesis in Thai VITS & KhanomTan."""
+    """Clean text and apply AI Learned Phonetics for Thai VITS & KhanomTan models."""
     if not text:
         return ""
     t = text.strip()
     t = re.sub(r"[\"\'\`\<\>\[\]\(\)\{\}\*\#\_]", "", t)
 
-    # Expand common tech and acronyms to natural Thai phonetics
+    # 1. Expand common acronyms
     acronym_map = {
         r"\bAI\b": "เอไอ",
         r"\bAPI\b": "เอพีไอ",
@@ -100,6 +100,13 @@ def clean_thai_text_for_speech(text: str) -> str:
     }
     for eng, th in acronym_map.items():
         t = re.sub(eng, th, t, flags=re.IGNORECASE)
+
+    # 2. Apply AI Self-Learning Phonetic Memory (Dynamic vocabulary & custom learned pronunciations)
+    try:
+        from app.learning_engine import learning_engine
+        t = learning_engine.apply_learned_phonetics(t)
+    except Exception:
+        pass
 
     t = re.sub(r"\s+", " ", t)
     return t.strip()

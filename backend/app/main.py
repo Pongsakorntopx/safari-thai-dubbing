@@ -92,8 +92,21 @@ class TranscriptRequest(BaseModel):
     videoId: str
 
 
+class LearnTermRequest(BaseModel):
+    term: str
+    phonetic_thai: str
+    category: Optional[str] = "user_taught"
+
+
+class FeedbackRequest(BaseModel):
+    cue_text: str
+    rating: int = 5
+    user_correction: Optional[str] = None
+    voice_id: Optional[str] = None
+
+
 def resolve_gender(voice: str, requested_gender: Optional[str] = "auto") -> str:
-    """Determine speaker gender from explicit request or Fish Speech voice persona."""
+    """Determine speaker gender from explicit request or voice persona."""
     if requested_gender and requested_gender in ["male", "female"]:
         return requested_gender
     v_lower = voice.lower()
@@ -122,26 +135,54 @@ def resolve_auto_settings(
     return engine, voice, style, gender
 
 
-
-
 @app.get("/health")
 async def health_check():
-    """Health check endpoint and list of active voices."""
+    """Health check endpoint and list of active voices + learning engine stats."""
+    from app.learning_engine import learning_engine
     return {
         "status": "healthy",
         "service": "thai-dubbing-api",
         "gemini_ready": bool(settings.gemini_api_key),
         "voices": tts_engine.list_voices(),
+        "learned_terms_count": len(learning_engine.get_learned_lexicon()),
     }
 
 
 @app.get("/api/v1/voices")
 async def list_supported_voices():
-    """Return dictionary of supported Fish Speech voice personas."""
+    """Return dictionary of supported Thai VITS & KhanomTan voice personas."""
     return {
         "success": True,
         "voices": tts_engine.list_voices(),
     }
+
+
+@app.get("/api/v1/learning/lexicon")
+async def get_learned_lexicon():
+    """Retrieve full list of learned phonetic vocabulary across all 4 models."""
+    from app.learning_engine import learning_engine
+    lex = learning_engine.get_learned_lexicon()
+    return {
+        "success": True,
+        "count": len(lex),
+        "lexicon": lex,
+    }
+
+
+@app.post("/api/v1/learning/learn")
+async def learn_new_term(req: LearnTermRequest):
+    """Teach the AI models a new word or custom pronunciation rule."""
+    from app.learning_engine import learning_engine
+    success = learning_engine.learn_term(req.term, req.phonetic_thai, req.category or "user_taught")
+    return {"success": success, "term": req.term, "phonetic_thai": req.phonetic_thai}
+
+
+@app.post("/api/v1/learning/feedback")
+async def submit_feedback(req: FeedbackRequest):
+    """Record quality feedback from user to continuously optimize future generations."""
+    from app.learning_engine import learning_engine
+    learning_engine.record_feedback(req.cue_text, req.rating, req.user_correction, req.voice_id)
+    return {"success": True}
 
 
 # Official Standalone YouTube Innertube API Key
@@ -333,6 +374,14 @@ async def dub_cues_batch(req: BatchDubRequest):
         gender=gender,
         custom_key=custom_key,
     )
+
+    # 🧠 Continuous AI Auto-Learning: Absorb new tech terms & vocabulary into persistent memory
+    try:
+        from app.learning_engine import learning_engine
+        for cue_item, diar in zip(req.cues, diarized_results):
+            learning_engine.auto_learn_from_context(cue_item.text, diar.get("thai", ""))
+    except Exception:
+        pass
 
     # 2. Hard-Locked Selected Thai VITS / KhanomTan Voice (100% consistent across entire video)
     target_voice = voice if voice in VOICE_REGISTRY else "khanomtan-v1.1-female"

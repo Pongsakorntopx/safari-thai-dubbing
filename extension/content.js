@@ -1569,6 +1569,11 @@
           <input type="range" id="hud-duck-slider" min="0" max="50" value="${Math.round(state.duckVolume * 100)}" style="width: 80px; height: 4px;">
         </div>
 
+        <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.08);">
+          <span style="font-size: 10px; color: #818cf8; font-weight: 600;">🧠 AI Self-Learning Engine:</span>
+          <span style="font-size: 10px; color: #a5b4fc; background: rgba(99,102,241,0.2); padding: 1px 6px; border-radius: 4px;">เรียนรู้คลังคำศัพท์อัตโนมัติ</span>
+        </div>
+
         <div style="display: flex; justify-content: space-between; align-items: center; gap: 4px;">
           <span style="font-size: 11px; color: #94a3b8; font-weight: 600;">Google AI Studio Key:</span>
           <input type="password" id="hud-gemini-input" placeholder="AQ.Ab... / AIzaSy..." value="${state.customGeminiKey || ''}" style="
