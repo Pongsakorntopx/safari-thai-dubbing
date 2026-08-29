@@ -18,19 +18,26 @@ from typing import Dict, List, Optional
 
 import aiohttp
 import edge_tts
-import numpy as np
-import soundfile as sf
+try:
+    import numpy as np
+except ImportError:
+    np = None
+
+try:
+    import soundfile as sf
+except (ImportError, OSError):
+    sf = None
 
 try:
     import sherpa_onnx
     SHERPA_AVAILABLE = True
-except ImportError:
+except (ImportError, OSError):
     SHERPA_AVAILABLE = False
 
 try:
     from kokoro_onnx import Kokoro
     KOKORO_AVAILABLE = True
-except ImportError:
+except (ImportError, OSError):
     KOKORO_AVAILABLE = False
 
 from app.config import settings
