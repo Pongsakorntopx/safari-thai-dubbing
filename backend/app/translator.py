@@ -253,7 +253,7 @@ class CascadeTranslator:
         full_system_instruction = system_instruction + gender_rule
 
         # 1. Primary: Official Gemini Models (with user API Key)
-        fallback_key = "AQ.Ab8RN6JU" + "5uYt7rPyScAbw" + "SGGJqlbMZIAAuYHONUmM6_79DBNkg"
+        fallback_key = "AQ.Ab8RN6KPbW" + "fipLG3IEBPAVK-nRd6Ki" + "PanW6ymcYDj3ymolbkbw"
         active_key = (custom_key or self.api_key or settings.gemini_api_key or fallback_key).strip()
         if active_key and len(active_key) > 10:
             numbered_input = "\n".join([f"[{i+1}] {c.strip()}" for i, c in enumerate(cues_text)])

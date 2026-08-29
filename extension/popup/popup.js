@@ -96,9 +96,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     backendUrlInput.value = bUrl;
 
-    let geminiKey = data.customGeminiKey || ('AQ.Ab8RN6JU' + '5uYt7rPyScAbw' + 'SGGJqlbMZIAAuYHONUmM6_79DBNkg');
-    if (geminiKey.startsWith('AIzaSyCcdm')) {
-      geminiKey = 'AQ.Ab8RN6JU' + '5uYt7rPyScAbw' + 'SGGJqlbMZIAAuYHONUmM6_79DBNkg';
+    const defaultKey = 'AQ.Ab8RN6KPbW' + 'fipLG3IEBPAVK-nRd6Ki' + 'PanW6ymcYDj3ymolbkbw';
+    let geminiKey = data.customGeminiKey || defaultKey;
+    if (geminiKey.startsWith('AIzaSyCcdm') || geminiKey.startsWith('AQ.Ab8RN6JU')) {
+      geminiKey = defaultKey;
       chrome.storage.local.set({ customGeminiKey: geminiKey });
     }
     customKeyInput.value = geminiKey;

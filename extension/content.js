@@ -19,7 +19,7 @@
     dubVolume: 1.0,
     duckVolume: 0.2,
     backendUrl: 'https://thai-dubbing-api.onrender.com',
-    customGeminiKey: 'AQ.Ab8RN6JU' + '5uYt7rPyScAbw' + 'SGGJqlbMZIAAuYHONUmM6_79DBNkg',
+    customGeminiKey: 'AQ.Ab8RN6KPbW' + 'fipLG3IEBPAVK-nRd6Ki' + 'PanW6ymcYDj3ymolbkbw',
     isCollapsed: false,
     showSettingsModal: false,
 
@@ -135,17 +135,16 @@
       }
       state.backendUrl = bUrl.replace(/\/+$/, '');
 
+      const defaultKey = 'AQ.Ab8RN6KPbW' + 'fipLG3IEBPAVK-nRd6Ki' + 'PanW6ymcYDj3ymolbkbw';
       if (data.customGeminiKey) {
         state.customGeminiKey = data.customGeminiKey;
-        if (data.customGeminiKey.startsWith('AIzaSyCcdm')) {
-          const newKey = 'AQ.Ab8RN6JU' + '5uYt7rPyScAbw' + 'SGGJqlbMZIAAuYHONUmM6_79DBNkg';
-          state.customGeminiKey = newKey;
-          saveSetting('customGeminiKey', newKey);
+        if (data.customGeminiKey.startsWith('AIzaSyCcdm') || data.customGeminiKey.startsWith('AQ.Ab8RN6JU')) {
+          state.customGeminiKey = defaultKey;
+          saveSetting('customGeminiKey', defaultKey);
         }
       } else {
-        const newKey = 'AQ.Ab8RN6JU' + '5uYt7rPyScAbw' + 'SGGJqlbMZIAAuYHONUmM6_79DBNkg';
-        state.customGeminiKey = newKey;
-        saveSetting('customGeminiKey', newKey);
+        state.customGeminiKey = defaultKey;
+        saveSetting('customGeminiKey', defaultKey);
       }
       if (data.isCollapsed !== undefined) state.isCollapsed = data.isCollapsed;
 
