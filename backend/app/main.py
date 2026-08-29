@@ -98,8 +98,10 @@ def resolve_auto_settings(
     context: str = "",
 ):
     """
-    Intelligent Auto Mode: Automatically resolves optimal Engine, Voice, Style, and Gender
-    based on video metadata, speaker cues, and local hardware availability.
+    Intelligent Auto & Explicit Voice Resolver:
+    - If user explicitly chooses a voice (e.g. vachana-m1, vachana-f1, lunarlist, mms-thai, etc.),
+      honor the exact model and voice requested!
+    - If auto mode is selected, automatically resolve optimal engine and voice based on context and gender.
     """
     # 1. Gender Auto-Detection from Context / Title / Keywords
     gender = req_gender
@@ -114,11 +116,26 @@ def resolve_auto_settings(
         else:
             gender = "male"
 
-    # 2. Engine & Voice Auto-Selection (Best Quality Human Studio Neural Voice)
+    # 2. Engine & Voice Resolution
     engine = req_engine or "auto"
     voice = req_voice or "auto"
 
-    if engine == "auto" or voice == "auto":
+    # If an explicit voice ID is provided, look it up in VOICE_REGISTRY
+    if voice and voice != "auto" and voice in VOICE_REGISTRY:
+        reg = VOICE_REGISTRY[voice]
+        engine = reg.get("engine", engine)
+        if not req_gender or req_gender == "auto":
+            gender = reg.get("gender", gender)
+    elif engine and engine != "auto":
+        # Find matching voice for the specified engine
+        matching = [v for v in VOICE_REGISTRY.values() if v.get("engine") == engine]
+        if matching:
+            gender_match = [v for v in matching if v.get("gender") == gender]
+            voice = gender_match[0]["id"] if gender_match else matching[0]["id"]
+        else:
+            voice = "th-TH-NiwatNeural" if gender == "male" else "th-TH-PremwadeeNeural"
+    else:
+        # Full Auto Mode
         engine = "edge"
         voice = "th-TH-NiwatNeural" if gender == "male" else "th-TH-PremwadeeNeural"
 
@@ -345,7 +362,18 @@ async def dub_cues_batch(req: BatchDubRequest):
     sem = asyncio.Semaphore(2)
 
     async def synth_cue(cue: CueItem, thai_text: str):
+        # Calculate adaptive speech rate so Thai text fits comfortably inside the video time slot
+        slot_duration = max(1.2, float(cue.end - cue.start))
+        thai_chars = len(thai_text)
+        expected_sec = thai_chars / 12.0
+
         cue_rate = rate or "+0%"
+        if cue_rate == "+0%" or not cue_rate:
+            if expected_sec > slot_duration * 1.30:
+                cue_rate = "+20%"
+            elif expected_sec > slot_duration * 1.12:
+                cue_rate = "+10%"
+
         cached = await cache.get_audio_dub(
             source_text=cue.text,
             engine=engine,

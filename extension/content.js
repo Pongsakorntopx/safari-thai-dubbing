@@ -45,13 +45,15 @@
   };
 
   const VOICES = [
-    { id: 'auto', name: '🤖 อัตโนมัติ (AI เลือกโมเดลและเสียง Open-Source ที่ดีที่สุด)', engine: 'auto', gender: 'auto' },
-    { id: 'th-TH-NiwatNeural', name: '👨‍💼 นิวัฒน์ (Neural Studio - ชาย ทุ้มนุ่ม พอดแคสต์ [ครับ])', engine: 'edge', gender: 'male' },
-    { id: 'th-TH-PremwadeeNeural', name: '👩‍💼 เปรมวดี (Neural Studio - หญิง นุ่มนวล คมชัด [ค่ะ])', engine: 'edge', gender: 'female' },
+    { id: 'auto', name: '🤖 อัตโนมัติ (AI วิเคราะห์คลิปและเลือกโมเดลที่ดีที่สุด)', engine: 'auto', gender: 'auto' },
+    { id: 'vachana-m1', name: '🇹🇭 Vachana ชาย 1 (Open-Source Deep Neural ภาษาไทยแท้)', engine: 'vachana', gender: 'male' },
+    { id: 'vachana-f1', name: '🇹🇭 Vachana หญิง 1 (Open-Source Deep Neural ภาษาไทยแท้)', engine: 'vachana', gender: 'female' },
+    { id: 'vachana-m2', name: '🇹🇭 Vachana ชาย 2 (Open-Source Deep Neural - สไตล์บรรยาย)', engine: 'vachana', gender: 'male' },
+    { id: 'vachana-f2', name: '🇹🇭 Vachana หญิง 2 (Open-Source Deep Neural - สไตล์สดใส)', engine: 'vachana', gender: 'female' },
+    { id: 'lunarlist', name: '🇹🇭 PyThaiNLP Lunarlist (Open-Source ONNX Acoustic)', engine: 'lunarlist', gender: 'male' },
+    { id: 'th-TH-NiwatNeural', name: '🎙️ นิวัฒน์ (Neural Studio - เสียงชาย ทุ้มนุ่ม 48kHz [ครับ])', engine: 'edge', gender: 'male' },
+    { id: 'th-TH-PremwadeeNeural', name: '🎙️ เปรมวดี (Neural Studio - เสียงหญิง นุ่มนวล 48kHz [ค่ะ])', engine: 'edge', gender: 'female' },
     { id: 'mms-thai', name: '🇹🇭 Meta MMS Thai (Open-Source Native VITS Neural Model)', engine: 'mms', gender: 'male' },
-    { id: 'kokoro-sarah', name: '🌟 Kokoro Sarah (82M Open-Source Studio Model - หญิง)', engine: 'kokoro', gender: 'female' },
-    { id: 'kokoro-adam', name: '🌟 Kokoro Adam (82M Open-Source Studio Model - ชาย)', engine: 'kokoro', gender: 'male' },
-    { id: 'gtts-thai', name: '🌐 Open Web TTS (Thai Standard Engine)', engine: 'gtts', gender: 'female' },
   ];
 
   const STYLES = [
@@ -922,7 +924,7 @@
     state.isPlaying = false;
   }
 
-  // --- Natural Pitch-Preserved Speech Audio Playback with Smooth Cross-Fading ---
+  // --- Natural Pitch-Preserved Speech Audio Playback with Adaptive Tempo & Zero Cutoffs ---
   function schedulePlayAudio(cue) {
     if (!cue.audioBuffer) return;
     const ctx = getAudioContext();
@@ -935,19 +937,19 @@
     const video = findVideoElement();
     const videoSpeed = (video && video.playbackRate) ? video.playbackRate : 1.0;
 
-    // Per-cue gain node for smooth cross-fading and natural rhythm
+    // Per-cue gain node for smooth audio rendering
     const cueGain = ctx.createGain();
     cueGain.gain.setValueAtTime(1.0, ctx.currentTime);
     cueGain.connect(state.clarityFilter || state.audioGainNode || ctx.destination);
 
-    // Smoothly fade out previous voice if still playing (no harsh cuts)
+    // Fade previous voice smoothly over 80ms (no abrupt cuts)
     if (state.currentSource && state.currentGainNode) {
       try {
-        state.currentGainNode.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.04);
+        state.currentGainNode.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.08);
         const oldSrc = state.currentSource;
         setTimeout(() => {
           try { oldSrc.stop(); } catch (e) {}
-        }, 50);
+        }, 90);
       } catch (e) {}
     }
 
@@ -955,9 +957,18 @@
     source.buffer = cue.audioBuffer;
     source.connect(cueGain);
     
-    // Natural human voice tempo matching video speed (no pitch shifting)
+    // Adaptive Sentence Duration Fitting:
+    // If Thai sentence length slightly exceeds the subtitle time slot, adaptively fit speech rate
+    const audioDur = cue.audioBuffer.duration;
+    const slotDur = Math.max(1.0, cue.end - cue.start);
+    let adaptiveRate = videoSpeed;
+    if (audioDur > slotDur * 1.08) {
+      // Speed up slightly (max 1.25x) so sentence concludes naturally without getting clipped
+      adaptiveRate = Math.min(1.25, (audioDur / slotDur) * videoSpeed);
+    }
+
     try {
-      source.playbackRate.setValueAtTime(videoSpeed, ctx.currentTime);
+      source.playbackRate.setValueAtTime(adaptiveRate, ctx.currentTime);
     } catch (rateErr) {}
 
     state.currentSource = source;
@@ -1457,12 +1468,27 @@
       voiceSelect.onchange = (e) => {
         const selectedId = e.target.value;
         const found = VOICES.find((v) => v.id === selectedId);
+        state.voice = selectedId;
         saveSetting('voice', selectedId);
         if (found) {
-          saveSetting('engine', found.engine);
-          saveSetting('gender', found.gender);
           state.engine = found.engine;
           state.gender = found.gender;
+          saveSetting('engine', found.engine);
+          saveSetting('gender', found.gender);
+        }
+
+        // If dubbing is active, invalidate buffered cues from the old voice so the new voice takes effect immediately!
+        if (state.isDubbingActive && state.timedCues.length > 0) {
+          const video = findVideoElement();
+          const cur = video ? video.currentTime : 0;
+          state.timedCues.forEach((c) => {
+            if (c.start >= cur - 1.0) {
+              c.status = 'pending';
+              c.audioBuffer = null;
+            }
+          });
+          updateBufferGauge();
+          showThaiCaptionToast(`เปลี่ยนโมเดลเสียงเป็น "${found ? found.name : selectedId}"`);
         }
       };
     }
