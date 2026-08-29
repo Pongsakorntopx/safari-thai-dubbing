@@ -301,14 +301,23 @@ async def dub_cues_batch(req: BatchDubRequest):
     if len(thai_texts) != len(req.cues):
         thai_texts = [await translator.translate(c.text, context=req.context or "", style=style, gender=gender, custom_key=custom_key) for c in req.cues]
 
-    # 2. Parallel TTS Synthesis
+    # 2. Parallel TTS Synthesis with Dynamic Cue-Level Time-Sync Rate
     async def synth_cue(cue: CueItem, thai_text: str):
+        # Calculate dynamic time-synced speech rate per cue
+        target_dur = max(0.6, cue.end - cue.start)
+        char_count = len(thai_text.strip())
+        normal_duration = max(0.8, char_count / 11.5)
+        ratio = normal_duration / target_dur
+        pct = round((ratio - 1.0) * 100)
+        pct = max(-10, min(35, pct))
+        cue_rate = f"+{pct}%" if pct >= 0 else f"{pct}%"
+
         # Check cache
         cached = await cache.get_audio_dub(
             source_text=cue.text,
             engine=engine,
             voice=voice,
-            rate=rate,
+            rate=cue_rate,
             pitch="0Hz",
             style=style,
             context=req.context or "",
@@ -327,7 +336,7 @@ async def dub_cues_batch(req: BatchDubRequest):
             engine=engine,
             voice=voice,
             style=style,
-            rate=rate,
+            rate=cue_rate,
             api_key=custom_key,
         )
 
@@ -336,7 +345,7 @@ async def dub_cues_batch(req: BatchDubRequest):
                 source_text=cue.text,
                 engine=engine,
                 voice=voice,
-                rate=rate,
+                rate=cue_rate,
                 pitch="0Hz",
                 style=style,
                 context=req.context or "",
@@ -349,6 +358,7 @@ async def dub_cues_batch(req: BatchDubRequest):
                 "base64Audio": base64.b64encode(audio_bytes).decode("utf-8"),
                 "cached": False,
             }
+
         return {
             "id": cue.id,
             "translatedText": thai_text,
