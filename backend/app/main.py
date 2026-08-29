@@ -301,23 +301,23 @@ async def dub_cues_batch(req: BatchDubRequest):
     if len(thai_texts) != len(req.cues):
         thai_texts = [await translator.translate(c.text, context=req.context or "", style=style, gender=gender, custom_key=custom_key) for c in req.cues]
 
-    # 2. TTS Synthesis: If Google Studio Audio is requested, synthesize the whole cohesive passage as 1 Master Track!
-    is_google = engine == "google" or voice in ["Aoede", "Puck", "Kore", "Fenrir", "Charon"]
+    # 2. TTS Synthesis: If Google Studio Audio or Apple Native is requested, synthesize the whole cohesive passage as 1 Master Track!
+    is_master_audio = engine in ["google", "apple"] or voice in ["Aoede", "Puck", "Kore", "Fenrir", "Charon", "Kanya"]
 
-    if is_google:
+    if is_master_audio:
         full_passage = " ".join([t.strip() for t in thai_texts if t.strip()])
         master_audio_bytes = None
         try:
             master_audio_bytes = await tts_engine.synthesize(
                 text=full_passage,
-                engine="google",
+                engine=engine,
                 voice=voice,
                 style=style,
                 rate=rate or "+0%",
                 api_key=custom_key,
             )
         except Exception as e:
-            logger.warning("Google master audio synthesis failed: %s. Falling back to cue-by-cue.", e)
+            logger.warning("Master audio synthesis failed: %s. Falling back to cue-by-cue.", e)
 
         if master_audio_bytes:
             results = []

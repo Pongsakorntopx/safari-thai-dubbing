@@ -5,7 +5,11 @@ import base64
 import io
 import json
 import logging
+import os
 import re
+import shutil
+import sys
+import uuid
 import wave
 from typing import Dict, Optional
 import aiohttp
@@ -291,7 +295,11 @@ class TTSEngine:
     ) -> bytes:
         """Main synthesis dispatcher supporting Apple Silicon Native, JaiTTS, Microsoft Edge Neural & Google Gemini Audio."""
         if engine == "apple" or (voice and voice in ["Kanya", "Narisa", "Pattara"]):
-            return await self.synthesize_apple_native(text=text, voice=voice or "Kanya", rate=rate)
+            if sys.platform == "darwin" and shutil.which("say"):
+                audio_res = await self.synthesize_apple_native(text=text, voice=voice or "Kanya", rate=rate)
+                if audio_res:
+                    return audio_res
+            return await self.synthesize_edge(text=text, voice="th-TH-PremwadeeNeural", rate=rate, pitch=pitch)
 
         if engine == "jaitts" or (voice and "JaiTTS" in voice):
             return await self.synthesize_jaitts(text=text, voice=voice or "JaiTTS-Female")
