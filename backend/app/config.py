@@ -14,7 +14,7 @@ class Settings(BaseSettings):
 
     gemini_api_key: str = os.getenv("GEMINI_API_KEY", "AQ.Ab8RN6JU" + "5uYt7rPyScAbw" + "SGGJqlbMZIAAuYHONUmM6_79DBNkg")
     gemini_model: str = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
-    default_voice: str = os.getenv("DEFAULT_VOICE", "th-TH-PremwadeeNeural")
+    default_voice: str = os.getenv("DEFAULT_VOICE", "Puck")
     default_rate: str = os.getenv("DEFAULT_RATE", "+5%")
     default_pitch: str = os.getenv("DEFAULT_PITCH", "+0Hz")
     sqlite_cache_db: str = os.getenv("SQLITE_CACHE_DB", str(Path(__file__).resolve().parent.parent / "dub_cache.db"))

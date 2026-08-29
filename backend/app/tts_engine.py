@@ -150,7 +150,7 @@ class TTSEngine:
             },
         }
 
-        # Fast 1.0s attempt per key on primary model
+        # Fast 12.0s attempt per key on primary model to ensure robust voice synthesis
         for key in keys:
             url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key={key}"
             try:
@@ -158,7 +158,7 @@ class TTSEngine:
                     async with session.post(
                         url,
                         json=payload,
-                        timeout=aiohttp.ClientTimeout(total=1.2),
+                        timeout=aiohttp.ClientTimeout(total=12.0),
                     ) as resp:
                         if resp.status == 200:
                             res_data = await resp.json()
@@ -172,9 +172,9 @@ class TTSEngine:
                                         pcm_bytes = base64.b64decode(raw_base64)
                                         return pcm_to_wav(pcm_bytes, sample_rate=24000)
                         elif resp.status == 429:
-                            break
-            except Exception:
-                break
+                            logger.warning("Google Studio Audio returned 429 on %s", key[:10])
+            except Exception as e:
+                logger.warning("Google Studio Audio error: %s", e)
 
         raise RuntimeError("Google Audio quota reached or fast timeout")
 

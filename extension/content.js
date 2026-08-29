@@ -11,8 +11,8 @@
   const state = {
     enabled: true,
     isDubbingActive: false,
-    engine: 'edge',
-    voice: 'th-TH-NiwatNeural', // Default to male voice
+    engine: 'google',
+    voice: 'Puck', // Default to Google Puck voice
     gender: 'male',
     style: 'auto',
     rate: '+0%',
