@@ -1273,6 +1273,13 @@
         </div>
 
         <div style="display: flex; justify-content: space-between; align-items: center; gap: 4px;">
+          <span style="font-size: 11px; color: #94a3b8; font-weight: 600;">Gemini Key (ฟรี - AI เรียบเรียง):</span>
+          <input type="password" id="hud-gemini-input" placeholder="AIzaSy... (ถ้ามี)" value="${state.customGeminiKey || ''}" style="
+            background: #1e293b; color: #10b981; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; padding: 2px 6px; font-size: 10px; width: 170px; outline: none;
+          ">
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 4px;">
           <span style="font-size: 11px; color: #94a3b8; font-weight: 600;">Backend URL (Cloud/Local):</span>
           <input type="text" id="hud-backend-input" placeholder="https://thai-dubbing-api.onrender.com" value="${state.backendUrl || 'https://thai-dubbing-api.onrender.com'}" style="
             background: #1e293b; color: #38bdf8; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; padding: 2px 6px; font-size: 10px; width: 170px; outline: none;
@@ -1355,6 +1362,13 @@
     if (duckSlider) {
       duckSlider.oninput = (e) => {
         saveSetting('duckVolume', parseInt(e.target.value, 10) / 100);
+      };
+    }
+
+    const geminiInput = document.getElementById('hud-gemini-input');
+    if (geminiInput) {
+      geminiInput.onchange = (e) => {
+        saveSetting('customGeminiKey', e.target.value.trim());
       };
     }
 
