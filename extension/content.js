@@ -802,11 +802,14 @@
       }
     }, 250);
 
-    // Audio Scheduler: Exact frame-accurate playback at cue.start with 3.0s tolerance window
+    // Audio Scheduler: Exact frame-accurate playback with natural sentence preservation
     state.schedulerTimer = setInterval(() => {
       if (!state.isDubbingActive || state.timedCues.length === 0) return;
       const video = findVideoElement();
       if (!video || video.paused || state.isSyncBuffering) return;
+
+      // Allow the active sentence to finish its natural phrasing and concluding polite particle
+      if (state.isPlaying) return;
 
       const currentTime = video.currentTime;
       for (let i = 0; i < state.timedCues.length; i++) {
@@ -817,7 +820,7 @@
           break;
         }
       }
-    }, 50);
+    }, 40);
   }
 
   function stopActivePlayback() {
