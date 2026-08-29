@@ -717,6 +717,7 @@
     state.isDubbingActive = true;
     state.isSyncBuffering = true;
     state.bufferedSeconds = 0;
+    setNativeCaptionsHidden(true);
 
     // 1. Pause video immediately & ENFORCE pause aggressively while buffering
     pauseYouTubeVideo();
@@ -811,14 +812,14 @@
       } else {
         console.warn('[ThaiDubbing] Video has no transcripts. Switching to Live Subtitle mode.');
         enableYouTubeCaptionsButton();
-        showThaiCaptionToast('⚠️ วิดีโอนี้ไม่มี Subtitle ถอดเสียงสำเร็จ จึงเปิดโหมดพากย์สดอัตโนมัติ');
+        showSystemToast('⚠️ วิดีโอนี้ไม่มี Subtitle ถอดเสียงสำเร็จ จึงเปิดโหมดพากย์สดอัตโนมัติ');
         onBufferSyncComplete();
         updateHUDStatus('🟢 โหมดพากย์สด (กำลังพากย์ตามซับ)');
       }
     } catch (err) {
       console.error('[ThaiDubbing] Error during startDubbingProcess:', err);
       stopDubbing();
-      showThaiCaptionToast('❌ เกิดข้อผิดพลาดในการโหลดระบบพากย์ โปรดลองใหม่อีกครั้ง');
+      showSystemToast('❌ เกิดข้อผิดพลาดในการโหลดระบบพากย์ โปรดลองใหม่อีกครั้ง');
     }
   }
 
@@ -837,6 +838,8 @@
     if (state.lookaheadTimer) clearInterval(state.lookaheadTimer);
     if (state.schedulerTimer) clearInterval(state.schedulerTimer);
     stopActivePlayback();
+    clearCinemaSubtitle();
+    setNativeCaptionsHidden(false);
     restoreVideoVolume();
     renderHUD();
     updateHUDStatus('⏸️ หยุดการพากย์เสียงแล้ว');
@@ -973,7 +976,8 @@
           if (cue.audioBuffer) {
             schedulePlayAudio(cue);
           } else if (cue.translated) {
-            showThaiCaptionToast(cue.translated);
+            const durMs = Math.max(800, Math.round((cue.end - cue.start) * 1000 + 400));
+            renderCinemaSubtitle(cue.translated, durMs);
             updateHUDStatus(`🔊 พากย์: "${cue.translated.slice(0, 16)}..."`);
           }
           break;
@@ -1042,7 +1046,8 @@
     state.isPlaying = true;
 
     applyAudioDucking();
-    showThaiCaptionToast(cue.translated);
+    const durationMs = Math.max(800, Math.round((cue.end - cue.start) * 1000 + 400));
+    renderCinemaSubtitle(cue.translated, durationMs);
     const rhythmTag = cue.orig_wpm ? `⚡ ${cue.orig_wpm} WPM (${cue.appliedRate || '+0%'}) | ` : '';
     updateHUDStatus(`🔊 ${rhythmTag}"${cue.translated.slice(0, 18)}..."`);
 
@@ -1051,6 +1056,7 @@
         state.currentSource = null;
         state.currentGainNode = null;
         state.isPlaying = false;
+        clearCinemaSubtitle();
         restoreVideoVolume();
         updateBufferGauge();
       }
@@ -1076,7 +1082,7 @@
     const barEl = document.getElementById('hud-buffer-bar');
     if (gaugeEl) {
       if (state.isSyncBuffering) {
-        gaugeEl.textContent = `⏳ ซิงค์ 2 นาที: ${state.bufferedSeconds}s/${state.targetBufferSeconds}s`;
+        gaugeEl.textContent = `⏳ ซิงค์ 3 นาที: ${state.bufferedSeconds}s/${state.targetBufferSeconds}s`;
       } else {
         gaugeEl.textContent = `⚡ บัฟเฟอร์ล่วงหน้า: ${state.bufferedSeconds}s`;
       }
@@ -1163,9 +1169,9 @@
 
     if (dubRes && dubRes.success && dubRes.base64Audio) {
       if (dubRes.gemini_status === 'depleted') {
-        showThaiCaptionToast('⚠️ วงเงิน Gemini Key หมดลงแล้ว (429) แปลสดชั่วคราว');
+        showSystemToast('⚠️ วงเงิน Gemini Key หมดลงแล้ว (429) แปลสดชั่วคราว');
       } else if (dubRes.gemini_status === 'invalid') {
-        showThaiCaptionToast('⚠️ Gemini Key ไม่ถูกต้อง (400) แปลสดชั่วคราว');
+        showSystemToast('⚠️ Gemini Key ไม่ถูกต้อง (400) แปลสดชั่วคราว');
       }
       const ctx = getAudioContext();
       if (ctx) {
@@ -1195,12 +1201,14 @@
     source.playbackRate.setValueAtTime(videoSpeed, ctx.currentTime);
 
     applyAudioDucking();
-    showThaiCaptionToast(translatedText);
+    const durationMs = Math.max(800, Math.round((buffer.duration || 3) * 1000 + 400));
+    renderCinemaSubtitle(translatedText, durationMs);
     updateHUDStatus(`🔊 พากย์: "${translatedText.slice(0, 15)}..."`);
 
     source.onended = () => {
       state.currentSource = null;
       state.isPlaying = false;
+      clearCinemaSubtitle();
       restoreVideoVolume();
       updateHUDStatus('🟢 กำลังพากย์สด');
     };
@@ -1208,32 +1216,118 @@
     source.start(0);
   }
 
-  // --- Subtitle Toast Overlay ---
-  function showThaiCaptionToast(text) {
-    if (!text) return;
-    let toast = document.getElementById('thai-dub-toast');
-    if (!toast) {
-      toast = document.createElement('div');
-      toast.id = 'thai-dub-toast';
-      toast.style.cssText = `
-        position: fixed;
+  // --- Hide YouTube Native Captions during Dubbing ---
+  function setNativeCaptionsHidden(hide) {
+    let styleEl = document.getElementById('thai-dub-hide-cc-style');
+    if (hide) {
+      if (!styleEl) {
+        styleEl = document.createElement('style');
+        styleEl.id = 'thai-dub-hide-cc-style';
+        styleEl.textContent = `
+          .ytp-caption-window-bottom,
+          .caption-window,
+          .ytp-caption-segment,
+          #ytp-caption-window-container {
+            display: none !important;
+            opacity: 0 !important;
+            visibility: hidden !important;
+          }
+        `;
+        document.head.appendChild(styleEl);
+      }
+    } else {
+      if (styleEl) styleEl.remove();
+    }
+  }
+
+  // --- Cinema-Grade 100% Synchronized Thai Subtitle Overlay ---
+  function renderCinemaSubtitle(text, durationMs) {
+    if (!text || !state.isDubbingActive) return;
+    let sub = document.getElementById('thai-cinema-subtitles');
+    if (!sub) {
+      sub = document.createElement('div');
+      sub.id = 'thai-cinema-subtitles';
+      sub.style.cssText = `
+        position: absolute;
         bottom: 75px;
         left: 50%;
         transform: translateX(-50%);
-        background: rgba(15, 23, 42, 0.94);
-        color: #38bdf8;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans Thai", sans-serif;
-        font-size: 18px;
-        font-weight: 600;
+        z-index: 2147483640;
+        max-width: 86%;
+        text-align: center;
+        pointer-events: none;
+        transition: opacity 0.15s ease-out;
+      `;
+      const player = document.querySelector('#movie_player') || document.querySelector('.html5-video-player') || document.body;
+      player.appendChild(sub);
+    }
+
+    sub.innerHTML = `
+      <div style="
+        display: inline-block;
+        background: rgba(0, 0, 0, 0.78);
+        color: #ffffff;
+        font-family: -apple-system, BlinkMacSystemFont, 'Noto Sans Thai', 'Thonburi', sans-serif;
+        font-size: 22px;
+        font-weight: 700;
+        line-height: 1.45;
         padding: 6px 18px;
         border-radius: 8px;
-        border: 1px solid rgba(56, 189, 248, 0.35);
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
-        z-index: 2147483640;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.85);
+        text-shadow: 0 2px 4px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.8);
+        word-break: break-word;
+      ">
+        ${text}
+      </div>
+    `;
+    sub.style.opacity = '1';
+    sub.style.display = 'block';
+
+    if (sub.fadeTimer) clearTimeout(sub.fadeTimer);
+    if (durationMs && durationMs > 0) {
+      sub.fadeTimer = setTimeout(() => {
+        if (sub) {
+          sub.style.opacity = '0';
+        }
+      }, durationMs);
+    }
+  }
+
+  function clearCinemaSubtitle() {
+    const sub = document.getElementById('thai-cinema-subtitles');
+    if (sub) {
+      sub.style.opacity = '0';
+      if (sub.fadeTimer) clearTimeout(sub.fadeTimer);
+    }
+  }
+
+  // --- Top Notification Toast (For System Alerts) ---
+  function showSystemToast(text) {
+    if (!text) return;
+    let toast = document.getElementById('thai-dub-system-toast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'thai-dub-system-toast';
+      toast.style.cssText = `
+        position: fixed;
+        top: 18px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(15, 23, 42, 0.95);
+        color: #38bdf8;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans Thai", sans-serif;
+        font-size: 13px;
+        font-weight: 600;
+        padding: 6px 16px;
+        border-radius: 20px;
+        border: 1px solid rgba(56, 189, 248, 0.4);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.7);
+        z-index: 2147483647;
         pointer-events: none;
         transition: opacity 0.2s ease;
         text-align: center;
-        max-width: 80%;
+        max-width: 90%;
       `;
       document.body.appendChild(toast);
     }
@@ -1243,7 +1337,7 @@
     clearTimeout(toast.fadeTimer);
     toast.fadeTimer = setTimeout(() => {
       if (toast) toast.style.opacity = '0';
-    }, 4500);
+    }, 3500);
   }
 
   // --- Floating Control Pill (HUD Mounted Directly to Body) ---
@@ -1564,7 +1658,7 @@
             }
           });
           updateBufferGauge();
-          showThaiCaptionToast(`เปลี่ยนโมเดลเสียงเป็น "${found ? found.name : selectedId}"`);
+          showSystemToast(`เปลี่ยนโมเดลเสียงเป็น "${found ? found.name : selectedId}"`);
         }
       };
     }
@@ -1575,7 +1669,7 @@
         const val = e.target.value;
         state.gender = val;
         saveSetting('gender', val);
-        showThaiCaptionToast(`เปลี่ยนโหมดเพศเป็น: ${val === 'female' ? '👩 ผู้หญิง (ค่ะ)' : (val === 'male' ? '👨 ผู้ชาย (ครับ)' : '🤖 อัตโนมัติ')}`);
+        showSystemToast(`เปลี่ยนโหมดเพศเป็น: ${val === 'female' ? '👩 ผู้หญิง (ค่ะ)' : (val === 'male' ? '👨 ผู้ชาย (ครับ)' : '🤖 อัตโนมัติ')}`);
 
         if (state.isDubbingActive && state.timedCues.length > 0) {
           const video = findVideoElement();
