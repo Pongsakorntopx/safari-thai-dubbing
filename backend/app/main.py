@@ -390,7 +390,7 @@ async def dub_cues_batch(req: BatchDubRequest):
     target_engine = voice_meta.get("engine", "khanomtan")
     speaker_gender = voice_meta.get("gender", "female")
 
-    sem = asyncio.Semaphore(1)
+    sem = asyncio.Semaphore(4)
 
     async def synth_cue(cue: CueItem, diarized: Dict):
         thai_text = diarized.get("thai", "").strip() or cue.text

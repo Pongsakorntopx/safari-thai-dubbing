@@ -715,51 +715,37 @@
         state.currentVideoId = videoId;
         console.log(`[ThaiDubbing] Loaded ${state.timedCues.length} cues. Pre-buffering 180 seconds...`);
 
-        // 3. Select all cues spanning the first 180 seconds (approx 36-48 cues)
+        // 3. Ultra-Fast Start: Buffer first 4 sentences for instant ~1.0s playback start!
         const video = findVideoElement();
         const cur = video ? video.currentTime : 0;
-        const targetTime = cur + state.targetBufferSeconds;
-        const batchCues = state.timedCues.filter((c) => c.end >= cur && c.start <= targetTime);
-        const toFetch = (batchCues.length > 0 ? batchCues : state.timedCues).slice(0, 48);
+        const upcomingCues = state.timedCues.filter((c) => c.end >= cur);
+        const fastStartCues = (upcomingCues.length > 0 ? upcomingCues : state.timedCues).slice(0, 4);
 
-        // Divide toFetch into progressive sub-batches of 8 cues for responsive progress updates
-        const chunkSize = 8;
-        let totalFetchedCues = 0;
+        updateHUDStatus('⚡ เริ่มต้นพากย์ไทยทันที (กำลังเตรียม 4 ท่อนแรก ~1 วิ)...');
+        fastStartCues.forEach((c) => (c.status = 'fetching'));
 
-        for (let i = 0; i < toFetch.length; i += chunkSize) {
-          if (!state.isDubbingActive) break;
-          const chunk = toFetch.slice(i, i + chunkSize);
-          chunk.forEach((c) => (c.status = 'fetching'));
-
-          const progressPercent = Math.round((totalFetchedCues / toFetch.length) * 100);
-          updateHUDStatus(`⏳ กำลังเรียบเรียงและสร้างเสียงพากย์ (${progressPercent}% - ท่อนที่ ${i + 1}/${toFetch.length})...`);
-
-          const batchRes = await fetchDubBatchDirect(chunk);
-          if (batchRes && batchRes.success && batchRes.results) {
-            for (const item of batchRes.results) {
-              const cue = state.timedCues.find((c) => c.id === item.id);
-              if (cue) {
-                cue.translated = item.translatedText || cue.text;
-                cue.isMasterTrack = !!item.isMasterTrack;
-                cue.speaker = item.speaker || 'Host';
-                cue.emotion = item.emotion || 'normal';
-                cue.orig_wpm = item.orig_wpm || 140;
-                cue.appliedRate = item.appliedRate || '+0%';
-                if (item.base64Audio) {
-                  cue.audioBase64 = item.base64Audio;
-                  cue.audioUrl = base64ToBlobUrl(item.base64Audio);
-                }
-                cue.status = 'ready';
-                totalFetchedCues++;
+        const batchRes = await fetchDubBatchDirect(fastStartCues);
+        if (batchRes && batchRes.success && batchRes.results) {
+          for (const item of batchRes.results) {
+            const cue = state.timedCues.find((c) => c.id === item.id);
+            if (cue) {
+              cue.translated = item.translatedText || cue.text;
+              cue.isMasterTrack = !!item.isMasterTrack;
+              cue.speaker = item.speaker || 'Host';
+              cue.emotion = item.emotion || 'normal';
+              cue.orig_wpm = item.orig_wpm || 140;
+              cue.appliedRate = item.appliedRate || '+0%';
+              if (item.base64Audio) {
+                cue.audioBase64 = item.base64Audio;
+                cue.audioUrl = base64ToBlobUrl(item.base64Audio);
               }
+              cue.status = 'ready';
             }
-            updateBufferGauge();
           }
+          updateBufferGauge();
         }
 
-        // 4. 3-Minute buffer is ready -> Automatically Play Video & Start Background Lookahead!
-        state.bufferedSeconds = state.targetBufferSeconds; // Force UI progress to 100%
-        updateBufferGauge();
+        // 4. Instant Start Video & Run Background Lookahead Streamer ahead of playback!
         onBufferSyncComplete();
         startLookaheadWorkers();
 
