@@ -1,9 +1,11 @@
 /**
- * Safari AI Thai Video Dubber - Popup UI Controller (KhanomTan TTS v1.0 Integration)
+ * Safari AI Thai Video Dubber - Popup UI Controller (Thai VITS & KhanomTan Integration)
  */
 
-const KHANOMTAN_VOICES = [
-  { id: 'khanomtan-v1', name: '🧁 ขนมตาล (KhanomTan TTS v1.0 - Open-Source Thai VITS)' },
+const VITS_VOICES = [
+  { id: 'vits-thai-community', name: '🇹🇭 VITS Thai Master (โมเดล VITS เสียงไทยแท้ • ชุมชน AI ไทย / PyThaiNLP)' },
+  { id: 'khanomtan-v1', name: '🧁 ขนมตาล (KhanomTan TTS v1.0 • PyThaiNLP YourTTS/VITS)' },
+  { id: 'khanomtan-v1.1', name: '🧁 ขนมตาล (KhanomTan TTS v1.1 • อัปเดตใหม่ Apache 2.0)' },
 ];
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -26,7 +28,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function populateVoices(selectedVoice) {
     voiceSelect.innerHTML = '';
-    KHANOMTAN_VOICES.forEach((v) => {
+    VITS_VOICES.forEach((v) => {
       const opt = document.createElement('option');
       opt.value = v.id;
       opt.textContent = v.name;

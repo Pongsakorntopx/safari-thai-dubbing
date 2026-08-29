@@ -5,8 +5,8 @@
 
 const DEFAULT_SETTINGS = {
   enabled: true,
-  engine: 'khanomtan',
-  voice: 'khanomtan-v1',
+  engine: 'vits_thai',
+  voice: 'vits-thai-community',
   style: 'auto',
   rate: '+0%',
   dubVolume: 1.0,

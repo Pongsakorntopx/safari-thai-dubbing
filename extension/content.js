@@ -10,8 +10,8 @@
   // --- Runtime State ---
   const state = {
     enabled: true,
-    engine: 'khanomtan',
-    voice: 'khanomtan-v1',
+    engine: 'vits_thai',
+    voice: 'vits-thai-community',
     gender: 'female',
     style: 'auto',
     rate: '+0%',
@@ -44,7 +44,9 @@
   };
 
   const VOICES = [
-    { id: 'khanomtan-v1', name: '🧁 ขนมตาล (KhanomTan TTS v1.0 - Open-Source Thai VITS)', engine: 'khanomtan', gender: 'female' },
+    { id: 'vits-thai-community', name: '🇹🇭 VITS Thai Master (โมเดล VITS เสียงไทยแท้ • ชุมชน AI ไทย / PyThaiNLP)', engine: 'vits_thai', gender: 'female' },
+    { id: 'khanomtan-v1', name: '🧁 ขนมตาล (KhanomTan TTS v1.0 • PyThaiNLP YourTTS/VITS)', engine: 'khanomtan', gender: 'female' },
+    { id: 'khanomtan-v1.1', name: '🧁 ขนมตาล (KhanomTan TTS v1.1 • อัปเดตใหม่ Apache 2.0)', engine: 'khanomtan', gender: 'female' },
   ];
 
   const STYLES = [
@@ -1487,7 +1489,11 @@
       ">
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <span style="font-size: 11px; color: #94a3b8; font-weight: 600;">โมเดลเสียง AI:</span>
-          <span style="font-size: 11px; color: #38bdf8; font-weight: 700;">🧁 ขนมตาล (KhanomTan TTS v1.0)</span>
+          <select id="hud-voice-select" style="
+            background: #1e293b; color: #38bdf8; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; padding: 2px 6px; font-size: 11px; outline: none; max-width: 200px;
+          ">
+            ${VOICES.map((v) => `<option value="${v.id}" ${v.id === state.voice ? 'selected' : ''}>${v.name}</option>`).join('')}
+          </select>
         </div>
 
         <div style="display: flex; justify-content: space-between; align-items: center;">

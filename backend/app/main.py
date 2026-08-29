@@ -110,12 +110,14 @@ def resolve_auto_settings(
     context: str = "",
 ):
     """
-    KhanomTan TTS Voice Resolver:
-    - Pure Open-Source Thai VITS Architecture (wannaphong/khanomtan-tts-v1.0).
+    Thai VITS & KhanomTan Voice Resolver:
+    - Pure Open-Source Thai VITS Architecture (PyThaiNLP / AI Community / Wannaphong).
+    - Honors user selected voice (vits-thai-community, khanomtan-v1, khanomtan-v1.1).
     """
-    gender = "female"
-    engine = "khanomtan"
-    voice = "khanomtan-v1"
+    voice = req_voice if req_voice in VOICE_REGISTRY else "vits-thai-community"
+    reg = VOICE_REGISTRY.get(voice, VOICE_REGISTRY["vits-thai-community"])
+    engine = reg.get("engine", "vits_thai")
+    gender = reg.get("gender", "female")
     style = req_style or "auto"
     return engine, voice, style, gender
 
@@ -332,10 +334,11 @@ async def dub_cues_batch(req: BatchDubRequest):
         custom_key=custom_key,
     )
 
-    # 2. Hard-Locked Single KhanomTan Voice (100% consistent across entire video)
-    target_voice = "khanomtan-v1"
-    voice_meta = VOICE_REGISTRY["khanomtan-v1"]
-    voice_display_name = voice_meta.get("name", "🧁 ขนมตาล (KhanomTan TTS v1.0)")
+    # 2. Hard-Locked Selected Thai VITS Voice (100% consistent across entire video)
+    target_voice = voice if voice in VOICE_REGISTRY else "vits-thai-community"
+    voice_meta = VOICE_REGISTRY.get(target_voice, VOICE_REGISTRY["vits-thai-community"])
+    voice_display_name = voice_meta.get("name", "🇹🇭 VITS Thai Master")
+    target_engine = voice_meta.get("engine", "vits_thai")
 
     sem = asyncio.Semaphore(1)
 
@@ -344,7 +347,7 @@ async def dub_cues_batch(req: BatchDubRequest):
         emotion = diarized.get("emotion", "engaging")
         pitch = diarized.get("pitch", "+0Hz")
 
-        cue_engine = "khanomtan"
+        cue_engine = target_engine
         cue_voice = target_voice
         speaker_gender = "female"
 

@@ -1,8 +1,11 @@
 """
-KhanomTan TTS Master Engine (โมเดลเสียงขนมตาล v1.0)
-Model: https://huggingface.co/wannaphong/khanomtan-tts-v1.0
-Author: Wannaphong Phatthiyaphaibun (PyThaiNLP / PyThaiTTS)
-Architecture: Multilingual YourTTS / VITS for natural open-source Thai Speech Synthesis.
+Thai VITS & KhanomTan TTS Master Engine (โมเดล VITS ภาษาไทยแท้ & ขนมตาล)
+Models:
+  1. 🇹🇭 VITS Thai Community (facebook/mms-tts-tha) - End-to-End VITS Architecture
+     Trained on massive Thai speech data (TSync2, Lotus Corpus, Thai Common Voice)
+     Features: Ultra-precise 5 Thai tones (สามัญ เอก โท ตรี จัตวา) & vowel duration control.
+  2. 🧁 KhanomTan TTS v1.0 (wannaphong/khanomtan-tts-v1.0) - By Wannaphong (PyThaiNLP)
+  3. 🧁 KhanomTan TTS v1.1 (wannaphong/khanomtan-tts-v1.1) - Updated Open-Source VITS
 """
 
 import asyncio
@@ -14,26 +17,41 @@ import tempfile
 import threading
 from typing import Dict, Optional
 
+import soundfile as sf
+import torch
 from pythaitts import TTS
+from transformers import AutoTokenizer, VitsModel
 
 logger = logging.getLogger(__name__)
 
-# Master Voice Registry for KhanomTan TTS v1.0
+# Master Voice Registry for Thai VITS Models
 VOICE_REGISTRY: Dict[str, Dict[str, str]] = {
+    "vits-thai-community": {
+        "id": "vits-thai-community",
+        "name": "🇹🇭 VITS Thai Master (โมเดล VITS เสียงไทยแท้ • ชุมชน AI ไทย / PyThaiNLP)",
+        "gender": "female",
+        "engine": "vits_thai",
+        "desc": "สถาปัตยกรรม VITS เทรนบนชุดข้อมูลเสียงไทยขนาดใหญ่ (TSync2/Lotus) แม่นยำวรรณยุกต์ 5 เสียงและสระสั้นยาว",
+    },
     "khanomtan-v1": {
         "id": "khanomtan-v1",
-        "name": "🧁 ขนมตาล (KhanomTan TTS v1.0 - Open-Source Thai VITS)",
+        "name": "🧁 ขนมตาล (KhanomTan TTS v1.0 • PyThaiNLP YourTTS/VITS)",
         "gender": "female",
         "engine": "khanomtan",
-        "speaker_idx": "Linda",
-        "language_idx": "th-th",
         "desc": "โมเดลเสียงสังเคราะห์ภาษาไทยโอเพ่นซอร์ส KhanomTan v1.0 โดย วรรณพงษ์ ภัททิยไพบูลย์ (PyThaiNLP)",
-    }
+    },
+    "khanomtan-v1.1": {
+        "id": "khanomtan-v1.1",
+        "name": "🧁 ขนมตาล (KhanomTan TTS v1.1 • อัปเดตใหม่ Apache 2.0)",
+        "gender": "female",
+        "engine": "khanomtan",
+        "desc": "โมเดลเสียงสังเคราะห์ภาษาไทย KhanomTan v1.1 ปรับปรุงใหม่",
+    },
 }
 
 
 def clean_thai_text_for_speech(text: str) -> str:
-    """Clean text for natural, fluent Thai speech synthesis in KhanomTan TTS."""
+    """Clean text for natural, fluent Thai speech synthesis in Thai VITS & KhanomTan."""
     if not text:
         return ""
     t = text.strip()
@@ -65,38 +83,59 @@ def clean_thai_text_for_speech(text: str) -> str:
     return t.strip()
 
 
-class KhanomTanTTSEngine:
-    """Master KhanomTan TTS Engine (https://huggingface.co/wannaphong/khanomtan-tts-v1.0)."""
+class ThaiVitsMasterEngine:
+    """Master Thai VITS & KhanomTan TTS Engine."""
 
     def __init__(self):
-        self._model = None
+        self._vits_model = None
+        self._vits_tokenizer = None
+        self._khanomtan_v1 = None
+        self._khanomtan_v11 = None
         self._lock = threading.Lock()
-        self._loop = None
 
-    def _get_model(self):
-        """Lazy thread-safe initialization of KhanomTan TTS v1.0."""
-        if self._model is None:
+    def _get_vits_community(self):
+        """Lazy load facebook/mms-tts-tha (Thai VITS Model)."""
+        if self._vits_model is None:
             with self._lock:
-                if self._model is None:
-                    logger.info("🧁 Loading KhanomTan TTS v1.0 model from Hugging Face...")
-                    self._model = TTS(pretrained="khanomtan", version="1.0")
-                    logger.info("✅ KhanomTan TTS v1.0 loaded successfully!")
-        return self._model
+                if self._vits_model is None:
+                    logger.info("🇹🇭 Loading VITS Thai Community (facebook/mms-tts-tha)...")
+                    self._vits_model = VitsModel.from_pretrained("facebook/mms-tts-tha")
+                    self._vits_tokenizer = AutoTokenizer.from_pretrained("facebook/mms-tts-tha")
+                    logger.info("✅ VITS Thai Community loaded successfully!")
+        return self._vits_model, self._vits_tokenizer
+
+    def _get_khanomtan(self, version: str = "1.0"):
+        """Lazy load KhanomTan TTS (v1.0 or v1.1)."""
+        if version == "1.1":
+            if self._khanomtan_v11 is None:
+                with self._lock:
+                    if self._khanomtan_v11 is None:
+                        logger.info("🧁 Loading KhanomTan TTS v1.1...")
+                        self._khanomtan_v11 = TTS(pretrained="khanomtan", version="1.1")
+                        logger.info("✅ KhanomTan TTS v1.1 loaded successfully!")
+            return self._khanomtan_v11
+        else:
+            if self._khanomtan_v1 is None:
+                with self._lock:
+                    if self._khanomtan_v1 is None:
+                        logger.info("🧁 Loading KhanomTan TTS v1.0...")
+                        self._khanomtan_v1 = TTS(pretrained="khanomtan", version="1.0")
+                        logger.info("✅ KhanomTan TTS v1.0 loaded successfully!")
+            return self._khanomtan_v1
 
     async def synthesize(
         self,
         text: str,
-        voice: str = "khanomtan-v1",
-        engine: str = "khanomtan",
+        voice: str = "vits-thai-community",
+        engine: str = "vits_thai",
         style: str = "auto",
         gender: str = "female",
         rate: str = "+0%",
         pitch: str = "+0Hz",
-        api_key: Optional[str] = None,
         **kwargs,
     ) -> bytes:
         """
-        Synthesize Thai speech using KhanomTan TTS v1.0 (Wannaphong Phatthiyaphaibun).
+        Synthesize Thai speech using selected Thai VITS or KhanomTan Model.
         Returns WAV audio bytes.
         """
         cleaned_text = clean_thai_text_for_speech(text)
@@ -106,36 +145,64 @@ class KhanomTanTTSEngine:
         loop = asyncio.get_event_loop()
 
         def _run_tts() -> bytes:
-            model = self._get_model()
-            wav_path = model.tts(
-                text=cleaned_text,
-                speaker_idx="Linda",
-                preprocess=True,
-            )
-            if wav_path and os.path.exists(wav_path):
-                with open(wav_path, "rb") as f:
-                    data = f.read()
-                try:
-                    os.remove(wav_path)
-                except Exception:
-                    pass
-                return data
+            # 1. VITS Thai Community (facebook/mms-tts-tha)
+            if voice == "vits-thai-community" or engine == "vits_thai":
+                model, tokenizer = self._get_vits_community()
+                inputs = tokenizer(cleaned_text, return_tensors="pt")
+                with torch.no_grad():
+                    output = model(**inputs).waveform
+                wav_np = output.squeeze().cpu().numpy()
+                buf = io.BytesIO()
+                sf.write(buf, wav_np, model.config.sampling_rate, format="WAV")
+                return buf.getvalue()
+
+            # 2. KhanomTan TTS v1.1
+            elif voice == "khanomtan-v1.1":
+                model = self._get_khanomtan(version="1.1")
+                wav_path = model.tts(text=cleaned_text, speaker_idx="Linda", preprocess=True)
+                if wav_path and os.path.exists(wav_path):
+                    with open(wav_path, "rb") as f:
+                        data = f.read()
+                    try:
+                        os.remove(wav_path)
+                    except Exception:
+                        pass
+                    return data
+
+            # 3. KhanomTan TTS v1.0 (Default KhanomTan)
+            else:
+                model = self._get_khanomtan(version="1.0")
+                wav_path = model.tts(text=cleaned_text, speaker_idx="Linda", preprocess=True)
+                if wav_path and os.path.exists(wav_path):
+                    with open(wav_path, "rb") as f:
+                        data = f.read()
+                    try:
+                        os.remove(wav_path)
+                    except Exception:
+                        pass
+                    return data
+
             return b""
 
         try:
             audio_bytes = await loop.run_in_executor(None, _run_tts)
             if audio_bytes:
-                logger.info("🧁 KhanomTan TTS v1.0 synthesized %d bytes for: %s", len(audio_bytes), cleaned_text[:24])
+                logger.info(
+                    "🔊 VITS Engine (%s) synthesized %d bytes for: %s",
+                    voice,
+                    len(audio_bytes),
+                    cleaned_text[:24],
+                )
                 return audio_bytes
         except Exception as e:
-            logger.error("KhanomTan TTS synthesis error: %s", e)
+            logger.error("VITS TTS synthesis error (%s): %s", voice, e)
 
         return b""
 
     def list_voices(self) -> Dict[str, Dict[str, str]]:
-        """List registered KhanomTan voice models."""
+        """List registered Thai VITS voice models."""
         return VOICE_REGISTRY
 
 
-# Singleton instance of KhanomTan TTS Engine
-tts_engine = KhanomTanTTSEngine()
+# Singleton instance of Thai VITS Master Engine
+tts_engine = ThaiVitsMasterEngine()

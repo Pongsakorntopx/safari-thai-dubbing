@@ -15,7 +15,7 @@ _translation_lru = LRUCache(maxsize=settings.in_memory_cache_size)
 _audio_lru = LRUCache(maxsize=settings.in_memory_cache_size)
 
 
-CACHE_VERSION = "v21"
+CACHE_VERSION = "v22"
 
 
 def _generate_cache_key(source_text: str, *args: str) -> str:

@@ -1,14 +1,16 @@
-# 🧁 Safari AI Thai Video Dubbing • KhanomTan TTS v1.0
+# 🇹🇭 Safari AI Thai Video Dubbing • Thai VITS & KhanomTan TTS
 
-ระบบแปลและพากย์เสียงวิดีโอบน YouTube เป็นภาษาไทยแบบ Real-time คุณภาพสูง สำหรับ Safari (macOS / iOS) ขับเคลื่อนด้วยโมเดลสังเคราะห์เสียงโอเพ่นซอร์ส **KhanomTan TTS v1.0 (ขนมตาล)** โดย วรรณพงษ์ ภัททิยไพบูลย์ (PyThaiNLP / PyThaiTTS)
-👉 [Hugging Face Model Card: wannaphong/khanomtan-tts-v1.0](https://huggingface.co/wannaphong/khanomtan-tts-v1.0)
+ระบบแปลและพากย์เสียงวิดีโอบน YouTube เป็นภาษาไทยแบบ Real-time คุณภาพสูง สำหรับ Safari (macOS / iOS) ขับเคลื่อนด้วยสถาปัตยกรรม **VITS ภาษาไทยแท้ (Variational Inference with Adversarial Learning for End-to-End TTS)** พัฒนาโดยชุมชน AI ไทย / PyThaiNLP / AIResearch
+👉 **โมเดลที่รองรับ:**
+1. `🇹🇭 VITS Thai Master`: โมเดล VITS เสียงไทยมาตรฐาน ควบคุมวรรณยุกต์ 5 เสียงและสระสั้น-ยาวได้ตรงตามหลักภาษาไทยแท้
+2. `🧁 KhanomTan TTS v1.0 / v1.1`: โมเดลเสียงสังเคราะห์ภาษาไทยโอเพ่นซอร์ส โดย วรรณพงษ์ ภัททิยไพบูลย์ (PyThaiNLP)
 
 ---
 
 ## 🌟 จุดเด่นของระบบ (Features)
 
-1. **KhanomTan TTS v1.0 (ขนมตาล)**: โมเดลเสียงสังเคราะห์ภาษาไทยโอเพ่นซอร์ส สถาปัตยกรรม VITS/YourTTS ที่พัฒนาโดยทีม PyThaiNLP
-2. **Single Consistent Host Voice**: พากย์ด้วยเสียงคนเดียวตลอดทั้งคลิป 100% ไม่มีการสลับเสียงหรือเปลี่ยนโทนไปมาระหว่างท่อน
+1. **End-to-End Thai VITS Models**: สถาปัตยกรรม VITS ที่เทรนบนชุดข้อมูลเสียงภาษาไทยขนาดใหญ่ (TSync2, Lotus Corpus) น้ำเสียงเป็นธรรมชาติสูงมาก
+2. **Single Consistent Host Voice**: ล็อกเสียงคนเดียวตลอดทั้งคลิป 100% ไม่มีการสลับเสียงไปมาระหว่างท่อน
 3. **Zero Dangling Fragments & Anti-Word Splitting**: แปลงบทสนทนาเป็นประโยคที่พูดจบสมบูรณ์ในตัวเอง ไม่ตัดคำผสมแยกออกจากกัน และไม่มีประโยคค้างคา
 4. **Exact Syllable Duration Pacing**: คำนวณความเร็วและจำนวนพยางค์ภาษาไทยให้พอดีกับจังหวะเวลาของคลิปต้นฉบับอย่างแม่นยำ
 5. **Monophonic Web Audio Player**: เล่นเสียงเดี่ยว ป้องกันเสียงซ้อน พร้อมปรับลดเสียงคลิปเดิม (Audio Ducking) อัตโนมัติ

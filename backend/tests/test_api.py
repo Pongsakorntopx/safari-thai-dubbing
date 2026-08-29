@@ -17,6 +17,7 @@ async def test_health_check():
         data = response.json()
         assert data["status"] == "healthy"
         assert "voices" in data
+        assert "vits-thai-community" in data["voices"]
         assert "khanomtan-v1" in data["voices"]
 
 
@@ -29,6 +30,7 @@ async def test_list_voices():
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
+        assert "vits-thai-community" in data["voices"]
         assert "khanomtan-v1" in data["voices"]
 
 
