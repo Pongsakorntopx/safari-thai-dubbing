@@ -732,17 +732,23 @@
         const ctx = getAudioContext();
         for (const item of batchRes.results) {
           const cue = state.timedCues.find((c) => c.id === item.id);
-          if (cue && item.base64Audio) {
-            try {
-              if (ctx) {
-                const arrayBuf = base64ToArrayBuffer(item.base64Audio);
-                cue.audioBuffer = await ctx.decodeAudioData(arrayBuf);
-                cue.translated = item.translatedText || cue.text;
+          if (cue) {
+            cue.translated = item.translatedText || cue.text;
+            cue.isMasterTrack = !!item.isMasterTrack;
+            if (item.base64Audio) {
+              try {
+                if (ctx) {
+                  const arrayBuf = base64ToArrayBuffer(item.base64Audio);
+                  cue.audioBuffer = await ctx.decodeAudioData(arrayBuf);
+                  cue.status = 'ready';
+                }
+              } catch (decErr) {
+                console.error('[ThaiDubbing] Audio decode error:', decErr);
                 cue.status = 'ready';
               }
-            } catch (decErr) {
-              console.error('[ThaiDubbing] Audio decode error:', decErr);
-              cue.status = 'pending';
+            } else {
+              cue.audioBuffer = null;
+              cue.status = 'ready';
             }
           }
         }
@@ -819,19 +825,23 @@
             const ctx = getAudioContext();
             for (const item of batchRes.results) {
               const cue = state.timedCues.find((c) => c.id === item.id);
-              if (cue && item.base64Audio) {
-                try {
-                  if (ctx) {
-                    const arrayBuf = base64ToArrayBuffer(item.base64Audio);
-                    cue.audioBuffer = await ctx.decodeAudioData(arrayBuf);
-                    cue.translated = item.translatedText || cue.text;
+              if (cue) {
+                cue.translated = item.translatedText || cue.text;
+                cue.isMasterTrack = !!item.isMasterTrack;
+                if (item.base64Audio) {
+                  try {
+                    if (ctx) {
+                      const arrayBuf = base64ToArrayBuffer(item.base64Audio);
+                      cue.audioBuffer = await ctx.decodeAudioData(arrayBuf);
+                      cue.status = 'ready';
+                    }
+                  } catch (e) {
                     cue.status = 'ready';
                   }
-                } catch (e) {
-                  cue.status = 'pending';
+                } else {
+                  cue.audioBuffer = null;
+                  cue.status = 'ready';
                 }
-              } else if (cue) {
-                cue.status = 'pending';
               }
             }
             updateBufferGauge();
