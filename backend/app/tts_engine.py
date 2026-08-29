@@ -59,10 +59,7 @@ GOOGLE_STYLES: Dict[str, str] = {
     "formal": "กรุณาอ่านบทภาษาไทยต่อไปนี้ด้วยน้ำเสียงทางการ ชัดเจน น่าเชื่อถือ สุภาพ:\n\n",
 }
 
-API_KEYS = [
-    "AQ.Ab8RN6J4QD43dHEfSKQZ9CSBkuS5KDSWeAdBlrXophCgH8K0Ow",
-    "AQ.Ab8RN6ItOKQa_J3gdlBkCeQFd1IAXfAFRlsdIRLO3wK__3hleA",
-]
+API_KEYS = []
 
 
 def pcm_to_wav(pcm_data: bytes, sample_rate: int = 24000, channels: int = 1, sampwidth: int = 2) -> bytes:
