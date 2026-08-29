@@ -1,6 +1,7 @@
 """Master Thai Dubbing Scriptwriter & Paragraph-Level Linguistic Transcreation Engine.
 Supports Universal Multi-Lingual Source Videos (English, Japanese, Korean, Chinese, Spanish, French, German, etc.).
-Converts conversational paragraphs and dialogue into cohesive, natural, authentic spoken Thai.
+Translates full 60-second conversational passages as a cohesive paragraph to preserve inter-sentence context,
+storytelling flow, and natural spoken Thai cadence.
 Guarantees correct speaker gender alignment (ครับ/ค่ะ), contextual register adaptation, and speech rhythm pacing.
 """
 
@@ -112,10 +113,10 @@ def is_valid_thai_translation(text: str) -> bool:
     return True
 
 
-def clean_spoken_thai(text: str, gender: str = "male", style: str = "auto") -> str:
+def polish_spoken_thai(text: str, gender: str = "male", style: str = "auto") -> str:
     """
-    Applies clean, non-destructive spoken Thai phrasing and gender particle alignment.
-    Does not delete words or mangle grammar.
+    Applies clean, whole-phrase natural spoken Thai phrasing and gender particle alignment.
+    Does not mangle grammar or delete words.
     """
     if not text or not text.strip():
         return ""
@@ -128,7 +129,13 @@ def clean_spoken_thai(text: str, gender: str = "male", style: str = "auto") -> s
     t = re.sub(r"สวัสดีทุกคน\b", "สวัสดีทุกคนด้วยนะ" + ("ครับ" if gender == "male" else "ค่ะ"), t)
     t = re.sub(r"อย่าลืมกดติดตาม|อย่าลืมกดซับ", "อย่าลืมกดติดตามกันด้วยนะ" + ("ครับ" if gender == "male" else "ค่ะ"), t)
     t = re.sub(r"ไปกันเถอะ|ลุยกันเถอะ", "ลุยกันเลย", t)
-    t = re.sub(r"ทีละขั้นตอน", "ทีละสเต็ป", t)
+    t = re.sub(r"ฉันจะแสดงให้คุณเห็น|ผมจะแสดงให้คุณเห็น", "ผมจะพามาดู" if gender == "male" else "ฉันจะพามาดู", t)
+    t = re.sub(r"ข้อผิดพลาดทั่วไปที่ผู้คนมักทำ|ข้อผิดพลาดที่พบบ่อยที่สุดที่ผู้คนทำ", "ข้อผิดพลาดที่คนมักจะเจอกันบ่อยๆ", t)
+    t = re.sub(r"หลีกเลี่ยงได้อย่างง่ายดาย|หลีกเลี่ยงง่ายดาย", "ป้องกันและแก้ง่ายๆ", t)
+    t = re.sub(r"ดังนั้นอย่าลืมดูให้จบ|อย่าลืมดูให้จบ", "อย่าลืมดูให้จบคลิปนะ" + ("ครับ" if gender == "male" else "ค่ะ"), t)
+    t = re.sub(r"ปี 2569", "ปี 2026", t)
+    t = re.sub(r"ปี 2568", "ปี 2025", t)
+    t = re.sub(r"ปี 2567", "ปี 2024", t)
 
     # 2. Gender alignment
     if gender == "male":
@@ -146,47 +153,65 @@ def clean_spoken_thai(text: str, gender: str = "male", style: str = "auto") -> s
     return t
 
 
-def translate_neural_endpoint(text: str) -> str:
+def translate_full_batch_neural(cues_text: List[str], gender: str = "male", style: str = "auto") -> List[str]:
     """
-    Multi-endpoint Neural Machine Translation API (100% Free, multi-lingual to Thai).
+    Translates all cues together as one full paragraph to preserve narrative context,
+    then parses back into structured sentence cues.
     """
+    batch_text = "\n".join([f"[{i+1}] {c.strip()}" for i, c in enumerate(cues_text)])
     endpoints = [
         "https://clients5.google.com/translate_a/t?client=dict-chrome-ex&sl=auto&tl=th&q=",
         "https://translate.google.com/translate_a/single?client=it&sl=auto&tl=th&dt=t&q=",
         "https://translate.google.com/translate_a/single?client=at&sl=auto&tl=th&dt=t&q=",
     ]
 
+    raw_translation = ""
     for ep in endpoints:
         try:
-            url = ep + urllib.parse.quote(text)
+            url = ep + urllib.parse.quote(batch_text)
             req = urllib.request.Request(
                 url,
                 headers={"User-Agent": "GoogleTranslate/6.28.0 (iPhone; iOS 16.0; en_US)"},
             )
-            resp = urllib.request.urlopen(req, timeout=4)
-            raw = resp.read().decode("utf-8")
-            data = json.loads(raw)
-
+            resp = urllib.request.urlopen(req, timeout=5)
+            data = json.loads(resp.read().decode("utf-8"))
             if isinstance(data, list) and len(data) > 0:
                 if isinstance(data[0], list) and len(data[0]) > 0:
-                    if isinstance(data[0][0], list) and len(data[0][0]) > 0:
-                        res = "".join([s[0] for s in data[0] if isinstance(s, list) and s[0]])
+                    if isinstance(data[0][0], list):
+                        raw_translation = "".join([s[0] for s in data[0] if s and isinstance(s, list) and s[0]])
                     elif isinstance(data[0][0], str):
-                        res = data[0][0]
-                    else:
-                        res = "".join([str(item) for item in data[0]])
+                        raw_translation = data[0][0]
                 elif isinstance(data[0], str):
-                    res = data[0]
-                else:
-                    res = str(data)
-
-                if is_valid_thai_translation(res):
-                    return res
+                    raw_translation = data[0]
+            if raw_translation and raw_translation.strip():
+                break
         except Exception as e:
-            logger.debug("Neural translation endpoint error: %s", e)
+            logger.debug("Endpoint translation error: %s", e)
             continue
 
-    return ""
+    # Parse numbered lines
+    results = [""] * len(cues_text)
+    current_idx = -1
+
+    if raw_translation:
+        for line in raw_translation.split("\n"):
+            m = re.match(r"^\[?(\d+)\]?[\.\:\s]*(.*)", line.strip())
+            if m:
+                idx = int(m.group(1)) - 1
+                if 0 <= idx < len(cues_text):
+                    current_idx = idx
+                    results[current_idx] = m.group(2).strip()
+            elif 0 <= current_idx < len(cues_text):
+                results[current_idx] += " " + line.strip()
+
+    # Polish each line
+    for i in range(len(cues_text)):
+        if results[i]:
+            results[i] = polish_spoken_thai(results[i], gender=gender, style=style)
+        else:
+            results[i] = cues_text[i]
+
+    return results
 
 
 class CascadeTranslator:
@@ -225,7 +250,7 @@ class CascadeTranslator:
 
         full_system_instruction = system_instruction + gender_rule
 
-        # 1. Primary: Official Gemini Models (if key available)
+        # 1. Primary: Official Gemini Models (if custom_key or valid env key is provided)
         active_key = custom_key or self.api_key or settings.gemini_api_key
         if active_key and active_key.startswith("AIzaSy"):
             numbered_input = "\n".join([f"[{i+1}] {c.strip()}" for i, c in enumerate(cues_text)])
@@ -265,9 +290,10 @@ class CascadeTranslator:
                     logger.debug("Gemini attempt error for %s: %s", model, e)
                     continue
 
-        # 2. High-Quality Multi-Endpoint Neural Translation Engine Fallback (100% Reliable, Zero Word Butchering)
-        logger.info("Using High-Quality Neural Translation Engine (sl=auto -> th)")
-        return await self._fallback_batch_translate(cues_text, style_key, gender)
+        # 2. High-Quality Full-Paragraph Neural Translation Engine Fallback (100% Coherent, Full Context)
+        logger.info("Using Full-Paragraph Neural Translation Engine (sl=auto -> th)")
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(None, translate_full_batch_neural, cues_text, gender, style_key)
 
     def _parse_gemini_output(self, raw_text: str, expected_count: int, gender: str) -> List[str]:
         """Parse [1] text, [2] text from Gemini response with clean gender alignment."""
@@ -290,26 +316,13 @@ class CascadeTranslator:
         # Clean gender particles
         for i in range(expected_count):
             if results[i]:
-                results[i] = clean_spoken_thai(results[i], gender=gender)
+                results[i] = polish_spoken_thai(results[i], gender=gender)
             else:
                 results[i] = ""
 
         if any(results):
             return results
         return []
-
-    async def _fallback_batch_translate(self, cues_text: List[str], style: str, gender: str) -> List[str]:
-        """Translates each cue using high-quality neural models and applies clean spoken Thai polishing."""
-        loop = asyncio.get_event_loop()
-
-        async def translate_one(cue: str) -> str:
-            raw = await loop.run_in_executor(None, translate_neural_endpoint, cue)
-            if raw and is_valid_thai_translation(raw):
-                return clean_spoken_thai(raw, gender=gender, style=style)
-            return cue
-
-        tasks = [translate_one(c) for c in cues_text]
-        return await asyncio.gather(*tasks)
 
     async def translate(
         self,
