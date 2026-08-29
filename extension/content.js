@@ -366,35 +366,64 @@
   async function fetchYouTubeInnertubeDirect(videoId) {
     try {
       const cleanVid = videoId.split('&')[0].split('?')[0];
-      console.log('[ThaiDubbing] Fetching YouTube Innertube metadata for video:', cleanVid);
+      console.log('[ThaiDubbing] Fetching YouTube subtitle metadata for video:', cleanVid);
 
       let captionTracks = [];
 
-      // 1. Direct Same-Origin Innertube POST (Bypasses all IP bans and CSP)
+      // Stage 1: Inspect Native YouTube Player DOM API
       try {
-        const pResp = await fetch(`https://www.youtube.com/youtubei/v1/player?key=${INNERTUBE_API_KEY}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            context: {
-              client: {
-                clientName: 'ANDROID',
-                clientVersion: '20.10.38',
-                androidSdkVersion: 30,
-              },
-            },
-            videoId: cleanVid,
-          }),
-        });
-        if (pResp.ok) {
-          const pData = await pResp.json();
-          captionTracks = pData?.captions?.playerCaptionsTracklistRenderer?.captionTracks || [];
+        const player = document.getElementById('movie_player') || document.querySelector('.html5-video-player');
+        if (player) {
+          if (typeof player.getPlayerResponse === 'function') {
+            const pData = player.getPlayerResponse();
+            const trks = pData?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
+            if (Array.isArray(trks) && trks.length > 0) {
+              captionTracks = trks;
+              console.log('[ThaiDubbing] Found caption tracks via player.getPlayerResponse():', captionTracks.length);
+            }
+          }
+          if (!captionTracks.length && typeof player.getOption === 'function') {
+            const trkList = player.getOption('captions', 'tracklist');
+            if (Array.isArray(trkList) && trkList.length > 0) {
+              captionTracks = trkList.map(t => ({
+                baseUrl: t.baseUrl || t.url || (t.vssId ? `https://www.youtube.com/api/timedtext?v=${cleanVid}&lang=${t.languageCode}&vss_id=${t.vssId}` : ''),
+                languageCode: t.languageCode || t.lang || 'en',
+                name: { runs: [{ text: t.name || t.displayName || 'Subtitles' }] }
+              })).filter(t => t.baseUrl);
+            }
+          }
         }
-      } catch (innertubeErr) {
-        console.warn('[ThaiDubbing] Innertube POST error, falling back to DOM scripts:', innertubeErr);
+      } catch (domErr) {
+        console.warn('[ThaiDubbing] Player DOM inspection error:', domErr);
       }
 
-      // 2. Fallback: Search DOM script tags for captionTracks
+      // Stage 2: Direct Same-Origin Innertube POST
+      if (!captionTracks.length) {
+        try {
+          const pResp = await fetch(`https://www.youtube.com/youtubei/v1/player?key=${INNERTUBE_API_KEY}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              context: {
+                client: {
+                  clientName: 'ANDROID',
+                  clientVersion: '20.10.38',
+                  androidSdkVersion: 30,
+                },
+              },
+              videoId: cleanVid,
+            }),
+          });
+          if (pResp.ok) {
+            const pData = await pResp.json();
+            captionTracks = pData?.captions?.playerCaptionsTracklistRenderer?.captionTracks || [];
+          }
+        } catch (innertubeErr) {
+          console.warn('[ThaiDubbing] Innertube POST error, falling back to DOM scripts:', innertubeErr);
+        }
+      }
+
+      // Stage 3: Search DOM script tags for captionTracks
       if (!captionTracks.length) {
         const scripts = document.querySelectorAll('script');
         for (const s of scripts) {
@@ -414,13 +443,13 @@
       }
 
       if (!captionTracks || !captionTracks.length) {
-        console.warn('[ThaiDubbing] No caption tracks available for video:', cleanVid);
+        console.warn('[ThaiDubbing] No caption tracks found directly on page for:', cleanVid);
         return null;
       }
 
       console.log(`[ThaiDubbing] Available caption tracks (${captionTracks.length}):`, captionTracks.map((t) => t.languageCode));
 
-      // Prioritize English, then Thai, or any available track (Korean, Japanese, Spanish, etc.)
+      // Prioritize English, then Thai, then any available track
       const chosen = captionTracks.find((t) => t.languageCode === 'en' || t.languageCode === 'en-US') ||
                      captionTracks.find((t) => t.languageCode === 'th') ||
                      captionTracks[0];

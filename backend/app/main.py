@@ -330,6 +330,50 @@ async def get_transcript(req: TranscriptRequest):
                 "cues": cues,
             }
 
+        # Fallback: YouTubeTranscriptApi
+        try:
+            from youtube_transcript_api import YouTubeTranscriptApi
+            api = YouTubeTranscriptApi()
+            tl = api.list(clean_vid)
+            chosen_t = next((t for t in tl if t.language_code in ["en", "en-US"]), None) or \
+                       next((t for t in tl if t.language_code == "th"), None) or \
+                       next(iter(tl), None)
+            if chosen_t:
+                snippets = chosen_t.fetch()
+                fb_cues = []
+                c_id = 1
+                curr_c = None
+                for s in snippets:
+                    st = round(float(s.start), 2)
+                    du = round(float(s.duration), 2)
+                    en = round(st + du, 2)
+                    tx = s.text.replace("\n", " ").strip()
+                    if not tx or tx.startswith("["):
+                        continue
+                    if not curr_c:
+                        curr_c = {"id": c_id, "start": st, "end": en, "text": tx}
+                        c_id += 1
+                    else:
+                        gap = st - curr_c["end"]
+                        if not curr_c["text"].endswith(tx):
+                            curr_c["text"] += " " + tx
+                        curr_c["end"] = max(curr_c["end"], en)
+                        is_end = bool(re.search(r'[.!?。！？]["\']?$', curr_c["text"])) or gap > 0.9 or (curr_c["end"] - curr_c["start"] >= 8.0)
+                        if is_end:
+                            fb_cues.append(curr_c)
+                            curr_c = None
+                if curr_c:
+                    fb_cues.append(curr_c)
+                if fb_cues:
+                    logger.info("Successfully fetched %d cues via YouTubeTranscriptApi for %s", len(fb_cues), clean_vid)
+                    return {
+                        "success": True,
+                        "videoId": clean_vid,
+                        "cues": fb_cues,
+                    }
+        except Exception as yt_err:
+            logger.warning("YouTubeTranscriptApi fallback failed for %s: %s", clean_vid, yt_err)
+
         return {
             "success": False,
             "videoId": clean_vid,
