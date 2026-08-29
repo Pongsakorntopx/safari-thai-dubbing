@@ -39,6 +39,12 @@
     lookaheadTimer: null,
     schedulerTimer: null,
 
+    // Multi-Speaker Diarization & Cast Detection
+    speakerCount: 0,
+    maleCount: 0,
+    femaleCount: 0,
+    speakers: [],
+
     // Audio Ducking & Volume Restore
     originalVideoVolume: 1.0,
     isDucking: false,
@@ -779,6 +785,14 @@
 
         const batchRes = await fetchDubBatchDirect(chunk);
         if (batchRes && batchRes.success && batchRes.results) {
+          if (batchRes.speaker_count !== undefined) {
+            state.speakerCount = batchRes.speaker_count;
+            state.maleCount = batchRes.male_count || 0;
+            state.femaleCount = batchRes.female_count || 0;
+            state.speakers = batchRes.speakers || [];
+            renderHUD();
+          }
+
           const ctx = getAudioContext();
           for (const item of batchRes.results) {
             const cue = state.timedCues.find((c) => c.id === item.id);
@@ -882,6 +896,14 @@
           state.isPreFetching = false;
 
           if (batchRes && batchRes.success && batchRes.results) {
+            if (batchRes.speaker_count !== undefined && batchRes.speaker_count > state.speakerCount) {
+              state.speakerCount = batchRes.speaker_count;
+              state.maleCount = batchRes.male_count || 0;
+              state.femaleCount = batchRes.female_count || 0;
+              state.speakers = batchRes.speakers || [];
+              renderHUD();
+            }
+
             const ctx = getAudioContext();
             for (const item of batchRes.results) {
               const cue = state.timedCues.find((c) => c.id === item.id);
@@ -1395,6 +1417,26 @@
           </div>
         </div>
 
+        <!-- Multi-Speaker Diarization Badge -->
+        ${state.isDubbingActive && state.speakerCount > 0 ? `
+          <div id="hud-speaker-badge" title="${state.speakers.map(s => s.id + ': ' + s.voice_name).join('\n')}" style="
+            background: rgba(99, 102, 241, 0.25);
+            border: 1px solid rgba(99, 102, 241, 0.6);
+            border-radius: 12px;
+            padding: 3px 8px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 10px;
+            font-weight: 700;
+            color: #a5b4fc;
+            white-space: nowrap;
+          ">
+            <span>👥</span>
+            <span>${state.speakerCount} ผู้พูด (ชาย ${state.maleCount} / หญิง ${state.femaleCount})</span>
+          </div>
+        ` : ''}
+
         <!-- Voice Selector Dropdown -->
         <select id="hud-voice-select" style="
           background: #1e293b;
@@ -1482,6 +1524,23 @@
             background: #1e293b; color: #38bdf8; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; padding: 2px 6px; font-size: 10px; width: 170px; outline: none;
           ">
         </div>
+
+        ${state.speakers && state.speakers.length > 0 ? `
+          <div style="background: rgba(30, 41, 59, 0.85); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 8px; padding: 6px 10px; margin-top: 4px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <span style="color: #a5b4fc; font-weight: 700; font-size: 11px;">👥 ตรวจพบผู้พูดในคลิป (${state.speakerCount} คน):</span>
+              <span style="color: #94a3b8; font-size: 10px;">(ชาย ${state.maleCount} / หญิง ${state.femaleCount})</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 3px;">
+              ${state.speakers.map((s) => `
+                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: #f1f5f9; padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                  <span style="font-weight: 600;">👤 ${s.id} (${s.gender === 'male' ? 'ผู้ชาย' : 'ผู้หญิง'})</span>
+                  <span style="color: #38bdf8; font-weight: 500;">🎙️ ${s.voice_name}</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        ` : ''}
 
         <div id="hud-status-text" style="font-size: 10px; color: #38bdf8; text-align: center; margin-top: 2px;">
           ${state.isDubbingActive ? '🟢 ระบบกำลังพากย์สด' : '⏸️ กด "🚀 เริ่มพากย์ไทย (2 นาที)" เพื่อเริ่มซิงค์เสียง'}

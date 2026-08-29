@@ -499,10 +499,45 @@ async def dub_cues_batch(req: BatchDubRequest):
 
     results = await asyncio.gather(*[synth_cue(c, d) for c, d in zip(req.cues, diarized_results)])
 
+    # 3. Speaker Cast Breakdown & Voice Roster
+    unique_speakers = {}
+    for d in diarized_results:
+        spk_id = d.get("speaker", "male_1")
+        if spk_id not in unique_speakers:
+            spk_gender = d.get("gender", "male")
+            if spk_id == "female_1" or spk_gender == "female":
+                v_name = "เปรมวดี (Studio HD หญิง)"
+                v_code = "th-TH-PremwadeeNeural"
+            elif spk_id == "male_2":
+                v_name = "Thai Male V2 (ชาย)"
+                v_code = "mms-male-v2"
+            elif spk_id == "female_2":
+                v_name = "Google Thai (หญิง)"
+                v_code = "google-thai"
+            else:
+                v_name = "นิวัฒน์ (Studio HD ชาย)"
+                v_code = "th-TH-NiwatNeural"
+
+            unique_speakers[spk_id] = {
+                "id": spk_id,
+                "gender": spk_gender,
+                "voice_name": v_name,
+                "voice_code": v_code,
+            }
+
+    speaker_list = list(unique_speakers.values())
+    male_count = sum(1 for s in speaker_list if s["gender"] == "male")
+    female_count = sum(1 for s in speaker_list if s["gender"] == "female")
+
     return {
         "success": True,
         "results": results,
+        "speaker_count": len(speaker_list),
+        "male_count": male_count,
+        "female_count": female_count,
+        "speakers": speaker_list,
         "gemini_status": translator.last_status,
+        "total_cues": len(req.cues),
     }
 
 
