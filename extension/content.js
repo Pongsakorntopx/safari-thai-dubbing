@@ -50,12 +50,13 @@
   };
 
   const VOICES = [
+    { id: 'Puck', name: '👨‍💼 Puck (Google Studio - ชายอบอุ่น [ครับ])', engine: 'google', gender: 'male' },
+    { id: 'Aoede', name: '👩‍💼 Aoede (Google Studio - หญิงพอดแคสต์ [ค่ะ])', engine: 'google', gender: 'female' },
+    { id: 'Kanya', name: '🍎 กัญญา (Apple Silicon Neural - ฮาร์ดแวร์ Mac เร็ว 0ms [ค่ะ])', engine: 'apple', gender: 'female' },
     { id: 'th-TH-NiwatNeural', name: '👨‍💼 นิวัฒน์ (เสียงชาย - ทุ้มนุ่ม ชัดเจน [ครับ])', engine: 'edge', gender: 'male' },
     { id: 'th-TH-PremwadeeNeural', name: '👩‍💼 เปรมวดี (เสียงหญิง - นุ่มนวล ธรรมชาติ [ค่ะ])', engine: 'edge', gender: 'female' },
     { id: 'JaiTTS-Male', name: '🌟 ใจ ชาย (JaiTTS - ภาษาพูดสมจริง [ครับ])', engine: 'jaitts', gender: 'male' },
     { id: 'JaiTTS-Female', name: '🌟 ใจ หญิง (JaiTTS - ภาษาพูดสมจริง [ค่ะ])', engine: 'jaitts', gender: 'female' },
-    { id: 'Puck', name: '👨‍💼 Puck (Google Studio - ชายอบอุ่น [ครับ])', engine: 'google', gender: 'male' },
-    { id: 'Aoede', name: '👩‍💼 Aoede (Google Studio - หญิงพอดแคสต์ [ค่ะ])', engine: 'google', gender: 'female' },
   ];
 
   const STYLES = [
@@ -66,14 +67,34 @@
     { id: 'formal', name: '📻 ทางการ / สารคดี / ข่าว' },
   ];
 
-  // --- Web Audio Context ---
+  // --- Hardware-Accelerated CoreAudio DSP Chain ---
   function getAudioContext() {
     if (!state.audioCtx) {
       const AudioContextClass = window.AudioContext || window.webkitAudioContext;
       if (AudioContextClass) {
         state.audioCtx = new AudioContextClass();
+
+        // 1. Hardware Vocal Clarity EQ Filter (Boosts presence & crisp vocal definition at 3.2kHz)
+        state.clarityFilter = state.audioCtx.createBiquadFilter();
+        state.clarityFilter.type = 'peaking';
+        state.clarityFilter.frequency.setValueAtTime(3200, state.audioCtx.currentTime);
+        state.clarityFilter.gain.setValueAtTime(2.2, state.audioCtx.currentTime);
+
+        // 2. Hardware Broadcast Dynamics Compressor (Studio presence, warm level leveling, anti-clipping)
+        state.compressorNode = state.audioCtx.createDynamicsCompressor();
+        state.compressorNode.threshold.setValueAtTime(-16, state.audioCtx.currentTime);
+        state.compressorNode.knee.setValueAtTime(20, state.audioCtx.currentTime);
+        state.compressorNode.ratio.setValueAtTime(6, state.audioCtx.currentTime);
+        state.compressorNode.attack.setValueAtTime(0.003, state.audioCtx.currentTime);
+        state.compressorNode.release.setValueAtTime(0.20, state.audioCtx.currentTime);
+
+        // 3. Master Volume Gain Node
         state.audioGainNode = state.audioCtx.createGain();
         state.audioGainNode.gain.value = state.dubVolume;
+
+        // Connect Hardware DSP Chain: Filter -> Compressor -> Gain -> Destination
+        state.clarityFilter.connect(state.compressorNode);
+        state.compressorNode.connect(state.audioGainNode);
         state.audioGainNode.connect(state.audioCtx.destination);
       }
     }

@@ -84,7 +84,7 @@ def resolve_gender(voice: str, requested_gender: Optional[str] = "auto") -> str:
     v_lower = voice.lower()
     if any(k in v_lower for k in ["niwat", "male", "puck"]):
         return "male"
-    if any(k in v_lower for k in ["premwadee", "female", "aoede"]):
+    if any(k in v_lower for k in ["premwadee", "female", "aoede", "kanya"]):
         return "female"
     return "male"
 

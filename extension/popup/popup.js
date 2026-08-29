@@ -15,6 +15,10 @@ const EDGE_VOICES = [
   { id: 'th-TH-NiwatNeural', name: '👨 นิวัฒน์ (Niwat - ชาย สุภาพ)' },
 ];
 
+const APPLE_VOICES = [
+  { id: 'Kanya', name: '🍎 กัญญา (Kanya - Apple Silicon Neural 0ms)' },
+];
+
 document.addEventListener('DOMContentLoaded', async () => {
   // DOM Elements
   const enabledToggle = document.getElementById('enabledToggle');
@@ -35,7 +39,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function populateVoices(engine, selectedVoice) {
     voiceSelect.innerHTML = '';
-    const voices = engine === 'edge' ? EDGE_VOICES : GOOGLE_VOICES;
+    let voices = GOOGLE_VOICES;
+    if (engine === 'edge') voices = EDGE_VOICES;
+    else if (engine === 'apple') voices = APPLE_VOICES;
+
     voices.forEach((v) => {
       const opt = document.createElement('option');
       opt.value = v.id;
@@ -45,7 +52,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     if (styleGroup) {
-      styleGroup.style.display = engine === 'edge' ? 'none' : 'flex';
+      styleGroup.style.display = engine === 'google' ? 'flex' : 'none';
     }
   }
 

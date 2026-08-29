@@ -50,6 +50,12 @@ VOICE_REGISTRY: Dict[str, Dict[str, str]] = {
         "engine": "google",
         "gender": "male",
     },
+    # Apple Silicon Native CoreAudio Neural Voice (0ms Hardware Engine)
+    "Kanya": {
+        "name": "🍎 กัญญา (Apple Silicon Neural - ฮาร์ดแวร์ Mac เร็ว 0ms)",
+        "engine": "apple",
+        "gender": "female",
+    },
 }
 
 GOOGLE_STYLES: Dict[str, str] = {
@@ -228,6 +234,51 @@ class TTSEngine:
 
         return buffer.getvalue()
 
+    async def synthesize_apple_native(
+        self,
+        text: str,
+        voice: str = "Kanya",
+        rate: Optional[str] = None,
+    ) -> bytes:
+        """Synthesize Thai speech directly on Apple Silicon Neural Engine via macOS native say & afconvert (0ms Latency)."""
+        clean_text = format_natural_thai_prosody(text)
+        if not clean_text:
+            return b""
+
+        import uuid
+        temp_id = uuid.uuid4().hex[:8]
+        aiff_path = f"/tmp/apple_tts_{temp_id}.aiff"
+        wav_path = f"/tmp/apple_tts_{temp_id}.wav"
+
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                "say", "-v", voice if voice else "Kanya", "-o", aiff_path, clean_text,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            await proc.communicate()
+
+            proc_conv = await asyncio.create_subprocess_exec(
+                "afconvert", "-f", "WAVE", "-d", "LEI16", aiff_path, wav_path,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            await proc_conv.communicate()
+
+            if os.path.exists(wav_path):
+                with open(wav_path, "rb") as f:
+                    return f.read()
+        except Exception as e:
+            logger.warning("Apple native TTS error: %s", e)
+        finally:
+            for p in [aiff_path, wav_path]:
+                if os.path.exists(p):
+                    try:
+                        os.remove(p)
+                    except Exception:
+                        pass
+        return b""
+
     async def synthesize(
         self,
         text: str,
@@ -238,7 +289,10 @@ class TTSEngine:
         pitch: Optional[str] = None,
         api_key: Optional[str] = None,
     ) -> bytes:
-        """Main synthesis dispatcher supporting JaiTTS, Microsoft Edge Neural & Google Gemini Audio."""
+        """Main synthesis dispatcher supporting Apple Silicon Native, JaiTTS, Microsoft Edge Neural & Google Gemini Audio."""
+        if engine == "apple" or (voice and voice in ["Kanya", "Narisa", "Pattara"]):
+            return await self.synthesize_apple_native(text=text, voice=voice or "Kanya", rate=rate)
+
         if engine == "jaitts" or (voice and "JaiTTS" in voice):
             return await self.synthesize_jaitts(text=text, voice=voice or "JaiTTS-Female")
 
