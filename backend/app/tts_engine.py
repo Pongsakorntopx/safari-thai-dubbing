@@ -82,11 +82,14 @@ VOICE_REGISTRY: Dict[str, Dict[str, str]] = {
 
 
 def clean_thai_text_for_speech(text: str) -> str:
-    """Clean text for natural acoustic neural synthesis."""
+    """Clean text for natural, fluent, continuous human speech synthesis."""
     if not text:
         return ""
     t = text.strip()
     t = re.sub(r"[\"\'\`\<\>\[\]\(\)\{\}\*\#\_]", "", t)
+    # Remove awkward spaces between Thai words that cause unnatural pauses
+    t = re.sub(r"([ก-๙])\s+([ก-๙])", r"\1\2", t)
+    t = re.sub(r"([ก-๙])\s+([ก-๙])", r"\1\2", t)  # 2nd pass for multi-word chains
     t = re.sub(r"(?<=[ก-๙])\s+(?=[ะ-ู็-์])", "", t)
     t = re.sub(r"(?<=[เ-ไ])\s+(?=[ก-ฮ])", "", t)
     t = re.sub(r"\s+", " ", t)

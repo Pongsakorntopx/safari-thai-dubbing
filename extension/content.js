@@ -941,25 +941,24 @@
   }
 
   function stopActivePlayback() {
-    if (state.currentSource) {
-      try {
-        if (state.currentGainNode && state.audioCtx) {
-          state.currentGainNode.gain.linearRampToValueAtTime(0.01, state.audioCtx.currentTime + 0.05);
-          const oldSrc = state.currentSource;
-          setTimeout(() => {
-            try { oldSrc.stop(); } catch (e) {}
-          }, 60);
-        } else {
-          state.currentSource.stop();
-        }
-      } catch (e) {}
-      state.currentSource = null;
-      state.currentGainNode = null;
+    if (state.activeSources && state.activeSources.length > 0) {
+      state.activeSources.forEach((src) => {
+        try { src.stop(); } catch (e) {}
+      });
+      state.activeSources = [];
     }
+    if (state.currentGainNode && state.audioCtx) {
+      try {
+        state.currentGainNode.gain.linearRampToValueAtTime(0.01, state.audioCtx.currentTime + 0.05);
+      } catch (e) {}
+    }
+    state.currentSource = null;
+    state.currentGainNode = null;
     state.isPlaying = false;
+    state.nextSpeechTime = 0;
   }
 
-  // --- Natural Pitch-Preserved Speech Audio Playback with Adaptive Tempo & Zero Cutoffs ---
+  // --- Master Human Cadence & Zero-Truncation Speech Queue ---
   function schedulePlayAudio(cue) {
     if (!cue.audioBuffer) return;
     const ctx = getAudioContext();
@@ -972,40 +971,38 @@
     const video = findVideoElement();
     const videoSpeed = (video && video.playbackRate) ? video.playbackRate : 1.0;
 
-    // Per-cue gain node for smooth audio rendering
+    // Per-cue isolated gain node for pristine acoustics
     const cueGain = ctx.createGain();
     cueGain.gain.setValueAtTime(1.0, ctx.currentTime);
     cueGain.connect(state.clarityFilter || state.audioGainNode || ctx.destination);
 
-    // Fade previous voice smoothly over 80ms (no abrupt cuts)
-    if (state.currentSource && state.currentGainNode) {
-      try {
-        state.currentGainNode.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.08);
-        const oldSrc = state.currentSource;
-        setTimeout(() => {
-          try { oldSrc.stop(); } catch (e) {}
-        }, 90);
-      } catch (e) {}
-    }
-
     const source = ctx.createBufferSource();
     source.buffer = cue.audioBuffer;
     source.connect(cueGain);
-    
-    // Adaptive Sentence Duration Fitting:
-    // If Thai sentence length slightly exceeds the subtitle time slot, adaptively fit speech rate
+
+    // Adaptive Sentence Duration Fitting
     const audioDur = cue.audioBuffer.duration;
     const slotDur = Math.max(1.0, cue.end - cue.start);
     let adaptiveRate = videoSpeed;
-    if (audioDur > slotDur * 1.08) {
-      // Speed up slightly (max 1.25x) so sentence concludes naturally without getting clipped
-      adaptiveRate = Math.min(1.25, (audioDur / slotDur) * videoSpeed);
+    if (audioDur > slotDur * 1.15) {
+      adaptiveRate = Math.min(1.22, (audioDur / slotDur) * videoSpeed);
     }
 
     try {
       source.playbackRate.setValueAtTime(adaptiveRate, ctx.currentTime);
     } catch (rateErr) {}
 
+    // 🌟 ZERO-TRUNCATION GUARANTEE:
+    // If previous sentence is still speaking, seamlessly queue this sentence immediately after it!
+    // Never stop or cut off previous sentence mid-thought!
+    if (!state.activeSources) state.activeSources = [];
+    
+    const now = ctx.currentTime;
+    const scheduledStart = Math.max(now, state.nextSpeechTime || now);
+    const effectiveDuration = audioDur / adaptiveRate;
+    state.nextSpeechTime = scheduledStart + effectiveDuration + 0.08; // 0.08s natural human breathing pause
+
+    state.activeSources.push(source);
     state.currentSource = source;
     state.currentGainNode = cueGain;
     state.isPlaying = true;
@@ -1015,7 +1012,10 @@
     updateHUDStatus(`🔊 พากย์: "${cue.translated.slice(0, 16)}..."`);
 
     source.onended = () => {
-      if (state.currentSource === source) {
+      if (state.activeSources) {
+        state.activeSources = state.activeSources.filter((s) => s !== source);
+      }
+      if (ctx.currentTime >= state.nextSpeechTime - 0.12) {
         state.currentSource = null;
         state.currentGainNode = null;
         state.isPlaying = false;
@@ -1024,7 +1024,7 @@
       }
     };
 
-    source.start(0);
+    source.start(scheduledStart);
   }
 
   function updateBufferGauge() {
