@@ -82,7 +82,7 @@ def resolve_gender(voice: str, requested_gender: Optional[str] = "auto") -> str:
     if requested_gender and requested_gender in ["male", "female"]:
         return requested_gender
     v_lower = voice.lower()
-    if any(k in v_lower for k in ["niwat", "male", "puck"]):
+    if any(k in v_lower for k in ["niwat", "male", "puck", "pattara"]):
         return "male"
     if any(k in v_lower for k in ["premwadee", "female", "aoede", "kanya"]):
         return "female"
@@ -302,7 +302,7 @@ async def dub_cues_batch(req: BatchDubRequest):
         thai_texts = [await translator.translate(c.text, context=req.context or "", style=style, gender=gender, custom_key=custom_key) for c in req.cues]
 
     # 2. TTS Synthesis: If Google Studio Audio or Apple Native is requested, synthesize the whole cohesive passage as 1 Master Track!
-    is_master_audio = engine in ["google", "apple"] or voice in ["Aoede", "Puck", "Kore", "Fenrir", "Charon", "Kanya"]
+    is_master_audio = engine in ["google", "apple"] or voice in ["Aoede", "Puck", "Kore", "Fenrir", "Charon", "Kanya", "Pattara"]
 
     if is_master_audio:
         full_passage = " ".join([t.strip() for t in thai_texts if t.strip()])

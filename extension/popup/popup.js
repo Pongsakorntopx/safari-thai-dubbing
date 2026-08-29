@@ -16,7 +16,8 @@ const EDGE_VOICES = [
 ];
 
 const APPLE_VOICES = [
-  { id: 'Kanya', name: '🍎 กัญญา (Kanya - Apple Silicon Neural 0ms)' },
+  { id: 'Pattara', name: '👨‍💼 Pattara / ภัทร (Apple Silicon ชาย ทุ้มนุ่ม - เร็ว 0ms)' },
+  { id: 'Kanya', name: '👩‍💼 Kanya / กัญญา (Apple Silicon หญิง นุ่มนวล - เร็ว 0ms)' },
 ];
 
 document.addEventListener('DOMContentLoaded', async () => {

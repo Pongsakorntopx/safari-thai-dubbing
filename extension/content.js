@@ -52,7 +52,8 @@
   const VOICES = [
     { id: 'Puck', name: '👨‍💼 Puck (Google Studio - ชายอบอุ่น [ครับ])', engine: 'google', gender: 'male' },
     { id: 'Aoede', name: '👩‍💼 Aoede (Google Studio - หญิงพอดแคสต์ [ค่ะ])', engine: 'google', gender: 'female' },
-    { id: 'Kanya', name: '🍎 กัญญา (Apple Silicon Neural - ฮาร์ดแวร์ Mac เร็ว 0ms [ค่ะ])', engine: 'apple', gender: 'female' },
+    { id: 'Pattara', name: '🍎 ภัทร (Apple Silicon Neural - ชาย ทุ้มนุ่ม เร็ว 0ms [ครับ])', engine: 'apple', gender: 'male' },
+    { id: 'Kanya', name: '🍎 กัญญา (Apple Silicon Neural - หญิง นุ่มนวล เร็ว 0ms [ค่ะ])', engine: 'apple', gender: 'female' },
     { id: 'th-TH-NiwatNeural', name: '👨‍💼 นิวัฒน์ (เสียงชาย - ทุ้มนุ่ม ชัดเจน [ครับ])', engine: 'edge', gender: 'male' },
     { id: 'th-TH-PremwadeeNeural', name: '👩‍💼 เปรมวดี (เสียงหญิง - นุ่มนวล ธรรมชาติ [ค่ะ])', engine: 'edge', gender: 'female' },
     { id: 'JaiTTS-Male', name: '🌟 ใจ ชาย (JaiTTS - ภาษาพูดสมจริง [ครับ])', engine: 'jaitts', gender: 'male' },

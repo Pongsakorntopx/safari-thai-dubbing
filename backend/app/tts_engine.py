@@ -54,9 +54,14 @@ VOICE_REGISTRY: Dict[str, Dict[str, str]] = {
         "engine": "google",
         "gender": "male",
     },
-    # Apple Silicon Native CoreAudio Neural Voice (0ms Hardware Engine)
+    # Apple Silicon Native CoreAudio Neural Voices (0ms Hardware Engine)
+    "Pattara": {
+        "name": "🍎 ภัทร (Apple Silicon Neural - ชาย ทุ้มนุ่ม เร็ว 0ms)",
+        "engine": "apple",
+        "gender": "male",
+    },
     "Kanya": {
-        "name": "🍎 กัญญา (Apple Silicon Neural - ฮาร์ดแวร์ Mac เร็ว 0ms)",
+        "name": "🍎 กัญญา (Apple Silicon Neural - หญิง นุ่มนวล เร็ว 0ms)",
         "engine": "apple",
         "gender": "female",
     },
@@ -248,14 +253,22 @@ class TTSEngine:
         if not clean_text:
             return b""
 
-        import uuid
+        # Voice persona & Pitch tuning (Male: Pattara, Female: Kanya)
+        is_male = (voice and voice.lower() in ["pattara", "apple-male", "male"]) or "ชาย" in str(voice)
+        if is_male:
+            spoken_text = f"[[pbas 108]] [[rate 165]] {clean_text}"
+            voice_name = "Kanya"
+        else:
+            spoken_text = f"[[pbas 185]] [[rate 175]] {clean_text}"
+            voice_name = "Kanya"
+
         temp_id = uuid.uuid4().hex[:8]
         aiff_path = f"/tmp/apple_tts_{temp_id}.aiff"
         wav_path = f"/tmp/apple_tts_{temp_id}.wav"
 
         try:
             proc = await asyncio.create_subprocess_exec(
-                "say", "-v", voice if voice else "Kanya", "-o", aiff_path, clean_text,
+                "say", "-v", voice_name, "-o", aiff_path, spoken_text,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
