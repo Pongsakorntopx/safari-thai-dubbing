@@ -84,23 +84,22 @@ def pcm_to_wav(pcm_data: bytes, sample_rate: int = 24000, channels: int = 1, sam
 
 
 def format_natural_thai_prosody(text: str) -> str:
-    """Clean and structure text with natural breath pauses (commas) and clause drops (periods)."""
+    """Clean and normalize Thai text for TTS engines without artificial intra-phrase chopping."""
+    if not text:
+        return ""
     t = text.strip()
-    # Remove artificial markers or brackets
-    t = re.sub(r"[\"\'\`\<\>\[\]\(\)]", "", t)
+    # Remove artificial markers, asterisks, brackets or quotes
+    t = re.sub(r"[\"\'\`\<\>\[\]\(\)\{\}\*\#\_]", "", t)
 
-    # Insert natural pauses after common greeting and discourse markers
-    t = re.sub(r"(สวัสดีครับ|สวัสดีค่ะ|ยินดีต้อนรับครับ|ยินดีต้อนรับค่ะ)(?!\s*[,.])", r"\1, ", t)
-    t = re.sub(r"(ในคลิปนี้|วันนี้|สำหรับคลิปนี้|อย่างแรกเลย)(?!\s*[,.])", r"\1, ", t)
-    t = re.sub(r"(เพราะฉะนั้น|ดังนั้น|นอกจากนี้|อย่างไรก็ตาม|ในส่วนของ)(?!\s*[,.])", r"\1, ", t)
+    # Normalize broken Thai vowels or tone marks (repair accidental spaces)
+    t = re.sub(r"(?<=[ก-๙])\s+(?=[ะ-ู็-์])", "", t)
+    t = re.sub(r"(?<=[เ-ไ])\s+(?=[ก-ฮ])", "", t)
 
-    # Insert sentence boundary periods after polite particles followed by new clauses
-    t = re.sub(r"(นะครับ|นะคะ|ครับผม|ค่ะ|ครับ)(?=\s+[ก-ฮA-Za-z])", r"\1. ", t)
+    # Normalize polite endings followed by a distinct new clause
+    t = re.sub(r"(นะครับ|นะคะ|ครับผม|ค่ะ|ครับ)\s*[,.]*\s*([ก-ฮA-Za-z])", r"\1 \2", t)
 
     # Collapse multiple spaces and clean up
     t = re.sub(r"\s+", " ", t)
-    t = re.sub(r"\s*,\s*", ", ", t)
-    t = re.sub(r"\s*\.\s*", ". ", t)
     return t.strip()
 
 
