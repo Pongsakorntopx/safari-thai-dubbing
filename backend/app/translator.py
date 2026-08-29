@@ -399,37 +399,34 @@ class CascadeTranslator:
 
             numbered_input = "\n".join(formatted_cues)
             system_prompt = f"""คุณคือนักเขียนบทพากย์และผู้กำกับเสียงภาษาไทยระดับมืออาชีพชั้นนำ (Master Thai Dubbing Director)
-หน้าที่ของคุณ:
-1. **วิเคราะห์รูปแบบผู้พูดของวิดีโอ (Speaker Structure Analysis):**
-   - ตรวจสอบก่อนว่าคลิปนี้เป็น **'ผู้พูดคนเดียว (Solo Narrator / Creator / Reviewer)'** หรือเป็น **'บทสนทนาที่มีหลายคนพูดคุยกันจริงๆ (Multi-Speaker Dialogue / Interview)'**
-   - **กรณีผู้พูดคนเดียว (Solo Creator):** ให้กำหนด `speaker` ของทุกท่อนเป็นคนเดียวกัน 100% (เช่น `male_1` ทั้งหมด หรือ `female_1` ทั้งหมด) **ห้ามแยกเป็นหลายคนหรือเปลี่ยนตัวละครไปมาระหว่างท่อนเด็ดขาด!**
-   - **กรณีมีหลายคนพูดคุยกันจริงๆ (Multi-Person):** ให้ระบุ `speaker` เป็น `male_1`, `female_1` ตามผู้พูดจริงในแต่ละท่อน
-2. **วิเคราะห์เพศของผู้พูดอย่างแม่นยำจากเนื้อหาบทสนทนา (Deep Contextual Gender Detection):**
-   - ตรวจสอบจากรูปประโยค เนื้อหา สรรพนาม อุปนิสัย และบริบทที่ปรากฏจริงในบทสนทนา (ห้ามตั้งสมมติฐานว่าเป็นผู้ชายตามค่าเริ่มต้นเด็ดขาด)
-   - **หากผู้พูดเป็นผู้หญิง** (เช่น ช่องสอนแต่งหน้า, รีวิว, เล่าเรื่อง, ผู้หญิงสายไอที/เกมเมอร์สาว/ครีเอเตอร์หญิง):
-     -> กำหนด gender = 'female' และ speaker = 'female_1'
-     -> ใช้คำลงท้าย 'ค่ะ / นะคะ / คะ' สรรพนาม 'ฉัน / เรา / หนู' (ห้ามใช้ 'ครับ' เด็ดขาด)
-   - **หากผู้พูดเป็นผู้ชาย**:
-     -> กำหนด gender = 'male' และ speaker = 'male_1'
-     -> ใช้คำลงท้าย 'ครับ / นะครับ' สรรพนาม 'ผม / เรา' (ห้ามใช้ 'ค่ะ' เด็ดขาด)
-3. **วิเคราะห์อารมณ์และน้ำเสียง (emotion):** excited, cheerful, serious, calm, dramatic, playful, neutral
-4. **แปลและเรียบเรียงบทพากย์ภาษาไทยให้เป็นภาษาพูดที่สละสลวย ธรรมชาติ 100%:**
-   - ความยาวพยางค์ต้องกระชับพอดีกับเวลา (duration) ของแต่ละท่อน
-   - แต่ละท่อนต้องพูดจบประโยคสมบูรณ์ ห้ามตัดคำค้างคาเด็ดขาด
-5. **ส่งผลลัพธ์เป็น JSON Array เท่านั้น ในรูปแบบ:**
+หน้าที่สำคัญที่สุดของคุณ:
+1. **พากย์ด้วยเสียงคนเดียวตลอดทั้งคลิป 100% (Single Consistent Host Voice):**
+   - ผู้พูดคือผู้ดำเนินรายการคนเดียวกันตลอดทั้งคลิป ไม่มีการสลับตัวละครหรือเปลี่ยนน้ำเสียงไปมาเด็ดขาด
+   - น้ำเสียงต้องมีความเป็นธรรมชาติ อบอุ่น มีชีวิตชีวา เหมือนยูทูบเบอร์/ผู้บรรยายมืออาชีพพูดให้ฟังจริงๆ
+2. **ความสอดคล้องของจังหวะเวลา (Speech Rhythm & Duration Alignment):**
+   - เรียบเรียงประโยคภาษาไทยให้มีความยาวพยางค์ที่ "พอดีกับเวลา (duration ในวงเล็บวินาที)" ของแต่ละท่อน
+   - ถ้าเวลาสั้น (1–2s): ใช้ประโยคสั้น กระชับ คมคาย ได้ใจความครบถ้วน
+   - ถ้าเวลายาว (3–6s): เรียบเรียงให้ลื่นไหล ต่อเนื่อง มีจังหวะจะโคน สละสลวย
+3. **ภาษาพูดมนุษย์ที่เป็นธรรมชาติสูงสุด (True Spoken Thai Flow):**
+   - แปลงภาษาอังกฤษให้เป็นภาษาพูดไทยแท้ 100% ห้ามแปลแข็งทื่อแบบ Google Translate เด็ดขาด
+   - แต่ละท่อนต้อง "พูดจบประโยคหรือจบใจความสมบูรณ์" ห้ามตัดคำค้างคาหรือแยกคำแปลกๆ
+   - สรรพนามและคำลงท้าย:
+     - ผู้ชาย: 'ผม / เรา', ลงท้าย 'ครับ / นะครับ'
+     - ผู้หญิง: 'ฉัน / เรา / หนู', ลงท้าย 'ค่ะ / นะคะ'
+4. **ส่งผลลัพธ์เป็น JSON Array เท่านั้น ในรูปแบบ:**
 [
-  {{"id": 1, "speaker": "female_1", "gender": "female", "emotion": "cheerful", "pitch": "+0Hz", "rate": "+0%", "thai": "ข้อความภาษาไทย"}},
-  {{"id": 2, "speaker": "female_1", "gender": "female", "emotion": "excited", "pitch": "+0Hz", "rate": "+5%", "thai": "ข้อความภาษาไทย"}}
+  {{"id": 1, "speaker": "host", "gender": "{gender}", "emotion": "cheerful", "rate": "+0%", "thai": "ข้อความภาษาไทยที่พากย์อย่างเป็นธรรมชาติ"}},
+  {{"id": 2, "speaker": "host", "gender": "{gender}", "emotion": "engaging", "rate": "+0%", "thai": "ข้อความภาษาไทยที่จบประโยคสมบูรณ์"}}
 ]"""
 
-            user_prompt = f"Video Title & Context: {context.strip() or 'General'}\nVideo Register: {effective_style}\nRequested Gender Mode: {gender}\n\nDialogue to Dub:\n{numbered_input}"
+            user_prompt = f"Video Title & Context: {context.strip() or 'General'}\nTarget Voice Persona: {gender}\nTarget Register: {effective_style}\n\nDialogue to Transcreate & Dub:\n{numbered_input}"
 
             payload = {
                 "systemInstruction": {"parts": [{"text": system_prompt}]},
                 "contents": [{"parts": [{"text": user_prompt}]}],
                 "generationConfig": {
                     "responseMimeType": "application/json",
-                    "temperature": 0.15,
+                    "temperature": 0.12,
                     "maxOutputTokens": 4096,
                 },
             }
@@ -450,10 +447,10 @@ class CascadeTranslator:
                                         raw_json = parts[0].get("text", "").strip()
                                         parsed_list = json.loads(raw_json)
                                         if isinstance(parsed_list, list) and len(parsed_list) == len(cues):
-                                            logger.info("Successfully diarized & transcreated %d cues with Gemini: %s", len(cues), model)
+                                            logger.info("Successfully transcreated %d cues with Master Spoken Cadence: %s", len(cues), model)
                                             # Polish each Thai text
                                             for item in parsed_list:
-                                                g = item.get("gender", "male")
+                                                g = item.get("gender", gender)
                                                 item["thai"] = transcreate_thai_dialogue(item.get("thai", ""), style=effective_style, gender=g)
                                             return parsed_list
                             elif resp.status == 429:
@@ -461,18 +458,18 @@ class CascadeTranslator:
                             elif resp.status == 400:
                                 self.last_status = "invalid"
                 except Exception as e:
-                    logger.debug("Diarization attempt error for %s: %s", model, e)
+                    logger.debug("Transcreation attempt error for %s: %s", model, e)
                     continue
 
-        # Fallback to standard translation if diarization API is unavailable
+        # Fallback to standard translation if AI transcreation API is unavailable
         raw_texts = [c.get("text", "").strip() for c in cues]
         thai_texts = await self.translate_batch(raw_texts, context=context, style=style, gender=gender, model_name=model_name, custom_key=custom_key)
         return [
             {
                 "id": c.get("id", i + 1),
-                "speaker": "male_1" if gender == "male" else "female_1",
+                "speaker": "host",
                 "gender": gender if gender in ["male", "female"] else "male",
-                "emotion": "neutral",
+                "emotion": "engaging",
                 "pitch": "+0Hz",
                 "rate": "+0%",
                 "thai": t,

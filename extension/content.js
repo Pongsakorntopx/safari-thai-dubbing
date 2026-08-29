@@ -1066,9 +1066,8 @@
 
     applyAudioDucking();
     showThaiCaptionToast(cue.translated);
-    const speakerTag = cue.speaker ? `🎭 ${cue.speaker} (${cue.emotion || 'normal'}) | ` : '';
-    const wpmText = cue.orig_wpm ? `⚡ ${cue.orig_wpm} WPM | ` : '';
-    updateHUDStatus(`🔊 ${speakerTag}${wpmText}"${cue.translated.slice(0, 14)}..."`);
+    const rhythmTag = cue.orig_wpm ? `⚡ ${cue.orig_wpm} WPM (${cue.appliedRate || '+0%'}) | ` : '';
+    updateHUDStatus(`🔊 ${rhythmTag}"${cue.translated.slice(0, 18)}..."`);
 
     source.onended = () => {
       if (state.currentSource === source) {
@@ -1509,9 +1508,9 @@
           <select id="hud-gender-select" style="
             background: #1e293b; color: #38bdf8; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; padding: 2px 6px; font-size: 11px; outline: none;
           ">
-            <option value="auto" ${state.gender === 'auto' ? 'selected' : ''}>🤖 อัตโนมัติ (AI ตรวจจับเพศจากบทพูด)</option>
-            <option value="female" ${state.gender === 'female' ? 'selected' : ''}>👩 ผู้หญิง (ค่ะ/นะคะ - เปรมวดี)</option>
-            <option value="male" ${state.gender === 'male' ? 'selected' : ''}>👨 ผู้ชาย (ครับ/นะครับ - นิวัฒน์)</option>
+            <option value="auto" ${state.gender === 'auto' ? 'selected' : ''}>🤖 อัตโนมัติ (AI ตรวจจับเพศ)</option>
+            <option value="female" ${state.gender === 'female' ? 'selected' : ''}>👩 ผู้หญิง (ค่ะ/นะคะ - Fish Female)</option>
+            <option value="male" ${state.gender === 'male' ? 'selected' : ''}>👨 ผู้ชาย (ครับ/นะครับ - Fish Male)</option>
           </select>
         </div>
 
@@ -1549,23 +1548,6 @@
             background: #1e293b; color: #38bdf8; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; padding: 2px 6px; font-size: 10px; width: 170px; outline: none;
           ">
         </div>
-
-        ${state.speakers && state.speakers.length > 0 ? `
-          <div style="background: rgba(30, 41, 59, 0.85); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 8px; padding: 6px 10px; margin-top: 4px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-              <span style="color: #a5b4fc; font-weight: 700; font-size: 11px;">👥 ตรวจพบผู้พูดในคลิป (${state.speakerCount} คน):</span>
-              <span style="color: #94a3b8; font-size: 10px;">(ชาย ${state.maleCount} / หญิง ${state.femaleCount})</span>
-            </div>
-            <div style="display: flex; flex-direction: column; gap: 3px;">
-              ${state.speakers.map((s) => `
-                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: #f1f5f9; padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                  <span style="font-weight: 600;">👤 ${s.id} (${s.gender === 'male' ? 'ผู้ชาย' : 'ผู้หญิง'})</span>
-                  <span style="color: #38bdf8; font-weight: 500;">🎙️ ${s.voice_name}</span>
-                </div>
-              `).join('')}
-            </div>
-          </div>
-        ` : ''}
 
         <div id="hud-status-text" style="font-size: 10px; color: #38bdf8; text-align: center; margin-top: 2px;">
           ${state.isDubbingActive ? '🟢 ระบบกำลังพากย์สด' : '⏸️ กด "🚀 เริ่มพากย์ไทย (2 นาที)" เพื่อเริ่มซิงค์เสียง'}

@@ -336,39 +336,31 @@ async def dub_cues_batch(req: BatchDubRequest):
     custom_key = req.customGeminiKey.strip() if req.customGeminiKey else None
     custom_fish_key = req.fishApiKey.strip() if req.fishApiKey else None
 
-    # 1. Multi-Speaker Diarization, Emotion Analysis & Duration-Aware Transcreation
+    # 1. Master Spoken Thai Transcreation & Rhythm Alignment
     raw_cues_dict = [c.dict() for c in req.cues]
     diarized_results = await translator.translate_batch_diarized(
         cues=raw_cues_dict,
         context=req.context or "",
         style=req.style or "auto",
-        gender=req.gender or "auto",
+        gender=gender,
         custom_key=custom_key,
     )
 
-    # 2. High-Fidelity Audio Synthesis with Multi-Speaker Persona & Tone Mapping
+    # 2. Hard-Locked Single Host Voice (100% consistent across entire video)
+    target_voice = voice if voice and voice != "auto" else ("fish-thai-female" if gender == "female" else "fish-thai-male")
+    voice_meta = VOICE_REGISTRY.get(target_voice, VOICE_REGISTRY.get("fish-thai-male", {}))
+    voice_display_name = voice_meta.get("name", "Fish Speech: ชายไทยธรรมชาติ")
+
     sem = asyncio.Semaphore(2)
 
     async def synth_cue(cue: CueItem, diarized: Dict):
         thai_text = diarized.get("thai", "").strip() or cue.text
-        speaker = diarized.get("speaker", "male_1")
-        speaker_gender = diarized.get("gender", "male")
-        emotion = diarized.get("emotion", "neutral")
+        emotion = diarized.get("emotion", "engaging")
         pitch = diarized.get("pitch", "+0Hz")
 
-        # Determine voice for this specific cue:
-        cue_engine = engine
-        cue_voice = voice
-
-        # 🐟 Fish Speech Voice Assignment (Pure LLM-based Architecture):
         cue_engine = "fish_speech"
-        if not req.voice or req.voice == "auto":
-            if speaker == "female_1" or speaker_gender == "female":
-                cue_voice = "fish-thai-female"
-            else:
-                cue_voice = "fish-thai-male"
-        else:
-            cue_voice = req.voice
+        cue_voice = target_voice
+        speaker_gender = gender if gender in ["male", "female"] else "male"
 
         # 🎯 Original Video Speech Cadence & Exact Duration Pacing (WPS / WPM)
         words_count = len(cue.text.split())
@@ -378,18 +370,18 @@ async def dub_cues_batch(req: BatchDubRequest):
 
         # Match Thai speech rate with Original Video Speaker's pacing:
         thai_chars = len(thai_text)
-        expected_sec = thai_chars / 12.0
+        expected_sec = thai_chars / 11.5
         speed_ratio = expected_sec / slot_duration
 
         cue_rate = rate or diarized.get("rate", "+0%")
         if cue_rate == "+0%" or not cue_rate:
-            if speed_ratio > 1.30:
-                cue_rate = "+25%"
-            elif speed_ratio > 1.15:
-                cue_rate = "+15%"
-            elif speed_ratio > 1.05:
-                cue_rate = "+8%"
-            elif speed_ratio < 0.75:
+            if speed_ratio > 1.25:
+                cue_rate = "+20%"
+            elif speed_ratio > 1.12:
+                cue_rate = "+12%"
+            elif speed_ratio > 1.04:
+                cue_rate = "+6%"
+            elif speed_ratio < 0.70:
                 cue_rate = "-5%"
             else:
                 cue_rate = "+0%"
@@ -410,7 +402,7 @@ async def dub_cues_batch(req: BatchDubRequest):
                 "translatedText": thai_text,
                 "base64Audio": base64.b64encode(audio_bytes).decode("utf-8"),
                 "cached": True,
-                "speaker": speaker,
+                "speaker": "host",
                 "emotion": emotion,
                 "orig_wpm": orig_wpm,
                 "slotDuration": slot_duration,
@@ -467,7 +459,7 @@ async def dub_cues_batch(req: BatchDubRequest):
                 "translatedText": thai_text,
                 "base64Audio": base64.b64encode(audio_bytes).decode("utf-8"),
                 "cached": False,
-                "speaker": speaker,
+                "speaker": "host",
                 "emotion": emotion,
                 "orig_wpm": orig_wpm,
                 "slotDuration": slot_duration,
@@ -479,7 +471,7 @@ async def dub_cues_batch(req: BatchDubRequest):
             "translatedText": thai_text,
             "base64Audio": "",
             "cached": False,
-            "speaker": speaker,
+            "speaker": "host",
             "emotion": emotion,
             "orig_wpm": orig_wpm,
             "slotDuration": slot_duration,
@@ -488,41 +480,11 @@ async def dub_cues_batch(req: BatchDubRequest):
 
     results = await asyncio.gather(*[synth_cue(c, d) for c, d in zip(req.cues, diarized_results)])
 
-    # 3. Speaker Cast Breakdown & Voice Roster
-    unique_speakers = {}
-    for d in diarized_results:
-        spk_id = d.get("speaker", "male_1")
-        if spk_id not in unique_speakers:
-            spk_gender = d.get("gender", "male")
-            if not req.voice or req.voice == "auto":
-                if spk_id == "female_1" or spk_gender == "female":
-                    v_name = "🐟 Fish Speech (หญิงไทย)"
-                    v_code = "fish-thai-female"
-                else:
-                    v_name = "🐟 Fish Speech (ชายไทย)"
-                    v_code = "fish-thai-male"
-            else:
-                v_name = VOICE_REGISTRY.get(req.voice, {}).get("name", req.voice)
-                v_code = req.voice
-
-            unique_speakers[spk_id] = {
-                "id": spk_id,
-                "gender": spk_gender,
-                "voice_name": v_name,
-                "voice_code": v_code,
-            }
-
-    speaker_list = list(unique_speakers.values())
-    male_count = sum(1 for s in speaker_list if s["gender"] == "male")
-    female_count = sum(1 for s in speaker_list if s["gender"] == "female")
-
     return {
         "success": True,
         "results": results,
-        "speaker_count": len(speaker_list),
-        "male_count": male_count,
-        "female_count": female_count,
-        "speakers": speaker_list,
+        "active_voice": target_voice,
+        "voice_name": voice_display_name,
         "gemini_status": translator.last_status,
         "total_cues": len(req.cues),
     }
