@@ -1,12 +1,9 @@
 /**
- * Safari AI Thai Video Dubber - Popup UI Controller (Fish Speech Integration)
+ * Safari AI Thai Video Dubber - Popup UI Controller (KhanomTan TTS v1.0 Integration)
  */
 
-const FISH_VOICES = [
-  { id: 'fish-thai-male', name: '🐟 Fish Speech: ชายไทยธรรมชาติ (Thai Male Master)' },
-  { id: 'fish-thai-female', name: '🐟 Fish Speech: หญิงไทยธรรมชาติ (Thai Female Master)' },
-  { id: 'fish-thai-narrator', name: '🐟 Fish Speech: ผู้บรรยายสารคดี (Thai Documentary Narrator)' },
-  { id: 'fish-custom-clone', name: '🐟 Fish Speech: โคลนเสียงตัวอย่าง 5-10 วิ (Zero-Shot Clone)' },
+const KHANOMTAN_VOICES = [
+  { id: 'khanomtan-v1', name: '🧁 ขนมตาล (KhanomTan TTS v1.0 - Open-Source Thai VITS)' },
 ];
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -29,7 +26,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function populateVoices(selectedVoice) {
     voiceSelect.innerHTML = '';
-    FISH_VOICES.forEach((v) => {
+    KHANOMTAN_VOICES.forEach((v) => {
       const opt = document.createElement('option');
       opt.value = v.id;
       opt.textContent = v.name;

@@ -29,8 +29,8 @@ async def test_cache_sqlite_operations(tmp_path):
     assert await test_cache.get_translation(source, context) == translated
 
     # 2. Test audio dubbing caching
-    engine = "fish_speech"
-    voice = "fish-thai-male"
+    engine = "khanomtan"
+    voice = "khanomtan-v1"
     rate = "+0%"
     pitch = "+0Hz"
     style = "auto"

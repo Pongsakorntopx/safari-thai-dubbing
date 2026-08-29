@@ -5,15 +5,14 @@
 
 const DEFAULT_SETTINGS = {
   enabled: true,
-  engine: 'fish_speech',
-  voice: 'fish-thai-male',
+  engine: 'khanomtan',
+  voice: 'khanomtan-v1',
   style: 'auto',
   rate: '+0%',
   dubVolume: 1.0,
   duckVolume: 0.2,
   backendUrl: 'http://127.0.0.1:8000',
   customGeminiKey: 'AQ.Ab8RN6KPbW' + 'fipLG3IEBPAVK-nRd6Ki' + 'PanW6ymcYDj3ymolbkbw',
-  fishApiKey: '',
 };
 
 chrome.runtime.onInstalled.addListener(async () => {

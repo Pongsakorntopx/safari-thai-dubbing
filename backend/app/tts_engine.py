@@ -1,72 +1,45 @@
 """
-Fish Speech Master Engine - LLM-Based Zero-Shot Neural Text-to-Speech for Thai Video Dubbing.
-Architectural Highlights:
-1. Pure LLM-Based Autoregressive Neural Speech Synthesis for ultra-natural Thai prosody.
-2. Zero-Shot Voice Cloning (5-10 second reference audio cloning).
-3. Native Fish Audio Cloud API (https://api.fish.audio/v1/tts) + Local Fish Speech Server (http://127.0.0.1:8080).
-4. Studio Thai Male, Thai Female, and Custom Cloned Voice Presets.
+KhanomTan TTS Master Engine (โมเดลเสียงขนมตาล v1.0)
+Model: https://huggingface.co/wannaphong/khanomtan-tts-v1.0
+Author: Wannaphong Phatthiyaphaibun (PyThaiNLP / PyThaiTTS)
+Architecture: Multilingual YourTTS / VITS for natural open-source Thai Speech Synthesis.
 """
 
 import asyncio
-import base64
 import io
 import logging
 import os
 import re
-from typing import Dict, Optional, List
+import tempfile
+import threading
+from typing import Dict, Optional
 
-import aiohttp
-import edge_tts
-
-from app.config import settings
+from pythaitts import TTS
 
 logger = logging.getLogger(__name__)
 
-# Master Fish Speech Voice Registry
+# Master Voice Registry for KhanomTan TTS v1.0
 VOICE_REGISTRY: Dict[str, Dict[str, str]] = {
-    "fish-thai-male": {
-        "id": "fish-thai-male",
-        "name": "🐟 Fish Speech: ชายไทยธรรมชาติ (Thai Male Master - LLM-Based)",
-        "gender": "male",
-        "engine": "fish_speech",
-        "reference_id": "7f92f8afb8ec43bf81429cc1c9199cb1",
-        "desc": "โมเดล Fish Speech LLM เสียงผู้ชายไทย ออกเสียงเป็นธรรมชาติ ลื่นไหล ไม่แข็งกระด้าง",
-    },
-    "fish-thai-female": {
-        "id": "fish-thai-female",
-        "name": "🐟 Fish Speech: หญิงไทยธรรมชาติ (Thai Female Master - LLM-Based)",
+    "khanomtan-v1": {
+        "id": "khanomtan-v1",
+        "name": "🧁 ขนมตาล (KhanomTan TTS v1.0 - Open-Source Thai VITS)",
         "gender": "female",
-        "engine": "fish_speech",
-        "reference_id": "54b2d56122d64f0b9f07b1d44106511a",
-        "desc": "โมเดล Fish Speech LLM เสียงผู้หญิงไทย หวานใส คมชัด น้ำเสียงมีชีวิตชีวาแบบมนุษย์",
-    },
-    "fish-thai-narrator": {
-        "id": "fish-thai-narrator",
-        "name": "🐟 Fish Speech: ผู้บรรยายสารคดี (Thai Documentary Narrator)",
-        "gender": "male",
-        "engine": "fish_speech",
-        "reference_id": "e674b27877964b4c80302b406b025406",
-        "desc": "โมเดล Fish Speech สำหรับงานบรรยายสารคดี พอดแคสต์ อบอุ่น ทุ้มนุ่มน่าเชื่อถือ",
-    },
-    "fish-custom-clone": {
-        "id": "fish-custom-clone",
-        "name": "🐟 Fish Speech: โคลนเสียงตัวอย่าง 5-10 วินาที (Zero-Shot Voice Clone)",
-        "gender": "auto",
-        "engine": "fish_speech",
-        "reference_id": "",
-        "desc": "โคลนเสียงจากตัวอย่างเสียงอ้างอิง 5–10 วินาทีด้วยเทคโนโลยี Zero-shot LLM",
-    },
+        "engine": "khanomtan",
+        "speaker_idx": "Linda",
+        "language_idx": "th-th",
+        "desc": "โมเดลเสียงสังเคราะห์ภาษาไทยโอเพ่นซอร์ส KhanomTan v1.0 โดย วรรณพงษ์ ภัททิยไพบูลย์ (PyThaiNLP)",
+    }
 }
 
 
 def clean_thai_text_for_speech(text: str) -> str:
-    """Clean text for natural, fluent, continuous human speech synthesis."""
+    """Clean text for natural, fluent Thai speech synthesis in KhanomTan TTS."""
     if not text:
         return ""
     t = text.strip()
     t = re.sub(r"[\"\'\`\<\>\[\]\(\)\{\}\*\#\_]", "", t)
-    
-    # Expand common tech and everyday acronyms to natural Thai phonetics for flawless pronunciation
+
+    # Expand common tech and acronyms to natural Thai phonetics
     acronym_map = {
         r"\bAI\b": "เอไอ",
         r"\bAPI\b": "เอพีไอ",
@@ -88,125 +61,81 @@ def clean_thai_text_for_speech(text: str) -> str:
     for eng, th in acronym_map.items():
         t = re.sub(eng, th, t, flags=re.IGNORECASE)
 
-    # Normalize excessive spaces but preserve natural breathing pause boundaries
     t = re.sub(r"\s+", " ", t)
     return t.strip()
 
 
-class FishSpeechEngine:
-    """Master Fish Speech Text-to-Speech Engine."""
+class KhanomTanTTSEngine:
+    """Master KhanomTan TTS Engine (https://huggingface.co/wannaphong/khanomtan-tts-v1.0)."""
 
     def __init__(self):
-        self.api_url = "https://api.fish.audio/v1/tts"
-        self.local_url = os.getenv("FISH_SPEECH_LOCAL_URL", "http://127.0.0.1:8080/v1/tts")
-        self.api_key = os.getenv("FISH_AUDIO_API_KEY", "").strip()
+        self._model = None
+        self._lock = threading.Lock()
+        self._loop = None
+
+    def _get_model(self):
+        """Lazy thread-safe initialization of KhanomTan TTS v1.0."""
+        if self._model is None:
+            with self._lock:
+                if self._model is None:
+                    logger.info("🧁 Loading KhanomTan TTS v1.0 model from Hugging Face...")
+                    self._model = TTS(pretrained="khanomtan", version="1.0")
+                    logger.info("✅ KhanomTan TTS v1.0 loaded successfully!")
+        return self._model
 
     async def synthesize(
         self,
         text: str,
-        voice: str = "fish-thai-male",
-        engine: str = "fish_speech",
+        voice: str = "khanomtan-v1",
+        engine: str = "khanomtan",
         style: str = "auto",
-        gender: str = "auto",
+        gender: str = "female",
         rate: str = "+0%",
         pitch: str = "+0Hz",
         api_key: Optional[str] = None,
-        reference_id: Optional[str] = None,
-        reference_audio_base64: Optional[str] = None,
-        reference_text: Optional[str] = None,
+        **kwargs,
     ) -> bytes:
         """
-        Synthesize Thai speech using Fish Speech LLM Architecture.
-        Strictly locked to the single requested voice persona.
+        Synthesize Thai speech using KhanomTan TTS v1.0 (Wannaphong Phatthiyaphaibun).
+        Returns WAV audio bytes.
         """
         cleaned_text = clean_thai_text_for_speech(text)
         if not cleaned_text:
             return b""
 
-        # 1. Determine Voice Configuration & Reference ID
-        effective_key = (api_key or self.api_key or os.getenv("FISH_AUDIO_API_KEY", "")).strip()
-        reg_entry = VOICE_REGISTRY.get(voice, VOICE_REGISTRY["fish-thai-male"])
-        target_ref_id = reference_id or reg_entry.get("reference_id", "")
+        loop = asyncio.get_event_loop()
 
-        # 2. Try Local Fish Speech Server first (if running on http://127.0.0.1:8080)
+        def _run_tts() -> bytes:
+            model = self._get_model()
+            wav_path = model.tts(
+                text=cleaned_text,
+                speaker_idx="Linda",
+                preprocess=True,
+            )
+            if wav_path and os.path.exists(wav_path):
+                with open(wav_path, "rb") as f:
+                    data = f.read()
+                try:
+                    os.remove(wav_path)
+                except Exception:
+                    pass
+                return data
+            return b""
+
         try:
-            async with aiohttp.ClientSession() as session:
-                payload = {
-                    "text": cleaned_text,
-                    "reference_id": target_ref_id,
-                    "format": "mp3",
-                }
-                if reference_audio_base64:
-                    payload["references"] = [{
-                        "audio": reference_audio_base64,
-                        "text": reference_text or ""
-                    }]
-                async with session.post(self.local_url, json=payload, timeout=aiohttp.ClientTimeout(total=4.0)) as resp:
-                    if resp.status == 200:
-                        audio_data = await resp.read()
-                        if audio_data and len(audio_data) > 500:
-                            logger.info("✅ Fish Speech (Local Inference) generated %d bytes", len(audio_data))
-                            return audio_data
-        except Exception:
-            pass
-
-        # 3. Try Fish Audio Cloud API (https://api.fish.audio/v1/tts)
-        if effective_key:
-            try:
-                headers = {
-                    "Authorization": f"Bearer {effective_key}",
-                    "Content-Type": "application/json",
-                }
-                payload = {
-                    "text": cleaned_text,
-                    "format": "mp3",
-                    "latency": "normal",
-                    "normalize": True,
-                }
-                if target_ref_id:
-                    payload["reference_id"] = target_ref_id
-                if reference_audio_base64:
-                    payload["references"] = [{
-                        "audio": reference_audio_base64,
-                        "text": reference_text or ""
-                    }]
-
-                async with aiohttp.ClientSession() as session:
-                    async with session.post(self.api_url, json=payload, headers=headers, timeout=aiohttp.ClientTimeout(total=10.0)) as resp:
-                        if resp.status == 200:
-                            audio_data = await resp.read()
-                            if audio_data and len(audio_data) > 500:
-                                logger.info("✅ Fish Speech (Cloud API) synthesized %d bytes for: %s", len(audio_data), cleaned_text[:20])
-                                return audio_data
-                        else:
-                            err_msg = await resp.text()
-                            logger.warning("Fish Audio API error %d: %s", resp.status, err_msg)
-            except Exception as e:
-                logger.warning("Fish Audio API request failed: %s", e)
-
-        # 4. Built-in Studio Fallback (Hard-Locked to the exact selected voice persona)
-        try:
-            # Enforce strict single voice selection: If voice is female -> Premwadee, otherwise ALWAYS Niwat!
-            is_female = (voice == "fish-thai-female") or (reg_entry.get("gender") == "female") or (gender == "female" and voice not in ["fish-thai-male", "fish-thai-narrator"])
-            target_voice = "th-TH-PremwadeeNeural" if is_female else "th-TH-NiwatNeural"
-
-            communicate = edge_tts.Communicate(cleaned_text, voice=target_voice, rate=rate, pitch=pitch)
-            audio_buffer = io.BytesIO()
-            async for chunk in communicate.stream():
-                if chunk["type"] == "audio":
-                    audio_buffer.write(chunk["data"])
-            audio_bytes = audio_buffer.getvalue()
+            audio_bytes = await loop.run_in_executor(None, _run_tts)
             if audio_bytes:
-                logger.info("Generated studio neural fallback audio with locked voice %s (%d bytes)", target_voice, len(audio_bytes))
+                logger.info("🧁 KhanomTan TTS v1.0 synthesized %d bytes for: %s", len(audio_bytes), cleaned_text[:24])
                 return audio_bytes
         except Exception as e:
-            logger.error("TTS synthesis fatal error: %s", e)
+            logger.error("KhanomTan TTS synthesis error: %s", e)
 
         return b""
 
     def list_voices(self) -> Dict[str, Dict[str, str]]:
-        """Return the dictionary of supported voice personas."""
+        """List registered KhanomTan voice models."""
         return VOICE_REGISTRY
 
 
-tts_engine = FishSpeechEngine()
+# Singleton instance of KhanomTan TTS Engine
+tts_engine = KhanomTanTTSEngine()

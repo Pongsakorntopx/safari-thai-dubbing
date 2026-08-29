@@ -110,24 +110,12 @@ def resolve_auto_settings(
     context: str = "",
 ):
     """
-    Fish Speech Intelligent Voice Resolver:
-    - Pure LLM-Based Fish Speech Architecture for high-fidelity natural Thai prosody.
-    - Honors user explicit voice or defaults cleanly to single host voice.
+    KhanomTan TTS Voice Resolver:
+    - Pure Open-Source Thai VITS Architecture (wannaphong/khanomtan-tts-v1.0).
     """
-    gender = req_gender or "male"
-    engine = "fish_speech"
-    voice = req_voice or "fish-thai-male"
-
-    if voice in VOICE_REGISTRY:
-        reg = VOICE_REGISTRY[voice]
-        gender = reg.get("gender", gender)
-    else:
-        if gender == "female":
-            voice = "fish-thai-female"
-        else:
-            voice = "fish-thai-male"
-            gender = "male"
-
+    gender = "female"
+    engine = "khanomtan"
+    voice = "khanomtan-v1"
     style = req_style or "auto"
     return engine, voice, style, gender
 
@@ -344,21 +332,21 @@ async def dub_cues_batch(req: BatchDubRequest):
         custom_key=custom_key,
     )
 
-    # 2. Hard-Locked Single Host Voice (100% consistent across entire video)
-    target_voice = voice if voice and voice != "auto" else ("fish-thai-female" if gender == "female" else "fish-thai-male")
-    voice_meta = VOICE_REGISTRY.get(target_voice, VOICE_REGISTRY.get("fish-thai-male", {}))
-    voice_display_name = voice_meta.get("name", "Fish Speech: ชายไทยธรรมชาติ")
+    # 2. Hard-Locked Single KhanomTan Voice (100% consistent across entire video)
+    target_voice = "khanomtan-v1"
+    voice_meta = VOICE_REGISTRY["khanomtan-v1"]
+    voice_display_name = voice_meta.get("name", "🧁 ขนมตาล (KhanomTan TTS v1.0)")
 
-    sem = asyncio.Semaphore(2)
+    sem = asyncio.Semaphore(1)
 
     async def synth_cue(cue: CueItem, diarized: Dict):
         thai_text = diarized.get("thai", "").strip() or cue.text
         emotion = diarized.get("emotion", "engaging")
         pitch = diarized.get("pitch", "+0Hz")
 
-        cue_engine = "fish_speech"
+        cue_engine = "khanomtan"
         cue_voice = target_voice
-        speaker_gender = gender if gender in ["male", "female"] else "male"
+        speaker_gender = "female"
 
         # 🎯 Original Video Speech Cadence & Exact Duration Pacing (WPS / WPM)
         words_count = len(cue.text.split())
@@ -416,27 +404,9 @@ async def dub_cues_batch(req: BatchDubRequest):
                     gender=speaker_gender,
                     rate=cue_rate,
                     pitch=pitch,
-                    api_key=custom_fish_key,
                 )
             except Exception as e:
-                logger.warning("Fish Speech synthesis error for cue %d: %s", cue.id, e)
-
-            # Retry once if needed
-            if not audio_bytes:
-                await asyncio.sleep(0.1)
-                try:
-                    audio_bytes = await tts_engine.synthesize(
-                        text=thai_text,
-                        engine=cue_engine,
-                        voice=cue_voice,
-                        style=style,
-                        gender=speaker_gender,
-                        rate=cue_rate,
-                        pitch=pitch,
-                        api_key=custom_fish_key,
-                    )
-                except Exception:
-                    pass
+                logger.warning("KhanomTan TTS synthesis error for cue %d: %s", cue.id, e)
 
         if audio_bytes:
             await cache.set_audio_dub(

@@ -10,26 +10,18 @@
   // --- Runtime State ---
   const state = {
     enabled: true,
-    isDubbingActive: false,
-    engine: 'auto',
-    voice: 'auto', // Smart Auto Mode: Chooses best engine & voice for video
-    gender: 'auto',
-    style: 'auto', // Smart Auto Mode: Auto-adapts to NotebookLM / context
+    engine: 'khanomtan',
+    voice: 'khanomtan-v1',
+    gender: 'female',
+    style: 'auto',
     rate: '+0%',
     dubVolume: 1.0,
     duckVolume: 0.2,
     backendUrl: 'http://127.0.0.1:8000',
     customGeminiKey: 'AQ.Ab8RN6KPbW' + 'fipLG3IEBPAVK-nRd6Ki' + 'PanW6ymcYDj3ymolbkbw',
-    isCollapsed: false,
-    showSettingsModal: false,
 
-    // Audio & Sync State
-    audioCtx: null,
-    audioGainNode: null,
-    currentSource: null,
-    isPlaying: false,
-
-    // Timed Script & Sync Buffer Pipeline (2-Minute Paragraph Narrative Buffer)
+    // Playback & Queue State
+    isDubbingActive: false,
     timedCues: [],
     currentVideoId: null,
     targetBufferSeconds: 120, // 120-Second (2-minute) Initial Sync Buffer
@@ -38,7 +30,6 @@
     syncInterval: null,
     liveObserver: null,
     subtitleHookAttached: false,
-    currentVideoId: '',
     audioCtx: null,
     clarityFilter: null,
     audioGainNode: null,
@@ -53,10 +44,7 @@
   };
 
   const VOICES = [
-    { id: 'fish-thai-male', name: '🐟 Fish Speech: ชายไทยธรรมชาติ (Thai Male Master)', engine: 'fish_speech', gender: 'male' },
-    { id: 'fish-thai-female', name: '🐟 Fish Speech: หญิงไทยธรรมชาติ (Thai Female Master)', engine: 'fish_speech', gender: 'female' },
-    { id: 'fish-thai-narrator', name: '🐟 Fish Speech: ผู้บรรยายสารคดี (Thai Documentary Narrator)', engine: 'fish_speech', gender: 'male' },
-    { id: 'fish-custom-clone', name: '🐟 Fish Speech: โคลนเสียงตัวอย่าง 5-10 วิ (Zero-Shot Clone)', engine: 'fish_speech', gender: 'auto' },
+    { id: 'khanomtan-v1', name: '🧁 ขนมตาล (KhanomTan TTS v1.0 - Open-Source Thai VITS)', engine: 'khanomtan', gender: 'female' },
   ];
 
   const STYLES = [
@@ -1498,14 +1486,8 @@
         box-shadow: 0 6px 18px rgba(0,0,0,0.6);
       ">
         <div style="display: flex; justify-content: space-between; align-items: center;">
-          <span style="font-size: 11px; color: #94a3b8; font-weight: 600;">เพศของผู้พูด (Gender Mode):</span>
-          <select id="hud-gender-select" style="
-            background: #1e293b; color: #38bdf8; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; padding: 2px 6px; font-size: 11px; outline: none;
-          ">
-            <option value="auto" ${state.gender === 'auto' ? 'selected' : ''}>🤖 อัตโนมัติ (AI ตรวจจับเพศ)</option>
-            <option value="female" ${state.gender === 'female' ? 'selected' : ''}>👩 ผู้หญิง (ค่ะ/นะคะ - Fish Female)</option>
-            <option value="male" ${state.gender === 'male' ? 'selected' : ''}>👨 ผู้ชาย (ครับ/นะครับ - Fish Male)</option>
-          </select>
+          <span style="font-size: 11px; color: #94a3b8; font-weight: 600;">โมเดลเสียง AI:</span>
+          <span style="font-size: 11px; color: #38bdf8; font-weight: 700;">🧁 ขนมตาล (KhanomTan TTS v1.0)</span>
         </div>
 
         <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -1520,13 +1502,6 @@
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <span style="font-size: 11px; color: #94a3b8; font-weight: 600;">ลดเสียงคลิปเดิม (Ducking):</span>
           <input type="range" id="hud-duck-slider" min="0" max="50" value="${Math.round(state.duckVolume * 100)}" style="width: 80px; height: 4px;">
-        </div>
-
-        <div style="display: flex; justify-content: space-between; align-items: center; gap: 4px;">
-          <span style="font-size: 11px; color: #94a3b8; font-weight: 600;">Fish Audio API Key:</span>
-          <input type="password" id="hud-fish-input" placeholder="fa_... (คีย์ Fish Audio)" value="${state.fishApiKey || ''}" style="
-            background: #1e293b; color: #38bdf8; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; padding: 2px 6px; font-size: 10px; width: 170px; outline: none;
-          ">
         </div>
 
         <div style="display: flex; justify-content: space-between; align-items: center; gap: 4px;">

@@ -17,7 +17,7 @@ async def test_health_check():
         data = response.json()
         assert data["status"] == "healthy"
         assert "voices" in data
-        assert "fish-thai-male" in data["voices"]
+        assert "khanomtan-v1" in data["voices"]
 
 
 @pytest.mark.asyncio
@@ -29,27 +29,26 @@ async def test_list_voices():
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
-        assert "fish-thai-male" in data["voices"]
-        assert "fish-thai-female" in data["voices"]
+        assert "khanomtan-v1" in data["voices"]
 
 
 @pytest.mark.asyncio
 async def test_dub_endpoint_cached():
     with patch("app.cache.cache.get_audio_dub", new_callable=AsyncMock) as mock_get_dub:
-        mock_get_dub.return_value = ("สวัสดีครับ", b"test_audio_bytes")
+        mock_get_dub.return_value = ("สวัสดีค่ะ", b"test_audio_bytes")
 
         async with AsyncClient(
             transport=ASGITransport(app=app), base_url="http://test"
         ) as ac:
             payload = {
                 "text": "Hello world",
-                "voice": "fish-thai-male",
+                "voice": "khanomtan-v1",
                 "rate": "+0%",
             }
             response = await ac.post("/api/v1/dub", json=payload)
             assert response.status_code == 200
             data = response.json()
             assert data["success"] is True
-            assert data["translatedText"] == "สวัสดีครับ"
+            assert data["translatedText"] == "สวัสดีค่ะ"
             assert data["cached"] is True
             assert len(data["base64Audio"]) > 0

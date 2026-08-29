@@ -1,17 +1,18 @@
-# 🐟 Safari AI Thai Video Dubbing • Fish Speech Engine
+# 🧁 Safari AI Thai Video Dubbing • KhanomTan TTS v1.0
 
-ระบบแปลและพากย์เสียงวิดีโอบน YouTube เป็นภาษาไทยแบบ Real-time คุณภาพสตูดิโอ สำหรับ Safari (macOS / iOS) ขับเคลื่อนด้วยโมเดลสังเคราะห์เสียงสังเคราะห์ **Fish Speech (LLM-based Zero-shot Neural TTS)**
+ระบบแปลและพากย์เสียงวิดีโอบน YouTube เป็นภาษาไทยแบบ Real-time คุณภาพสูง สำหรับ Safari (macOS / iOS) ขับเคลื่อนด้วยโมเดลสังเคราะห์เสียงโอเพ่นซอร์ส **KhanomTan TTS v1.0 (ขนมตาล)** โดย วรรณพงษ์ ภัททิยไพบูลย์ (PyThaiNLP / PyThaiTTS)
+👉 [Hugging Face Model Card: wannaphong/khanomtan-tts-v1.0](https://huggingface.co/wannaphong/khanomtan-tts-v1.0)
 
 ---
 
 ## 🌟 จุดเด่นของระบบ (Features)
 
-1. **Fish Speech LLM-Based Prosody**: ใช้สถาปัตยกรรม Large Language Model สร้างเสียงสังเคราะห์ภาษาไทยที่เนียน ละมุน และเป็นธรรมชาติสูงสุด ไร้รอยต่อระหว่างคำ
-2. **Zero-Shot Voice Cloning**: รองรับการโคลนเสียงจากตัวอย่างเสียงภาษาไทย 5–10 วินาที เพื่อสร้างอารมณ์ คาแรคเตอร์ และน้ำเสียงที่ตรงใจ
-3. **Multi-Speaker Diarization & Auto Gender Alignment**: วิเคราะห์ผู้พูดเดี่ยวหรือกลุ่มบทสนทนา แยกเพศชาย/หญิง และจัดสรรคำลงท้าย (*ครับ/ค่ะ*) ได้อย่างถูกต้องแม่นยำ
-4. **Paragraph-Level Transcreation (60s Buffer)**: แปลงบทสนทนาแบบทั้งย่อหน้า ป้องกันการตัดประโยคค้างคา และซิงค์ความเร็วการพูดกับจังหวะของวิดีโอต้นฉบับ
-5. **Monophonic Single-Track Playback**: ระบบเล่นเสียงเดี่ยว ป้องกันเสียงซ้อน เสียงหลอน และปรับลดเสียงคลิปเดิม (Audio Ducking) แบบสมูท
-6. **Unified Safari HUD & Extension Popup**: แถบควบคุมบนวิดีโอ YouTube ใน Safari ปรับแต่งโหมดเสียง เพศ และระดับภาษาได้ทันที 1 คลิก
+1. **KhanomTan TTS v1.0 (ขนมตาล)**: โมเดลเสียงสังเคราะห์ภาษาไทยโอเพ่นซอร์ส สถาปัตยกรรม VITS/YourTTS ที่พัฒนาโดยทีม PyThaiNLP
+2. **Single Consistent Host Voice**: พากย์ด้วยเสียงคนเดียวตลอดทั้งคลิป 100% ไม่มีการสลับเสียงหรือเปลี่ยนโทนไปมาระหว่างท่อน
+3. **Zero Dangling Fragments & Anti-Word Splitting**: แปลงบทสนทนาเป็นประโยคที่พูดจบสมบูรณ์ในตัวเอง ไม่ตัดคำผสมแยกออกจากกัน และไม่มีประโยคค้างคา
+4. **Exact Syllable Duration Pacing**: คำนวณความเร็วและจำนวนพยางค์ภาษาไทยให้พอดีกับจังหวะเวลาของคลิปต้นฉบับอย่างแม่นยำ
+5. **Monophonic Web Audio Player**: เล่นเสียงเดี่ยว ป้องกันเสียงซ้อน พร้อมปรับลดเสียงคลิปเดิม (Audio Ducking) อัตโนมัติ
+6. **Hardware CoreAudio Clarity EQ**: ยกระดับความคมชัดของเสียงพูดไทยบน Safari macOS
 
 ---
 
@@ -19,20 +20,20 @@
 
 ```
 thai-dubbing-safari/
-├── backend/                  # Python FastAPI Backend (Fish Speech Engine)
+├── backend/                  # Python FastAPI Backend (KhanomTan TTS Engine)
 │   ├── app/
 │   │   ├── __init__.py
 │   │   ├── config.py         # จัดการค่า Settings, Keys & Endpoints
 │   │   ├── main.py           # REST API endpoints & CORS middleware
-│   │   ├── translator.py     # Gemini 2.0/3.5/3.6 Localization Engine
-│   │   ├── tts_engine.py     # Fish Speech LLM Neural TTS Engine
-│   │   └── cache.py          # LRU In-Memory + SQLite Cache (v17)
-│   ├── requirements.txt      # รายการ Python dependencies
+│   │   ├── translator.py     # Gemini Localization & Complete Sentence Transcreation
+│   │   ├── tts_engine.py     # KhanomTan TTS v1.0 Engine (wannaphong/khanomtan-tts-v1.0)
+│   │   └── cache.py          # LRU In-Memory + SQLite Cache
+│   ├── requirements.txt      # รายการ Python dependencies (pythaitts, coqui-tts)
 │   ├── .env.example          # ตัวอย่างไฟล์ตั้งค่า API Key
 │   └── Dockerfile            # สำหรับ Deploy ขึ้น Cloud / Docker
 ├── extension/                # Web Extension Source (Manifest V3)
 │   ├── manifest.json         # กำหนดสิทธิ์และการทำงานของ Extension
-│   ├── background.js         # Service Worker & Multi-Endpoint Fallback
+│   ├── background.js         # Service Worker
 │   ├── content.js            # YouTube DOM, Monophonic Audio Scheduler & Safari HUD
 │   ├── popup/
 │   │   ├── popup.html        # หน้าต่างตั้งค่า UI (Dark Mode)
