@@ -785,6 +785,8 @@
             if (cue) {
               cue.translated = item.translatedText || cue.text;
               cue.isMasterTrack = !!item.isMasterTrack;
+              cue.speaker = item.speaker || 'Host';
+              cue.emotion = item.emotion || 'normal';
               cue.orig_wpm = item.orig_wpm || 140;
               cue.appliedRate = item.appliedRate || '+0%';
               if (item.base64Audio && ctx) {
@@ -1035,8 +1037,10 @@
     state.isPlaying = true;
 
     applyAudioDucking();
+    showThaiCaptionToast(cue.translated);
+    const speakerTag = cue.speaker ? `🎭 ${cue.speaker} (${cue.emotion || 'normal'}) | ` : '';
     const wpmText = cue.orig_wpm ? `⚡ ${cue.orig_wpm} WPM | ` : '';
-    updateHUDStatus(`🔊 ${wpmText}"${cue.translated.slice(0, 16)}..."`);
+    updateHUDStatus(`🔊 ${speakerTag}${wpmText}"${cue.translated.slice(0, 14)}..."`);
 
     source.onended = () => {
       if (state.activeSources) {

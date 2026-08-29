@@ -344,25 +344,46 @@ async def dub_cues_batch(req: BatchDubRequest):
     rate = req.rate or "+0%"
     custom_key = req.customGeminiKey.strip() if req.customGeminiKey else None
 
-    # 1. Translate all cues together as a cohesive 60s paragraph (in any source language)
-    cues_text = [c.text.strip() for c in req.cues]
-    thai_texts = await translator.translate_batch(
-        cues_text=cues_text,
+    # 1. Multi-Speaker Diarization, Emotion Analysis & Duration-Aware Transcreation
+    raw_cues_dict = [c.dict() for c in req.cues]
+    diarized_results = await translator.translate_batch_diarized(
+        cues=raw_cues_dict,
         context=req.context or "",
-        style=style,
-        gender=gender,
+        style=req.style or "auto",
+        gender=req.gender or "auto",
         custom_key=custom_key,
     )
 
-    # Fallback if mismatch
-    if len(thai_texts) != len(req.cues):
-        thai_texts = [await translator.translate(c.text, context=req.context or "", style=style, gender=gender, custom_key=custom_key) for c in req.cues]
-
-    # 2. Open-Source TTS Synthesis with Controlled Concurrency & Cache for EVERY cue
+    # 2. High-Fidelity Audio Synthesis with Multi-Speaker Persona & Tone Mapping
     sem = asyncio.Semaphore(2)
 
-    async def synth_cue(cue: CueItem, thai_text: str):
-        # 🎯 Original Video Speech Cadence & Speed Analysis (WPS / WPM)
+    async def synth_cue(cue: CueItem, diarized: Dict):
+        thai_text = diarized.get("thai", "").strip() or cue.text
+        speaker = diarized.get("speaker", "male_1")
+        speaker_gender = diarized.get("gender", "male")
+        emotion = diarized.get("emotion", "neutral")
+        pitch = diarized.get("pitch", "+0Hz")
+
+        # Determine voice for this specific cue:
+        cue_engine = engine
+        cue_voice = voice
+
+        # 🎭 Multi-Speaker Cast Assignment (when user selects Auto / Dynamic mode):
+        if not req.voice or req.voice == "auto":
+            if speaker == "female_1" or speaker_gender == "female":
+                cue_engine = "edge"
+                cue_voice = "th-TH-PremwadeeNeural"
+            elif speaker == "male_2":
+                cue_engine = "vits"
+                cue_voice = "mms-male-v2"
+            elif speaker == "female_2":
+                cue_engine = "gtts"
+                cue_voice = "google-thai"
+            else:
+                cue_engine = "edge"
+                cue_voice = "th-TH-NiwatNeural"
+
+        # 🎯 Original Video Speech Cadence & Exact Duration Pacing (WPS / WPM)
         words_count = len(cue.text.split())
         slot_duration = max(0.8, float(cue.end - cue.start))
         orig_wps = words_count / slot_duration
@@ -373,7 +394,7 @@ async def dub_cues_batch(req: BatchDubRequest):
         expected_sec = thai_chars / 12.0
         speed_ratio = expected_sec / slot_duration
 
-        cue_rate = rate or "+0%"
+        cue_rate = rate or diarized.get("rate", "+0%")
         if cue_rate == "+0%" or not cue_rate:
             if speed_ratio > 1.30:
                 cue_rate = "+25%"
@@ -388,10 +409,10 @@ async def dub_cues_batch(req: BatchDubRequest):
 
         cached = await cache.get_audio_dub(
             source_text=cue.text,
-            engine=engine,
-            voice=voice,
+            engine=cue_engine,
+            voice=cue_voice,
             rate=cue_rate,
-            pitch="0Hz",
+            pitch=pitch,
             style=style,
             context=req.context or "",
         )
@@ -402,6 +423,8 @@ async def dub_cues_batch(req: BatchDubRequest):
                 "translatedText": thai_text,
                 "base64Audio": base64.b64encode(audio_bytes).decode("utf-8"),
                 "cached": True,
+                "speaker": speaker,
+                "emotion": emotion,
                 "orig_wpm": orig_wpm,
                 "slotDuration": slot_duration,
                 "appliedRate": cue_rate,
@@ -412,10 +435,11 @@ async def dub_cues_batch(req: BatchDubRequest):
             try:
                 audio_bytes = await tts_engine.synthesize(
                     text=thai_text,
-                    engine=engine,
-                    voice=voice,
+                    engine=cue_engine,
+                    voice=cue_voice,
                     style=style,
                     rate=cue_rate,
+                    pitch=pitch,
                     api_key=custom_key,
                 )
             except Exception as e:
@@ -427,10 +451,11 @@ async def dub_cues_batch(req: BatchDubRequest):
                 try:
                     audio_bytes = await tts_engine.synthesize(
                         text=thai_text,
-                        engine=engine,
-                        voice=voice,
+                        engine=cue_engine,
+                        voice=cue_voice,
                         style=style,
                         rate=cue_rate,
+                        pitch=pitch,
                         api_key=custom_key,
                     )
                 except Exception:
@@ -439,10 +464,10 @@ async def dub_cues_batch(req: BatchDubRequest):
         if audio_bytes:
             await cache.set_audio_dub(
                 source_text=cue.text,
-                engine=engine,
-                voice=voice,
+                engine=cue_engine,
+                voice=cue_voice,
                 rate=cue_rate,
-                pitch="0Hz",
+                pitch=pitch,
                 style=style,
                 context=req.context or "",
                 translated_text=thai_text,
@@ -453,6 +478,8 @@ async def dub_cues_batch(req: BatchDubRequest):
                 "translatedText": thai_text,
                 "base64Audio": base64.b64encode(audio_bytes).decode("utf-8"),
                 "cached": False,
+                "speaker": speaker,
+                "emotion": emotion,
                 "orig_wpm": orig_wpm,
                 "slotDuration": slot_duration,
                 "appliedRate": cue_rate,
@@ -463,12 +490,14 @@ async def dub_cues_batch(req: BatchDubRequest):
             "translatedText": thai_text,
             "base64Audio": "",
             "cached": False,
+            "speaker": speaker,
+            "emotion": emotion,
             "orig_wpm": orig_wpm,
             "slotDuration": slot_duration,
             "appliedRate": cue_rate,
         }
 
-    results = await asyncio.gather(*[synth_cue(c, t) for c, t in zip(req.cues, thai_texts)])
+    results = await asyncio.gather(*[synth_cue(c, d) for c, d in zip(req.cues, diarized_results)])
 
     return {
         "success": True,
