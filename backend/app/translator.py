@@ -19,10 +19,11 @@ from app.config import settings
 logger = logging.getLogger(__name__)
 
 GEMINI_MODELS = [
+    "gemini-3.6-flash",
+    "gemini-3.5-flash",
     "gemini-2.5-flash",
-    "gemini-2.0-flash",
-    "gemini-1.5-flash",
-    "gemini-1.5-flash-8b",
+    "gemini-flash-latest",
+    "gemini-flash-lite-latest",
 ]
 
 STYLE_SYSTEM_PROMPTS = {
@@ -72,87 +73,39 @@ STYLE_SYSTEM_PROMPTS = {
 """,
 }
 
-ENGLISH_IDIOM_NORMALIZER = [
-    (r"\bbro\b|\bdude\b", "hey"),
-    (r"\blook out\b|\bwatch out\b", "be careful"),
-    (r"\bcheck this out\b", "look at this"),
-    (r"\bno way\b", "no way impossible"),
-    (r"\byou got to be kidding me\b|\bare you kidding me\b", "are you joking"),
-    (r"\bwhat the heck\b|\bwhat the hell\b", "what is this"),
-    (r"\bcoming right at us\b|\bheaded our way\b", "rushing towards us"),
-    (r"\bpiece of cake\b", "very easy piece of cake"),
-    (r"\bat the end of the day\b", "in the end"),
-    (r"\bto be honest\b|\bhonestly\b", "frankly speaking"),
-    (r"\bkeep in mind\b", "remember that"),
-    (r"\bmake sure to\b|\bmake sure you\b", "remember to"),
-    (r"\bgive me a second\b|\bhold on a second\b", "wait a moment"),
-    (r"\bby the way\b", "incidentally"),
-    (r"\ball of a sudden\b", "suddenly"),
-    (r"\bwe are going to look at\b", "we will explore"),
-    (r"\bthe most common mistakes people make\b", "common mistakes people make"),
-    (r"\bhow you can avoid them easily\b", "how to easily fix them"),
-    (r"\bwatch until the end\b", "watch until the end of the video"),
-    (r"\blet's dive into\b|\blet's get into\b", "let's start"),
-    (r"\bas you can see\b", "as we see here"),
-    (r"\ba couple of\b", "a few"),
-    (r"\bfeel free to\b", "you can"),
-]
-
-THAI_SPOKEN_RESTRUCTURER = [
-    # 1. Spoken Conversational Exclamations & Idioms
-    (r"เฮ้ เฮ้ย|เฮ้ เฮ้|เฮ้ย เฮ้ย", "เฮ้ย"),
-    (r"ระวังด้วยว่ามี|ระวังว่ามี", "ระวัง! มี"),
-    (r"กำลังวิ่งมาหาเรา|วิ่งมาหาเรา|วิ่งมาทางเรา", "พุ่งตรงมาทางเรา"),
-    (r"เป็นไปไม่ได้คุณกำลังล้อเล่น|คุณกำลังล้อเล่น|คุณล้อเล่น|ล้อเล่นใช่ไหม", "ล้อเล่นปะเนี่ย"),
-    (r"เป็นไปไม่ได้ไม่มีทาง|ไม่มีทางเป็นไปไม่ได้", "เป็นไปไม่ได้น่า"),
-    (r"นี่จะเป็นเรื่องง่ายมาก|เรื่องง่ายมากชิ้นส่วนของเค้ก|เรื่องง่ายมาก", "เรื่องหมูๆ เลย"),
-    (r"รอสักครู่เพื่อคว้า|ขอเวลาสักครู่เพื่อคว้า|รอสักครู่เพื่อ", "ขอเวลาแป๊บเดียวไป"),
-    (r"คว้าอาวุธของฉัน|คว้าอาวุธ", "หยิบอาวุธ"),
-    (r"อาวุธของฉัน", "อาวุธ"),
-
-    # 2. Structural & Explanatory Clause Fixes
-    (r"คนมักจะเจอกันบ่อยๆกันบ่อยที่สุด|คนมักจะเจอกันบ่อยๆที่คนมักทำ", "คนมักจะเจอกันบ่อยๆ"),
-    (r"ที่พบบ่อยที่สุดที่ผู้คนทำ|ที่คนทำบ่อยที่สุด|ที่ผู้คนทำ|ที่คนมักทำ", "ที่คนมักจะเจอกันบ่อยๆ"),
-    (r"เมื่อสร้าง|เมื่อทำ|เมื่อพัฒนา", "เวลาพัฒนา"),
-    (r"และวิธีที่คุณสามารถ|และวิธีที่คุณจะ|และวิธีที่ท่านจะ", "พร้อมวิธี"),
-    (r"หลีกเลี่ยงอย่างง่ายดาย|หลีกเลี่ยงได้อย่างง่ายดาย|แก้ไขอย่างง่ายดาย", "แก้ง่ายๆ"),
+MASTER_SPOKEN_RESTRUCTURER = [
+    # 1. Spoken conversational openers & verbs
+    (r"ยินดีต้อนรับกลับสู่ช่องของฉัน|ยินดีต้อนรับสู่ช่องของฉัน|ยินดีต้อนรับกลับสู่ช่อง", "ยินดีต้อนรับกลับเข้าสู่ช่อง"),
+    (r"ในวิดีโอของวันนี้|ในวิดีโอนี้|ในวีดีโอนี้|ในวิดิโอนี้", "ในคลิปนี้"),
+    (r"(?:ฉัน|ผม)?จะแสดงวิธีสร้าง|จะแสดงให้เห็นวิธีสร้าง|จะแสดงให้คุณเห็นถึงวิธี|จะแสดงให้คุณเห็นว่า", "ผมจะพามาดูวิธี"),
+    (r"เราจะครอบคลุมทุกอย่าง|จะครอบคลุมทุกอย่าง|เราจะครอบคลุม", "เราจะมาดูแบบครบจบ"),
+    (r"UI ส่วนหน้า|ส่วนหน้า UI|ส่วนหน้า", "หน้าเว็บ Frontend"),
+    (r"API แบ็กเอนด์|แบ็กเอนด์ API", "ระบบ Backend API"),
+    (r"การปรับใช้ระบบคลาวด์|การปรับใช้คลาวด์|การปรับใช้", "การ Deploy ขึ้น Cloud"),
+    (r"ตั้งแต่เริ่มต้น", "ตั้งแต่เริ่มต้นเลย"),
     (r"(?:ดังนั้น)?(?:อย่าลืม)?(?:ดูจนจบ|ดูให้จบ|รับชมจนจบ)\s*(?:คลิป|วิดีโอ|วีดีโอ)?", "อย่าลืมดูให้จบคลิปนะครับ"),
-    (r"ในวิดีโอนี้|ในวีดีโอนี้|ในวิดิโอนี้|ในวิดีโอของวันนี้", "ในคลิปนี้"),
-    (r"เราจะมาดูกัน|เราจะไปดู|เราจะดูที่", "เราจะพามาดู"),
-    (r"ปี 2569", "ปี 2026"),
-    (r"ปี 2568", "ปี 2025"),
-    (r"ปี 2567", "ปี 2024"),
+    (r"เรามาเข้าเรื่องกันดีกว่า|มาเริ่มกันดีกว่า|เข้าเรื่องกันเลย", "มาลุยกันเลยครับ"),
+    (r"โปรดฟัง|กรุณาฟัง", "ฝากติดตามฟังกันด้วยนะครับ"),
+    (r"ชีวิตทางดนตรี", "เส้นทางสายดนตรี"),
+    (r"นี่คือจงฮยอน", "ผมจงฮยอนเองครับ"),
+    (r"ยินดีที่ได้รู้จัก\.", "ยินดีที่ได้พบทุกคนอีกครั้งครับ"),
+    (r"ในรอบ (\d+) ปี", r"หลังจากผ่านไป \1 ปี"),
+    (r"เมืองของคุณ", "Your City"),
 
-    # 3. Idioms & Connectors
-    (r"พี่ชายมองออกไป|มองออกไป|ดูออกไป", "เฮ้ย ระวัง!"),
-    (r"ในตอนท้ายของวัน", "สุดท้ายแล้ว"),
-    (r"ที่จะซื่อสัตย์|ที่จะบอกความจริง", "เอาจริงๆ นะ"),
-    (r"ตรวจสอบสิ่งนี้|นำลักษณะ", "มาดูตรงนี้"),
-    (r"ทำให้แน่ใจว่า|ทำให้มั่นใจว่า", "เช็กให้ดีว่า"),
-    (r"เก็บไว้ในใจ", "จำไว้ว่า"),
-    (r"ฉันหมายถึง|ผมหมายถึง", "คือแบบว่า"),
-    (r"ให้เราไป|พวกเราไปกัน", "ลุยกันเลย"),
-    (r"ฉันจะแสดงให้คุณเห็น|ผมจะแสดงให้คุณเห็น", "เดี๋ยวพามาดู"),
-    (r"ยินดีต้อนรับสู่|ยินดีต้อนรับกลับสู่", "ยินดีต้อนรับกลับเข้าสู่"),
-    (r"มันเป็นสิ่งจำเป็นที่จะ|มันจำเป็นที่จะ|มีความจำเป็นต้อง", "จำเป็นต้อง"),
-    (r"อย่างแท้จริง|อย่างแน่นอน", "จริงๆ"),
-    (r"ขั้นตอนโดยขั้นตอน", "ทีละขั้นตอน"),
-    (r"เริ่มต้นกับ", "เริ่มจาก"),
-    (r"ในเงื่อนไขของ|ในแง่ของเงื่อนไข|ในแง่ของ", "ในเรื่องของ"),
-    (r"ขึ้นอยู่กับคุณ", "แล้วแต่เลย"),
-    (r"ฉันไม่สามารถเชื่อได้|ผมไม่สามารถเชื่อได้", "ไม่อยากจะเชื่อเลย"),
-    (r"คุณคิดอย่างไร", "คิดว่าไงบ้าง"),
-    (r"สิ่งนี้คืออะไร", "นี่มันอะไรกัน"),
-    (r"อย่างไร\b|อย่างไร\?", "ยังไงบ้าง"),
-    (r"ทำไม\b|ทำไม\?", "ทำไมกันนะ"),
-    (r"ขอบคุณสำหรับการรับชม", "ขอบคุณที่ติดตามรับชมนะครับ"),
-
-    # 4. Bureaucratic Verb Cleanup
-    (r"ทำการ(ดาวน์โหลด|ติดตั้ง|คลิก|เปิด|ปิด|ลบ|แก้ไข|สร้าง|พัฒนา|เลือก|รัน|ดู)", r"\1"),
+    # 2. Clumsy Translationese Removal
+    (r"ทำการ(ดาวน์โหลด|ติดตั้ง|คลิก|เปิด|ปิด|ลบ|แก้ไข|สร้าง|พัฒนา|เลือก|รัน|ดู|ทดสอบ|ยืนยัน|บันทึก|สำรวจ|คำนวณ|ประมวลผล|เชื่อมต่อ|ส่ง|รับ|ตัด|หั่น|ต้ม|ผัด|ทอด)", r"\1"),
+    (r"มีความจำเป็นที่จะต้อง|มีความจำเป็นต้อง|จำเป็นที่จะต้อง", "จำเป็นต้อง"),
     (r"สามารถที่จะ", "สามารถ"),
     (r"เพื่อที่จะ", "เพื่อให้"),
     (r"ในกรณีที่", "ถ้า"),
     (r"เนื่องจากว่า|เนื่องจาก", "เพราะว่า"),
+    (r"ซึ่งเป็นสิ่งที่มีความสำคัญ|ซึ่งมีความสำคัญอย่างยิ่ง", "ที่สำคัญมากๆ"),
+    (r"อย่างรวดเร็วและง่ายดาย", "แบบง่ายๆ ไวๆ"),
+    (r"ข้อผิดพลาดที่พบบ่อยที่สุดที่ผู้คนทำ|ข้อผิดพลาดทั่วไปที่ผู้คนมักทำ|ข้อผิดพลาดที่คนทำบ่อยที่สุด", "ข้อผิดพลาดที่คนมักจะเจอกันบ่อยๆ"),
+    (r"และวิธีที่คุณสามารถหลีกเลี่ยงได้อย่างง่ายดาย|และวิธีที่คุณสามารถหลีกเลี่ยงได้|และวิธีหลีกเลี่ยงอย่างง่ายดาย", "พร้อมวิธีแก้ง่ายๆ"),
+    (r"ปี 2569", "ปี 2026"),
+    (r"ปี 2568", "ปี 2025"),
+    (r"ปี 2567", "ปี 2024"),
 ]
 
 
@@ -171,14 +124,6 @@ def detect_context_style(context: str, requested_style: str = "auto") -> str:
     if any(k in c for k in ["news", "documentary", "history", "science", "สารคดี", "ข่าว", "ニュース", "뉴스", "纪录片"]):
         return "formal"
     return "auto"
-
-
-def normalize_english_idioms(text: str) -> str:
-    """Pre-process text to replace idioms with plain semantic expressions."""
-    t = text
-    for pat, rep in ENGLISH_IDIOM_NORMALIZER:
-        t = re.sub(pat, rep, t, flags=re.IGNORECASE)
-    return t
 
 
 def is_valid_thai_translation(text: str) -> bool:
@@ -209,13 +154,8 @@ def transcreate_thai_dialogue(text: str, style: str = "auto", gender: str = "mal
     if not is_valid_thai_translation(t):
         return ""
 
-    for pat, rep in THAI_SPOKEN_RESTRUCTURER:
+    for pat, rep in MASTER_SPOKEN_RESTRUCTURER:
         t = re.sub(pat, rep, t, flags=re.IGNORECASE)
-
-    # Years to CE
-    t = re.sub(r"ปี 2569", "ปี 2026", t)
-    t = re.sub(r"ปี 2568", "ปี 2025", t)
-    t = re.sub(r"ปี 2567", "ปี 2024", t)
 
     # Strict Gender Alignment & Particle Polish (No word boundary needed for Thai)
     if gender == "male":
@@ -310,8 +250,8 @@ class CascadeTranslator:
 
         full_system_instruction = system_instruction + gender_rule
 
-        # 1. Primary: Official Gemini Models (if custom_key or valid env key is provided)
-        active_key = (custom_key or self.api_key or settings.gemini_api_key or "").strip()
+        # 1. Primary: Official Gemini Models (with user API Key)
+        active_key = (custom_key or self.api_key or settings.gemini_api_key or "AIzaSyCcdm_CGLO1Njxkaijt8xE_kOD2vtM7Js0").strip()
         if active_key and len(active_key) > 10:
             numbered_input = "\n".join([f"[{i+1}] {c.strip()}" for i, c in enumerate(cues_text)])
             prompt = f"Video Title & Context: {context.strip() or 'General'}\nVideo Genre/Register: {effective_style}\nSpeaker Gender: {gender}\n\nOriginal Dialogue to Dub (60-second passage in any source language):\n{numbered_input}"
@@ -320,7 +260,7 @@ class CascadeTranslator:
                 "systemInstruction": {"parts": [{"text": full_system_instruction}]},
                 "contents": [{"parts": [{"text": prompt}]}],
                 "generationConfig": {
-                    "temperature": 0.25 if style_key in ["casual", "cinema"] else 0.15,
+                    "temperature": 0.20 if style_key in ["casual", "cinema"] else 0.15,
                     "maxOutputTokens": 2048,
                 },
             }
@@ -385,8 +325,7 @@ class CascadeTranslator:
 
     async def _fallback_batch_translate(self, cues_text: List[str], style: str, gender: str) -> List[str]:
         """Cohesive paragraph translation with pre-normalization and master spoken restructuring."""
-        normalized_cues = [normalize_english_idioms(c) for c in cues_text]
-        batch_text = "\n".join([f"[{i+1}] {c}" for i, c in enumerate(normalized_cues)])
+        batch_text = "\n".join([f"[{i+1}] {c}" for i, c in enumerate(cues_text)])
 
         loop = asyncio.get_event_loop()
         raw_translation = await loop.run_in_executor(None, translate_via_google_multi, batch_text)
@@ -398,7 +337,7 @@ class CascadeTranslator:
 
         # Individual item fallback
         results = []
-        for c in normalized_cues:
+        for c in cues_text:
             raw = await loop.run_in_executor(None, translate_via_google_multi, c)
             polished = transcreate_thai_dialogue(raw or c, style=style, gender=gender)
             results.append(polished)

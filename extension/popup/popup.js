@@ -96,8 +96,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     backendUrlInput.value = bUrl;
 
-    if (data.customGeminiKey) {
-      customKeyInput.value = data.customGeminiKey;
+    const geminiKey = data.customGeminiKey || 'AIzaSyCcdm_CGLO1Njxkaijt8xE_kOD2vtM7Js0';
+    customKeyInput.value = geminiKey;
+    if (!data.customGeminiKey) {
+      chrome.storage.local.set({ customGeminiKey: geminiKey });
     }
   } catch (err) {
     console.error('Failed to load settings in popup:', err);

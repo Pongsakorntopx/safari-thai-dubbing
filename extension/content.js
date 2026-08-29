@@ -19,7 +19,7 @@
     dubVolume: 1.0,
     duckVolume: 0.2,
     backendUrl: 'https://thai-dubbing-api.onrender.com',
-    customGeminiKey: '',
+    customGeminiKey: 'AIzaSyCcdm_CGLO1Njxkaijt8xE_kOD2vtM7Js0',
     isCollapsed: false,
     showSettingsModal: false,
 

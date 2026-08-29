@@ -12,7 +12,7 @@ load_dotenv(dotenv_path=ENV_PATH)
 class Settings(BaseSettings):
     """Application settings."""
 
-    gemini_api_key: str = os.getenv("GEMINI_API_KEY", "")
+    gemini_api_key: str = os.getenv("GEMINI_API_KEY", "AIzaSyCcdm_CGLO1Njxkaijt8xE_kOD2vtM7Js0")
     gemini_model: str = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
     default_voice: str = os.getenv("DEFAULT_VOICE", "th-TH-PremwadeeNeural")
     default_rate: str = os.getenv("DEFAULT_RATE", "+5%")
