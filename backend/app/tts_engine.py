@@ -108,6 +108,55 @@ def format_natural_thai_prosody(text: str) -> str:
     return t.strip()
 
 
+def format_apple_silicon_prosody(text: str, is_male: bool) -> str:
+    """
+    Format Thai text with Apple Speech Synthesis Manager embedded control tags
+    to achieve the exact charismatic breathing pauses and dynamic vocal cadence of NotebookLM.
+    """
+    clean = format_natural_thai_prosody(text)
+    if not clean:
+        return ""
+
+    header = "[[pbas 106]] [[rate 165]] " if is_male else "[[pbas 174]] [[rate 172]] "
+    body = clean
+    body = re.sub(r"([.!?…]+|\.{3})\s*", r" [[slnc 240]] ", body)
+    body = re.sub(r"([,;:|])\s*", r" [[slnc 130]] ", body)
+    body = re.sub(r"(นะครับ|นะคะ|ครับผม|ค่ะ|ครับ)\s+", r"\1 [[slnc 180]] ", body)
+    body = re.sub(r"\s*\[\[slnc\s+(\d+)\]\]\s*\[\[slnc\s+(\d+)\]\]\s*", r" [[slnc 240]] ", body)
+    body = re.sub(r"\s+", " ", body).strip()
+
+    return header + body
+
+
+def format_edge_ssml_prosody(text: str, voice: str) -> str:
+    """
+    Format Thai text with SSML prosody and micro-breaks for Microsoft Edge Neural.
+    """
+    clean = format_natural_thai_prosody(text)
+    if not clean:
+        return ""
+
+    body = clean
+    body = re.sub(r"([.!?…]+|\.{3})\s*", r'. <break time="220ms"/> ', body)
+    body = re.sub(r"([,;:|])\s*", r', <break time="120ms"/> ', body)
+    body = re.sub(r"(นะครับ|นะคะ|ครับผม|ค่ะ|ครับ)\s+", r'\1 <break time="180ms"/> ', body)
+    body = re.sub(r"\s+", " ", body).strip()
+
+    is_male = "Niwat" in voice or "Male" in voice
+    rate_str = "+2%" if is_male else "+1%"
+    pitch_str = "+0Hz"
+
+    return (
+        f'<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="th-TH">'
+        f'<voice name="{voice}">'
+        f'<prosody rate="{rate_str}" pitch="{pitch_str}">'
+        f'{body}'
+        f'</prosody>'
+        f'</voice>'
+        f'</speak>'
+    )
+
+
 class TTSEngine:
     """Non-blocking Async Speech Synthesizer with Instant Sub-Second Failover & Multi-Engine Support."""
 
@@ -254,19 +303,12 @@ class TTSEngine:
         rate: Optional[str] = None,
     ) -> bytes:
         """Synthesize Thai speech directly on Apple Silicon Neural Engine via macOS native say & afconvert (0ms Latency)."""
-        clean_text = format_natural_thai_prosody(text)
-        if not clean_text:
+        is_male = (voice and voice.lower() in ["pattara", "apple-male", "male"]) or "ชาย" in str(voice)
+        spoken_text = format_apple_silicon_prosody(text, is_male=is_male)
+        if not spoken_text:
             return b""
 
-        # Voice persona & Pitch tuning (Male: Pattara, Female: Kanya)
-        is_male = (voice and voice.lower() in ["pattara", "apple-male", "male"]) or "ชาย" in str(voice)
-        if is_male:
-            spoken_text = f"[[pbas 108]] [[rate 165]] {clean_text}"
-            voice_name = "Kanya"
-        else:
-            spoken_text = f"[[pbas 185]] [[rate 175]] {clean_text}"
-            voice_name = "Kanya"
-
+        voice_name = "Kanya"
         temp_id = uuid.uuid4().hex[:8]
         aiff_path = f"/tmp/apple_tts_{temp_id}.aiff"
         wav_path = f"/tmp/apple_tts_{temp_id}.wav"

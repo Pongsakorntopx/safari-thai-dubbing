@@ -747,9 +747,10 @@
       const video = findVideoElement();
       const cur = video ? video.currentTime : 0;
       const targetTime = cur + state.targetBufferSeconds;
+      const batchCues = state.timedCues.filter((c) => c.end >= cur && c.start <= targetTime);
       const toFetch = (batchCues.length > 0 ? batchCues : state.timedCues).slice(0, 32);
       toFetch.forEach((c) => (c.status = 'fetching'));
-      updateHUDStatus('⏳ กำลังเรียบเรียงบทพากย์ภาษาไทยและสร้างเสียงพากย์ 2 นาที...');
+      updateHUDStatus(`⏳ กำลังเรียบเรียงบทพากย์ภาษาไทยและสร้างเสียงพากย์ 2 นาที (${toFetch.length} ท่อน)...`);
 
       const batchRes = await fetchDubBatchDirect(toFetch);
       if (batchRes && batchRes.success && batchRes.results) {
