@@ -164,27 +164,13 @@ def is_valid_thai_translation(text: str) -> bool:
 
 
 def transcreate_thai_dialogue(text: str, style: str = "auto", gender: str = "male") -> str:
-    """Restructure raw translated Thai into fluent, spoken-style Thai dialogue with strict gender alignment."""
+    """Restructure raw translated Thai into fluent, spoken-style Thai dialogue without breaking compound words."""
     t = text.strip()
     if not is_valid_thai_translation(t):
         return ""
 
     for pat, rep in MASTER_SPOKEN_RESTRUCTURER:
         t = re.sub(pat, rep, t, flags=re.IGNORECASE)
-
-    # Strict Gender Alignment & Particle Polish (No word boundary needed for Thai)
-    if gender == "male":
-        t = re.sub(r"นะคะ|นะค่ะ|ค่ะ|คะ", "ครับ", t)
-        t = re.sub(r"ดิฉัน|ฉัน", "ผม", t)
-        t = re.sub(r"ครับ\s+ครับ", "ครับ", t)
-    elif gender == "female":
-        t = re.sub(r"นะครับ|ครับ|คับ|ฮะ|ก๊าบ", "ค่ะ", t)
-        t = re.sub(r"กระผม|ผม", "ฉัน", t)
-        t = re.sub(r"ค่ะ\s+ค่ะ", "ค่ะ", t)
-
-    # Style-specific pronoun adjustments
-    if style in ["casual", "cinema"]:
-        t = re.sub(r"คุณ", "นาย", t)
 
     # Clean double spaces and punctuation marks
     t = re.sub(r"[\.\,\!\?]+$", "", t).strip()

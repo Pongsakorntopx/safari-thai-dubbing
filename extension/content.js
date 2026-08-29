@@ -883,54 +883,27 @@
       }
     }, 300);
 
-    // Audio Scheduler: Exact frame-accurate playback with natural sentence preservation and Video Phase-Lock Sync
+    // Audio Scheduler: Lightweight, ultra-smooth playback without CPU spikes or Safari freezes
     state.schedulerTimer = setInterval(() => {
       if (!state.isDubbingActive || state.timedCues.length === 0) return;
       const video = findVideoElement();
-      if (!video) return;
+      if (!video || video.paused) return;
 
-      // 🛑 ENFORCE BUFFER PAUSE: If YouTube tries to auto-play while we are still buffering, force pause it!
       if (state.isSyncBuffering) {
         if (!video.paused) {
-          console.warn('[ThaiDubbing] Auto-play detected during buffering. Enforcing pause...');
           video.pause();
         }
         return;
       }
 
-      if (video.paused) return;
+      // If already playing a cue, wait until it finishes naturally
+      if (state.isPlaying) return;
 
       const currentTime = video.currentTime;
 
-      // 🎯 VIDEO-AUDIO PHASE-LOCK SYNC (PLL):
-      // If the Thai voice is still speaking previous sentence and the video is racing ahead,
-      // dynamically slow down or micro-pause the video so the audio and video stay perfectly in sync!
-      if (state.isPlaying && state.lastScheduledCue) {
-        const audio = getGlobalAudioPlayer();
-        if (audio && !audio.paused && audio.duration && !isNaN(audio.duration)) {
-          const audioRemaining = audio.duration - audio.currentTime;
-          // If video has raced past the subtitle boundary while voice is still speaking:
-          if (currentTime >= state.lastScheduledCue.end + 0.15 && audioRemaining > 0.25) {
-            if (!video.paused) {
-              video.pause();
-              const pauseDurationMs = Math.min(1200, Math.max(150, Math.round((audioRemaining - 0.08) * 1000)));
-              setTimeout(() => {
-                if (state.isDubbingActive && !state.isSyncBuffering) {
-                  video.play().catch(() => {});
-                }
-              }, pauseDurationMs);
-            }
-          }
-        }
-      }
-
       for (let i = 0; i < state.timedCues.length; i++) {
         const cue = state.timedCues[i];
-        if (cue.status === 'ready' && currentTime >= cue.start - 0.15 && currentTime <= cue.end + 0.8) {
-          // If a sentence is currently speaking, let it finish naturally without overlapping!
-          if (state.isPlaying) {
-            break;
-          }
+        if (cue.status === 'ready' && currentTime >= cue.start - 0.15 && currentTime <= cue.end + 0.5) {
           cue.status = 'played';
           state.lastScheduledCue = cue;
           if (cue.audioUrl || cue.audioBase64) {
@@ -938,12 +911,14 @@
           } else if (cue.translated) {
             const durMs = Math.max(800, Math.round((cue.end - cue.start) * 1000 + 400));
             renderCinemaSubtitle(cue.translated, durMs);
-            updateHUDStatus(`🔊 พากย์: "${cue.translated.slice(0, 16)}..."`);
           }
+          break;
+        } else if (cue.start > currentTime + 1.0) {
+          // Cues are sorted by start time, no need to check further into future
           break;
         }
       }
-    }, 40);
+    }, 60);
   }
 
   function stopActivePlayback() {

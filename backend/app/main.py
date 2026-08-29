@@ -408,17 +408,17 @@ async def dub_cues_batch(req: BatchDubRequest):
 
         # Match Thai speech rate with Original Video Speaker's pacing:
         thai_chars = len(thai_text)
-        expected_sec = thai_chars / 11.5
+        expected_sec = thai_chars / 12.0
         speed_ratio = expected_sec / slot_duration
 
-        cue_rate = rate or diarized.get("rate", "+0%")
+        cue_rate = rate if (rate and rate != "+0%") else diarized.get("rate", "+0%")
         if cue_rate == "+0%" or not cue_rate:
-            if speed_ratio > 1.30:
-                cue_rate = "+8%"
-            elif speed_ratio > 1.15:
-                cue_rate = "+4%"
-            elif speed_ratio < 0.65:
-                cue_rate = "-3%"
+            if speed_ratio > 1.05:
+                rate_pct = min(35, max(5, int((speed_ratio - 1.0) * 100)))
+                cue_rate = f"+{rate_pct}%"
+            elif speed_ratio < 0.80:
+                rate_pct = max(-20, min(-5, int((speed_ratio - 1.0) * 100)))
+                cue_rate = f"{rate_pct}%"
             else:
                 cue_rate = "+0%"
 
