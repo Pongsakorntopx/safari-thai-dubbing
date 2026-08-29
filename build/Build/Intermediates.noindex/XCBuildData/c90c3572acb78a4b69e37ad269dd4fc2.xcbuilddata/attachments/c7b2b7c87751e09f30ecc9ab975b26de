@@ -1,0 +1,39 @@
+{
+  "" : {
+    "diagnostics" : "/Users/pongsakon/Desktop/Google Drive Sync/Thai realtime safari extension/build/Build/Intermediates.noindex/Thai Dubbing for Safari.build/Debug/Thai Dubbing for Safari.build/Objects-normal/arm64/Thai Dubbing for Safari-primary.dia",
+    "emit-module-dependencies" : "/Users/pongsakon/Desktop/Google Drive Sync/Thai realtime safari extension/build/Build/Intermediates.noindex/Thai Dubbing for Safari.build/Debug/Thai Dubbing for Safari.build/Objects-normal/arm64/Thai Dubbing for Safari-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/pongsakon/Desktop/Google Drive Sync/Thai realtime safari extension/build/Build/Intermediates.noindex/Thai Dubbing for Safari.build/Debug/Thai Dubbing for Safari.build/Objects-normal/arm64/Thai Dubbing for Safari-primary-emit-module.dia",
+    "pch" : "/Users/pongsakon/Desktop/Google Drive Sync/Thai realtime safari extension/build/Build/Intermediates.noindex/Thai Dubbing for Safari.build/Debug/Thai Dubbing for Safari.build/Objects-normal/arm64/Thai Dubbing for Safari-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/pongsakon/Desktop/Google Drive Sync/Thai realtime safari extension/build/Build/Intermediates.noindex/Thai Dubbing for Safari.build/Debug/Thai Dubbing for Safari.build/Objects-normal/arm64/Thai Dubbing for Safari-primary.swiftdeps"
+  },
+  "/Users/pongsakon/Desktop/Google Drive Sync/Thai realtime safari extension/build/Build/Intermediates.noindex/Thai Dubbing for Safari.build/Debug/Thai Dubbing for Safari.build/DerivedSources/GeneratedAssetSymbols.swift" : {
+    "const-values" : "/Users/pongsakon/Desktop/Google Drive Sync/Thai realtime safari extension/build/Build/Intermediates.noindex/Thai Dubbing for Safari.build/Debug/Thai Dubbing for Safari.build/Objects-normal/arm64/GeneratedAssetSymbols.swiftconstvalues",
+    "dependencies" : "/Users/pongsakon/Desktop/Google Drive Sync/Thai realtime safari extension/build/Build/Intermediates.noindex/Thai Dubbing for Safari.build/Debug/Thai Dubbing for Safari.build/Objects-normal/arm64/GeneratedAssetSymbols.d",
+    "diagnostics" : "/Users/pongsakon/Desktop/Google Drive Sync/Thai realtime safari extension/build/Build/Intermediates.noindex/Thai Dubbing for Safari.build/Debug/Thai Dubbing for Safari.build/Objects-normal/arm64/GeneratedAssetSymbols.dia",
+    "index-unit-output-path" : "/Thai Dubbing for Safari.build/Debug/Thai Dubbing for Safari.build/Objects-normal/arm64/GeneratedAssetSymbols.o",
+    "llvm-bc" : "/Users/pongsakon/Desktop/Google Drive Sync/Thai realtime safari extension/build/Build/Intermediates.noindex/Thai Dubbing for Safari.build/Debug/Thai Dubbing for Safari.build/Objects-normal/arm64/GeneratedAssetSymbols.bc",
+    "object" : "/Users/pongsakon/Desktop/Google Drive Sync/Thai realtime safari extension/build/Build/Intermediates.noindex/Thai Dubbing for Safari.build/Debug/Thai Dubbing for Safari.build/Objects-normal/arm64/GeneratedAssetSymbols.o",
+    "swift-dependencies" : "/Users/pongsakon/Desktop/Google Drive Sync/Thai realtime safari extension/build/Build/Intermediates.noindex/Thai Dubbing for Safari.build/Debug/Thai Dubbing for Safari.build/Objects-normal/arm64/GeneratedAssetSymbols.swiftdeps",
+    "swiftmodule" : "/Users/pongsakon/Desktop/Google Drive Sync/Thai realtime safari extension/build/Build/Intermediates.noindex/Thai Dubbing for Safari.build/Debug/Thai Dubbing for Safari.build/Objects-normal/arm64/GeneratedAssetSymbols~partial.swiftmodule"
+  },
+  "/Users/pongsakon/Desktop/Google Drive Sync/Thai realtime safari extension/xcode-wrapper/Thai Dubbing for Safari/Thai Dubbing for Safari/AppDelegate.swift" : {
+    "const-values" : "/Users/pongsakon/Desktop/Google Drive Sync/Thai realtime safari extension/build/Build/Intermediates.noindex/Thai Dubbing for Safari.build/Debug/Thai Dubbing for Safari.build/Objects-normal/arm64/AppDelegate.swiftconstvalues",
+    "dependencies" : "/Users/pongsakon/Desktop/Google Drive Sync/Thai realtime safari extension/build/Build/Intermediates.noindex/Thai Dubbing for Safari.build/Debug/Thai Dubbing for Safari.build/Objects-normal/arm64/AppDelegate.d",
+    "diagnostics" : "/Users/pongsakon/Desktop/Google Drive Sync/Thai realtime safari extension/build/Build/Intermediates.noindex/Thai Dubbing for Safari.build/Debug/Thai Dubbing for Safari.build/Objects-normal/arm64/AppDelegate.dia",
+    "index-unit-output-path" : "/Thai Dubbing for Safari.build/Debug/Thai Dubbing for Safari.build/Objects-normal/arm64/AppDelegate.o",
+    "llvm-bc" : "/Users/pongsakon/Desktop/Google Drive Sync/Thai realtime safari extension/build/Build/Intermediates.noindex/Thai Dubbing for Safari.build/Debug/Thai Dubbing for Safari.build/Objects-normal/arm64/AppDelegate.bc",
+    "object" : "/Users/pongsakon/Desktop/Google Drive Sync/Thai realtime safari extension/build/Build/Intermediates.noindex/Thai Dubbing for Safari.build/Debug/Thai Dubbing for Safari.build/Objects-normal/arm64/AppDelegate.o",
+    "swift-dependencies" : "/Users/pongsakon/Desktop/Google Drive Sync/Thai realtime safari extension/build/Build/Intermediates.noindex/Thai Dubbing for Safari.build/Debug/Thai Dubbing for Safari.build/Objects-normal/arm64/AppDelegate.swiftdeps",
+    "swiftmodule" : "/Users/pongsakon/Desktop/Google Drive Sync/Thai realtime safari extension/build/Build/Intermediates.noindex/Thai Dubbing for Safari.build/Debug/Thai Dubbing for Safari.build/Objects-normal/arm64/AppDelegate~partial.swiftmodule"
+  },
+  "/Users/pongsakon/Desktop/Google Drive Sync/Thai realtime safari extension/xcode-wrapper/Thai Dubbing for Safari/Thai Dubbing for Safari/ViewController.swift" : {
+    "const-values" : "/Users/pongsakon/Desktop/Google Drive Sync/Thai realtime safari extension/build/Build/Intermediates.noindex/Thai Dubbing for Safari.build/Debug/Thai Dubbing for Safari.build/Objects-normal/arm64/ViewController.swiftconstvalues",
+    "dependencies" : "/Users/pongsakon/Desktop/Google Drive Sync/Thai realtime safari extension/build/Build/Intermediates.noindex/Thai Dubbing for Safari.build/Debug/Thai Dubbing for Safari.build/Objects-normal/arm64/ViewController.d",
+    "diagnostics" : "/Users/pongsakon/Desktop/Google Drive Sync/Thai realtime safari extension/build/Build/Intermediates.noindex/Thai Dubbing for Safari.build/Debug/Thai Dubbing for Safari.build/Objects-normal/arm64/ViewController.dia",
+    "index-unit-output-path" : "/Thai Dubbing for Safari.build/Debug/Thai Dubbing for Safari.build/Objects-normal/arm64/ViewController.o",
+    "llvm-bc" : "/Users/pongsakon/Desktop/Google Drive Sync/Thai realtime safari extension/build/Build/Intermediates.noindex/Thai Dubbing for Safari.build/Debug/Thai Dubbing for Safari.build/Objects-normal/arm64/ViewController.bc",
+    "object" : "/Users/pongsakon/Desktop/Google Drive Sync/Thai realtime safari extension/build/Build/Intermediates.noindex/Thai Dubbing for Safari.build/Debug/Thai Dubbing for Safari.build/Objects-normal/arm64/ViewController.o",
+    "swift-dependencies" : "/Users/pongsakon/Desktop/Google Drive Sync/Thai realtime safari extension/build/Build/Intermediates.noindex/Thai Dubbing for Safari.build/Debug/Thai Dubbing for Safari.build/Objects-normal/arm64/ViewController.swiftdeps",
+    "swiftmodule" : "/Users/pongsakon/Desktop/Google Drive Sync/Thai realtime safari extension/build/Build/Intermediates.noindex/Thai Dubbing for Safari.build/Debug/Thai Dubbing for Safari.build/Objects-normal/arm64/ViewController~partial.swiftmodule"
+  }
+}

@@ -1,0 +1,593 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 110;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		2793CBCC3042FB1800B367CF /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2793CBCB3042FB1800B367CF /* AppDelegate.swift */; };
+		2793CBD03042FB1800B367CF /* Main.html in Resources */ = {isa = PBXBuildFile; fileRef = 2793CBCE3042FB1800B367CF /* Main.html */; };
+		2793CBD23042FB1800B367CF /* Icon.png in Resources */ = {isa = PBXBuildFile; fileRef = 2793CBD13042FB1800B367CF /* Icon.png */; };
+		2793CBD43042FB1800B367CF /* Style.css in Resources */ = {isa = PBXBuildFile; fileRef = 2793CBD33042FB1800B367CF /* Style.css */; };
+		2793CBD63042FB1800B367CF /* Script.js in Resources */ = {isa = PBXBuildFile; fileRef = 2793CBD53042FB1800B367CF /* Script.js */; };
+		2793CBD83042FB1800B367CF /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2793CBD73042FB1800B367CF /* ViewController.swift */; };
+		2793CBDB3042FB1800B367CF /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 2793CBD93042FB1800B367CF /* Main.storyboard */; };
+		2793CBDD3042FB1900B367CF /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2793CBDC3042FB1900B367CF /* Assets.xcassets */; };
+		2793CBE43042FB1900B367CF /* Thai Dubbing for Safari Extension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 2793CBE33042FB1900B367CF /* Thai Dubbing for Safari Extension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		2793CBE93042FB1900B367CF /* SafariWebExtensionHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2793CBE83042FB1900B367CF /* SafariWebExtensionHandler.swift */; };
+		2793CBFA3042FB1900B367CF /* popup in Resources */ = {isa = PBXBuildFile; fileRef = 2793CBF53042FB1900B367CF /* popup */; };
+		2793CBFB3042FB1900B367CF /* background.js in Resources */ = {isa = PBXBuildFile; fileRef = 2793CBF63042FB1900B367CF /* background.js */; };
+		2793CBFC3042FB1900B367CF /* icons in Resources */ = {isa = PBXBuildFile; fileRef = 2793CBF73042FB1900B367CF /* icons */; };
+		2793CBFD3042FB1900B367CF /* manifest.json in Resources */ = {isa = PBXBuildFile; fileRef = 2793CBF83042FB1900B367CF /* manifest.json */; };
+		2793CBFE3042FB1900B367CF /* content.js in Resources */ = {isa = PBXBuildFile; fileRef = 2793CBF93042FB1900B367CF /* content.js */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		2793CBE53042FB1900B367CF /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 2793CBC03042FB1800B367CF /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 2793CBE23042FB1900B367CF;
+			remoteInfo = "Thai Dubbing for Safari Extension";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		2793CBF03042FB1900B367CF /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			dstPath = "";
+			dstSubfolder = PlugIns;
+			files = (
+				2793CBE43042FB1900B367CF /* Thai Dubbing for Safari Extension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		2793CBC83042FB1800B367CF /* Thai Dubbing for Safari.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Thai Dubbing for Safari.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		2793CBCB3042FB1800B367CF /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		2793CBCF3042FB1800B367CF /* Base */ = {isa = PBXFileReference; lastKnownFileType = text.html; name = Base; path = Base.lproj/Main.html; sourceTree = "<group>"; };
+		2793CBD13042FB1800B367CF /* Icon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Icon.png; sourceTree = "<group>"; };
+		2793CBD33042FB1800B367CF /* Style.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; path = Style.css; sourceTree = "<group>"; };
+		2793CBD53042FB1800B367CF /* Script.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = Script.js; sourceTree = "<group>"; };
+		2793CBD73042FB1800B367CF /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
+		2793CBDA3042FB1800B367CF /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
+		2793CBDC3042FB1900B367CF /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		2793CBDE3042FB1900B367CF /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		2793CBE33042FB1900B367CF /* Thai Dubbing for Safari Extension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "Thai Dubbing for Safari Extension.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
+		2793CBE83042FB1900B367CF /* SafariWebExtensionHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafariWebExtensionHandler.swift; sourceTree = "<group>"; };
+		2793CBEA3042FB1900B367CF /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		2793CBF53042FB1900B367CF /* popup */ = {isa = PBXFileReference; lastKnownFileType = folder; name = popup; path = ../../../extension/popup; sourceTree = "<group>"; };
+		2793CBF63042FB1900B367CF /* background.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; name = background.js; path = ../../../extension/background.js; sourceTree = "<group>"; };
+		2793CBF73042FB1900B367CF /* icons */ = {isa = PBXFileReference; lastKnownFileType = folder; name = icons; path = ../../../extension/icons; sourceTree = "<group>"; };
+		2793CBF83042FB1900B367CF /* manifest.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = manifest.json; path = ../../../extension/manifest.json; sourceTree = "<group>"; };
+		2793CBF93042FB1900B367CF /* content.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; name = content.js; path = ../../../extension/content.js; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		2793CBC53042FB1800B367CF /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+			);
+		};
+		2793CBE03042FB1900B367CF /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+			);
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		2793CBBF3042FB1800B367CF = {
+			isa = PBXGroup;
+			children = (
+				2793CBCA3042FB1800B367CF /* Thai Dubbing for Safari */,
+				2793CBE73042FB1900B367CF /* Thai Dubbing for Safari Extension */,
+				2793CBC93042FB1800B367CF /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		2793CBC93042FB1800B367CF /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				2793CBC83042FB1800B367CF /* Thai Dubbing for Safari.app */,
+				2793CBE33042FB1900B367CF /* Thai Dubbing for Safari Extension.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		2793CBCA3042FB1800B367CF /* Thai Dubbing for Safari */ = {
+			isa = PBXGroup;
+			children = (
+				2793CBCB3042FB1800B367CF /* AppDelegate.swift */,
+				2793CBD73042FB1800B367CF /* ViewController.swift */,
+				2793CBD93042FB1800B367CF /* Main.storyboard */,
+				2793CBDC3042FB1900B367CF /* Assets.xcassets */,
+				2793CBDE3042FB1900B367CF /* Info.plist */,
+				2793CBCD3042FB1800B367CF /* Resources */,
+			);
+			path = "Thai Dubbing for Safari";
+			sourceTree = "<group>";
+		};
+		2793CBCD3042FB1800B367CF /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				2793CBCE3042FB1800B367CF /* Main.html */,
+				2793CBD13042FB1800B367CF /* Icon.png */,
+				2793CBD33042FB1800B367CF /* Style.css */,
+				2793CBD53042FB1800B367CF /* Script.js */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		2793CBE73042FB1900B367CF /* Thai Dubbing for Safari Extension */ = {
+			isa = PBXGroup;
+			children = (
+				2793CBF43042FB1900B367CF /* Resources */,
+				2793CBE83042FB1900B367CF /* SafariWebExtensionHandler.swift */,
+				2793CBEA3042FB1900B367CF /* Info.plist */,
+			);
+			path = "Thai Dubbing for Safari Extension";
+			sourceTree = "<group>";
+		};
+		2793CBF43042FB1900B367CF /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				2793CBF53042FB1900B367CF /* popup */,
+				2793CBF63042FB1900B367CF /* background.js */,
+				2793CBF73042FB1900B367CF /* icons */,
+				2793CBF83042FB1900B367CF /* manifest.json */,
+				2793CBF93042FB1900B367CF /* content.js */,
+			);
+			name = Resources;
+			path = "Thai Dubbing for Safari Extension";
+			sourceTree = SOURCE_ROOT;
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		2793CBC73042FB1800B367CF /* Thai Dubbing for Safari */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 2793CBF13042FB1900B367CF /* Build configuration list for PBXNativeTarget "Thai Dubbing for Safari" */;
+			buildPhases = (
+				2793CBC43042FB1800B367CF /* Sources */,
+				2793CBC53042FB1800B367CF /* Frameworks */,
+				2793CBC63042FB1800B367CF /* Resources */,
+				2793CBF03042FB1900B367CF /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				2793CBE63042FB1900B367CF /* PBXTargetDependency */,
+			);
+			name = "Thai Dubbing for Safari";
+			productName = "Thai Dubbing for Safari";
+			productReference = 2793CBC83042FB1800B367CF /* Thai Dubbing for Safari.app */;
+			productType = "com.apple.product-type.application";
+		};
+		2793CBE23042FB1900B367CF /* Thai Dubbing for Safari Extension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 2793CBED3042FB1900B367CF /* Build configuration list for PBXNativeTarget "Thai Dubbing for Safari Extension" */;
+			buildPhases = (
+				2793CBDF3042FB1900B367CF /* Sources */,
+				2793CBE03042FB1900B367CF /* Frameworks */,
+				2793CBE13042FB1900B367CF /* Resources */,
+			);
+			buildRules = (
+			);
+			name = "Thai Dubbing for Safari Extension";
+			productName = "Thai Dubbing for Safari Extension";
+			productReference = 2793CBE33042FB1900B367CF /* Thai Dubbing for Safari Extension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		2793CBC03042FB1800B367CF /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2700;
+				LastUpgradeCheck = 2700;
+				TargetAttributes = {
+					2793CBC73042FB1800B367CF = {
+						CreatedOnToolsVersion = 27.0;
+					};
+					2793CBE23042FB1900B367CF = {
+						CreatedOnToolsVersion = 27.0;
+					};
+				};
+			};
+			buildConfigurationList = 2793CBC33042FB1800B367CF /* Build configuration list for PBXProject "Thai Dubbing for Safari" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 2793CBBF3042FB1800B367CF;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 2793CBC93042FB1800B367CF /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				2793CBC73042FB1800B367CF /* Thai Dubbing for Safari */,
+				2793CBE23042FB1900B367CF /* Thai Dubbing for Safari Extension */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		2793CBC63042FB1800B367CF /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+				2793CBD23042FB1800B367CF /* Icon.png in Resources */,
+				2793CBDB3042FB1800B367CF /* Main.storyboard in Resources */,
+				2793CBD63042FB1800B367CF /* Script.js in Resources */,
+				2793CBD03042FB1800B367CF /* Main.html in Resources */,
+				2793CBDD3042FB1900B367CF /* Assets.xcassets in Resources */,
+				2793CBD43042FB1800B367CF /* Style.css in Resources */,
+			);
+		};
+		2793CBE13042FB1900B367CF /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+				2793CBFD3042FB1900B367CF /* manifest.json in Resources */,
+				2793CBFC3042FB1900B367CF /* icons in Resources */,
+				2793CBFB3042FB1900B367CF /* background.js in Resources */,
+				2793CBFA3042FB1900B367CF /* popup in Resources */,
+				2793CBFE3042FB1900B367CF /* content.js in Resources */,
+			);
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		2793CBC43042FB1800B367CF /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+				2793CBD83042FB1800B367CF /* ViewController.swift in Sources */,
+				2793CBCC3042FB1800B367CF /* AppDelegate.swift in Sources */,
+			);
+		};
+		2793CBDF3042FB1900B367CF /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+				2793CBE93042FB1900B367CF /* SafariWebExtensionHandler.swift in Sources */,
+			);
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		2793CBE63042FB1900B367CF /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 2793CBE23042FB1900B367CF /* Thai Dubbing for Safari Extension */;
+			targetProxy = 2793CBE53042FB1900B367CF /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin PBXVariantGroup section */
+		2793CBCE3042FB1800B367CF /* Main.html */ = {
+			isa = PBXVariantGroup;
+			children = (
+				2793CBCF3042FB1800B367CF /* Base */,
+			);
+			name = Main.html;
+			sourceTree = "<group>";
+		};
+		2793CBD93042FB1800B367CF /* Main.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				2793CBDA3042FB1800B367CF /* Base */,
+			);
+			name = Main.storyboard;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
+/* Begin XCBuildConfiguration section */
+		2793CBEB3042FB1900B367CF /* Debug configuration for PBXProject "Thai Dubbing for Safari" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 27.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		2793CBEC3042FB1900B367CF /* Release configuration for PBXProject "Thai Dubbing for Safari" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 27.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		2793CBEE3042FB1900B367CF /* Debug configuration for PBXNativeTarget "Thai Dubbing for Safari Extension" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Thai Dubbing for Safari Extension/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Thai Dubbing for Safari Extension";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 12.0;
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.yourCompany.Thai-Dubbing-for-Safari.Extension";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		2793CBEF3042FB1900B367CF /* Release configuration for PBXNativeTarget "Thai Dubbing for Safari Extension" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Thai Dubbing for Safari Extension/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Thai Dubbing for Safari Extension";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 12.0;
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.yourCompany.Thai-Dubbing-for-Safari.Extension";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		2793CBF23042FB1900B367CF /* Debug configuration for PBXNativeTarget "Thai Dubbing for Safari" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Thai Dubbing for Safari/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Thai Dubbing for Safari";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_NSMainStoryboardFile = Main;
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				INFOPLIST_KEY_NSViewGestureRecognizerIsExclusive = NO;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+					"-framework",
+					WebKit,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.yourCompany.Thai-Dubbing-for-Safari";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		2793CBF33042FB1900B367CF /* Release configuration for PBXNativeTarget "Thai Dubbing for Safari" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Thai Dubbing for Safari/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Thai Dubbing for Safari";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_NSMainStoryboardFile = Main;
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				INFOPLIST_KEY_NSViewGestureRecognizerIsExclusive = NO;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+					"-framework",
+					WebKit,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.yourCompany.Thai-Dubbing-for-Safari";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		2793CBC33042FB1800B367CF /* Build configuration list for PBXProject "Thai Dubbing for Safari" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2793CBEB3042FB1900B367CF /* Debug configuration for PBXProject "Thai Dubbing for Safari" */,
+				2793CBEC3042FB1900B367CF /* Release configuration for PBXProject "Thai Dubbing for Safari" */,
+			);
+			defaultConfigurationName = Release;
+		};
+		2793CBED3042FB1900B367CF /* Build configuration list for PBXNativeTarget "Thai Dubbing for Safari Extension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2793CBEE3042FB1900B367CF /* Debug configuration for PBXNativeTarget "Thai Dubbing for Safari Extension" */,
+				2793CBEF3042FB1900B367CF /* Release configuration for PBXNativeTarget "Thai Dubbing for Safari Extension" */,
+			);
+			defaultConfigurationName = Release;
+		};
+		2793CBF13042FB1900B367CF /* Build configuration list for PBXNativeTarget "Thai Dubbing for Safari" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2793CBF23042FB1900B367CF /* Debug configuration for PBXNativeTarget "Thai Dubbing for Safari" */,
+				2793CBF33042FB1900B367CF /* Release configuration for PBXNativeTarget "Thai Dubbing for Safari" */,
+			);
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 2793CBC03042FB1800B367CF /* Project object */;
+	validationLevel = 1;
+}

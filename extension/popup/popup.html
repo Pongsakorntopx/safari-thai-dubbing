@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Safari AI Thai Dubbing</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <div class="logo-area">
+        <div class="logo-icon">🎙️</div>
+        <div>
+          <h1 class="title">Thai Video Dubber</h1>
+          <p class="subtitle">AI พากย์ไทยสด • Unlock TTS</p>
+        </div>
+      </div>
+      <div id="statusBadge" class="badge active">เปิดใช้งาน</div>
+    </header>
+
+    <!-- Master Toggle -->
+    <div class="card toggle-card">
+      <div class="toggle-info">
+        <span class="label-primary">ระบบพากย์เสียงไทย</span>
+        <span class="label-secondary">แปลซับและพากย์เสียงสดอัตโนมัติ</span>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="enabledToggle" checked>
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <!-- Engine Selector (Unlock-TTS vs Edge-TTS) -->
+    <div class="card">
+      <div class="form-group">
+        <label for="engineSelect" class="form-label">
+          <span>🚀 ระบบสร้างเสียง (TTS Engine)</span>
+        </label>
+        <select id="engineSelect" class="select-input">
+          <option value="google" selected>🌟 Google Studio Audio (Unlock-TTS - ธรรมชาติที่สุด)</option>
+          <option value="edge">⚡ Microsoft Edge Neural (เร็วพิเศษ / Real-time)</option>
+        </select>
+      </div>
+
+      <!-- Voice Selector -->
+      <div class="form-group" style="margin-top: 10px;">
+        <label for="voiceSelect" class="form-label">
+          <span>🗣️ เสียงพากย์ AI</span>
+        </label>
+        <select id="voiceSelect" class="select-input">
+          <!-- Populated dynamically by JS -->
+        </select>
+      </div>
+
+      <!-- Style Selector (Visible when Google Engine is active) -->
+      <div id="styleGroup" class="form-group" style="margin-top: 10px;">
+        <label for="styleSelect" class="form-label">
+          <span>🎨 อารมณ์ / สไตล์การพูด</span>
+        </label>
+        <select id="styleSelect" class="select-input">
+          <option value="podcast" selected>🎧 พอดแคสต์ / เป็นธรรมชาติ (แนะนำ)</option>
+          <option value="story">📖 นิทาน / เล่าเรื่อง มีอารมณ์ร่วม</option>
+          <option value="commercial">⚡ โฆษณา / สปอต กระฉับกระเฉง</option>
+          <option value="formal">📻 ทางการ / ผู้ประกาศข่าว</option>
+        </select>
+      </div>
+
+      <div class="form-group" style="margin-top: 10px;">
+        <label for="rateSelect" class="form-label">
+          <span>⚡ ความเร็วเสียงพูด</span>
+        </label>
+        <select id="rateSelect" class="select-input">
+          <option value="+0%">ปกติ (Normal)</option>
+          <option value="+5%" selected>+5% (แนะนำ ทันซับพอดี)</option>
+          <option value="+10%">+10% (กระชับ รวดเร็ว)</option>
+          <option value="+15%">+15% (วิดีโอพูดเร็ว)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Volume & Ducking Sliders -->
+    <div class="card">
+      <div class="slider-group">
+        <div class="slider-header">
+          <span class="form-label">🔊 ระดับเสียงพากย์</span>
+          <span id="dubVolumeVal" class="slider-value">100%</span>
+        </div>
+        <input type="range" id="dubVolumeSlider" min="0" max="100" value="100" class="range-slider">
+      </div>
+
+      <div class="slider-group" style="margin-top: 14px;">
+        <div class="slider-header">
+          <span class="form-label">📉 ลดเสียงคลิปต้นฉบับ (Ducking)</span>
+          <span id="duckVolumeVal" class="slider-value">20%</span>
+        </div>
+        <input type="range" id="duckVolumeSlider" min="0" max="50" value="20" class="range-slider">
+        <span class="help-text">ลดเสียง YouTube เหลือ 20% ขณะพากย์</span>
+      </div>
+    </div>
+
+    <!-- Server Connection & Settings -->
+    <div class="card">
+      <div class="form-group">
+        <label for="backendUrl" class="form-label">
+          <span>🌐 Backend Server URL</span>
+        </label>
+        <div class="input-with-button">
+          <input type="text" id="backendUrl" class="text-input" placeholder="http://localhost:8000" value="http://localhost:8000">
+          <button id="testBtn" class="btn-secondary" title="ทดสอบการเชื่อมต่อ">ตรวจสอบ</button>
+        </div>
+      </div>
+      <div id="connResult" class="conn-status"></div>
+
+      <details class="advanced-section">
+        <summary class="advanced-toggle">⚙️ ตัวเลือกขั้นสูง (Gemini API Key)</summary>
+        <div class="advanced-content">
+          <div class="form-group">
+            <label for="customKey" class="form-label">Custom Gemini API Key</label>
+            <input type="password" id="customKey" class="text-input" placeholder="AQ.Ab8RN...">
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <span>Zero-Cost Stack • Gemini 2.0 & Unlock-TTS Audio</span>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

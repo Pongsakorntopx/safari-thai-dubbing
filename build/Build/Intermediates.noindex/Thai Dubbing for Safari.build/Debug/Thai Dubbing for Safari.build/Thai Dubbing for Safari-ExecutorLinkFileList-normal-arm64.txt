@@ -1,0 +1,1 @@
+/Users/pongsakon/Downloads/Xcode-beta.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib/libPreviewsJITStubExecutor.a

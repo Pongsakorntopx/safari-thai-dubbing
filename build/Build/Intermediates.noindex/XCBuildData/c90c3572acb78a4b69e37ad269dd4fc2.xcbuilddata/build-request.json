@@ -1,0 +1,65 @@
+{
+  "buildCommand" : {
+    "command" : "build",
+    "skipDependencies" : false,
+    "style" : "buildOnly"
+  },
+  "configuredTargets" : [
+    {
+      "guid" : "506299e6848aa485a765de8af40b58167a86e763667b91556d15bf4c18f988e8"
+    }
+  ],
+  "containerPath" : "/Users/pongsakon/Desktop/Google Drive Sync/Thai realtime safari extension/xcode-wrapper/Thai Dubbing for Safari/Thai Dubbing for Safari.xcodeproj",
+  "continueBuildingAfterErrors" : false,
+  "dependencyScope" : "workspace",
+  "enableIndexBuildArena" : false,
+  "hideShellScriptEnvironment" : false,
+  "parameters" : {
+    "action" : "build",
+    "activeArchitecture" : "arm64",
+    "activeRunDestination" : {
+      "disableOnlyActiveArch" : false,
+      "hostTargetedPlatform" : null,
+      "platform" : "macosx",
+      "sdk" : "macosx27.0",
+      "sdkVariant" : "macos",
+      "supportedArchitectures" : [
+        "arm64e",
+        "arm64",
+        "x86_64"
+      ],
+      "targetArchitecture" : "arm64"
+    },
+    "arenaInfo" : {
+      "buildIntermediatesPath" : "/Users/pongsakon/Desktop/Google Drive Sync/Thai realtime safari extension/build/Build/Intermediates.noindex",
+      "buildProductsPath" : "/Users/pongsakon/Desktop/Google Drive Sync/Thai realtime safari extension/build/Build/Products",
+      "derivedDataPath" : "/Users/pongsakon/Desktop/Google Drive Sync/Thai realtime safari extension/build",
+      "indexDataStoreFolderPath" : "/Users/pongsakon/Desktop/Google Drive Sync/Thai realtime safari extension/build/Index.noindex/DataStore",
+      "indexEnableDataStore" : true,
+      "indexPCHPath" : "/Users/pongsakon/Desktop/Google Drive Sync/Thai realtime safari extension/build/Index.noindex/PrecompiledHeaders",
+      "pchPath" : "/Users/pongsakon/Desktop/Google Drive Sync/Thai realtime safari extension/build/Build/Intermediates.noindex/PrecompiledHeaders"
+    },
+    "configurationName" : "Debug",
+    "overrides" : {
+      "commandLine" : {
+        "table" : {
+          "CODE_SIGNING_ALLOWED" : "NO"
+        }
+      },
+      "synthesized" : {
+        "table" : {
+          "ACTION" : "build",
+          "ENABLE_PREVIEWS" : "NO",
+          "ENABLE_XOJIT_PREVIEWS" : "YES",
+          "ONLY_ACTIVE_ARCH" : "YES"
+        }
+      }
+    }
+  },
+  "schemeCommand" : "launch",
+  "showNonLoggedProgress" : true,
+  "useDryRun" : false,
+  "useImplicitDependencies" : true,
+  "useLegacyBuildLocations" : false,
+  "useParallelTargets" : true
+}

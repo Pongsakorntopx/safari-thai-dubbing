@@ -1,0 +1,4 @@
+Target dependency graph (2 targets)
+Target 'Thai Dubbing for Safari' in project 'Thai Dubbing for Safari'
+➜ Explicit dependency on target 'Thai Dubbing for Safari Extension' in project 'Thai Dubbing for Safari'
+Target 'Thai Dubbing for Safari Extension' in project 'Thai Dubbing for Safari' (no dependencies)

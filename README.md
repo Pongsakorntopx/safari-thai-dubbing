@@ -1,0 +1,129 @@
+# 🎙️ Safari AI Thai Video Dubbing (Zero-Cost Stack)
+
+ระบบแปลและพากย์เสียงวิดีโอภาษาอังกฤษเป็นภาษาไทยแบบ Real-time บน YouTube สำหรับ Safari (และเบราว์เซอร์ตระกูล Chromium เช่น Chrome / Brave / Edge) ด้วยสแตกเทคโนโลยีฟรี 100% (**Zero-Cost Stack**)
+
+---
+
+## 🌟 จุดเด่นของระบบ (Features)
+
+1. **Context-Aware Thai Localization**: ใช้ **Google Gemini 2.0 Flash** แปลงบทบรรยาย (Captions) เป็นบทพากย์ภาษาไทยที่เป็นธรรมชาติ ลื่นไหล เข้ากับจังหวะพูด
+2. **High-Quality Neural Voices**: พากย์เสียงด้วย **Microsoft Edge Neural TTS**
+   - 👩 **เปรมวดี (`th-TH-PremwadeeNeural`)**: เสียงผู้หญิง นุ่มนวล ชัดเจน
+   - 👨 **นิวัฒน์ (`th-TH-NiwatNeural`)**: เสียงผู้ชาย สุภาพ ฟังสบาย
+3. **Smart Web Audio Ducking**: ลดเสียงคลิปต้นฉบับลงอัตโนมัติ (เช่น เหลือ 20%) ทันทีที่เสียงพากย์เริ่มพูด และคืนระดับเสียงเดิมเมื่อพูดจบ
+4. **Playback Queue & Seek Synchronization**: จัดการคิวเสียงพากย์ไม่ให้ทับซ้อน และหยุด/ล้างคิวทันทีเมื่อกด Pause หรือเลื่อนไทม์ไลน์ (Seek)
+5. **Dual-Tier Caching (In-Memory + SQLite)**: แคชข้อความแปลและไฟล์เสียง MP3 เพื่อลด Latency เหลือต่ำกว่า 50ms สำหรับประโยคที่เคยแปลแล้ว
+6. **Zero-Cost Deployment**: มี Dockerfile พร้อม Deploy ขึ้น **Hugging Face Spaces (Free Docker)** หรือ **Render**
+
+---
+
+## 📁 โครงสร้างโปรเจกต์ (Project Structure)
+
+```
+thai-dubbing-safari/
+├── backend/                  # Python FastAPI Backend
+│   ├── app/
+│   │   ├── __init__.py
+│   │   ├── config.py         # จัดการค่า Settings & Environment
+│   │   ├── main.py           # REST API endpoints & CORS middleware
+│   │   ├── translator.py     # Gemini 2.0 Flash prompt & localization logic
+│   │   ├── tts_engine.py     # Microsoft Edge-TTS streaming handler
+│   │   └── cache.py          # LRU In-Memory + SQLite Cache
+│   ├── requirements.txt      # รายการ Python dependencies
+│   ├── .env.example          # ตัวอย่างไฟล์ตั้งค่า API Key
+│   └── Dockerfile            # สำหรับ Deploy ขึ้น Hugging Face / Render
+├── extension/                # Web Extension Source (Manifest V3)
+│   ├── manifest.json         # กำหนดสิทธิ์และการทำงานของ Extension
+│   ├── background.js         # Service Worker
+│   ├── content.js            # YouTube DOM / Subtitle hook, Audio Ducking & Queue Sync
+│   ├── popup/
+│   │   ├── popup.html        # หน้าต่างตั้งค่า UI (Dark Mode)
+│   │   ├── popup.js          # จัดการ State และเชื่อมต่อ Storage
+│   │   └── popup.css         # ดีไซน์สไตล์โมเดิร์น
+│   └── icons/                # ไอคอนขนาด 16x16, 48x48, 128x128 px
+├── convert_to_safari.sh      # สคริปต์แปลง Web Extension เข้า Xcode สำหรับ Safari
+└── README.md
+```
+
+---
+
+## 🚀 เริ่มต้นใช้งาน (Quick Start)
+
+### 1. ติดตั้งและรัน Backend (FastAPI)
+
+```bash
+# เข้าโฟลเดอร์โปรเจกต์
+cd backend
+
+# สร้างไฟล์ .env จาก .env.example
+cp .env.example .env
+
+# ใส่ Gemini API Key ใน .env (รับฟรีได้จาก https://aistudio.google.com/)
+# GEMINI_API_KEY=AIzaSy...
+
+# รัน Server ผ่าน virtual environment
+./venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+ตรวจสอบการทำงานของ Server ได้ที่: `http://localhost:8000/health`
+
+---
+
+### 2. ติดตั้ง Web Extension บน Safari (macOS)
+
+1. ตรวจสอบว่าติดตั้ง **Xcode** จาก Mac App Store แล้ว
+2. รันคำสั่งแปลง Extension:
+   ```bash
+   ./convert_to_safari.sh
+   ```
+3. เปิดโปรเจกต์ที่สร้างขึ้นในโฟลเดอร์ `xcode-wrapper/` ด้วย Xcode:
+   ```bash
+   open "xcode-wrapper/Thai Dubbing for Safari/Thai Dubbing for Safari.xcodeproj"
+   ```
+4. กด **Run (Cmd + R)** เพื่อ Build และติดตั้ง Host App
+5. เปิด **Safari** -> เข้าเมนู **Settings (Cmd + ,)** -> แท็บ **Advanced** -> ติ๊กถูก **Show features for web developers**
+6. ไปที่เมนูบาร์ด้านบน **Develop** -> ติ๊กถูก **Allow Unsigned Extensions**
+7. ไปที่ **Safari Settings** -> แท็บ **Extensions** -> ติ๊กเปิด **Thai Dubbing for Safari**
+
+---
+
+### 3. ติดตั้งบน Chrome / Brave / Edge (Developer Mode)
+
+1. เปิดเบราว์เซอร์ไปที่ `chrome://extensions` (หรือ `edge://extensions`, `brave://extensions`)
+2. เปิดสวิตช์ **Developer mode** ที่มุมขวาบน
+3. คลิกปุ่ม **Load unpacked**
+4. เลือกโฟลเดอร์ `extension/` ในโปรเจกต์นี้
+
+---
+
+## 🎛️ การใช้งานบน YouTube
+
+1. เปิดวิดีโอภาษาอังกฤษบน **YouTube**
+2. กดปุ่มเปิด **Subtitles/Closed Captions (CC)** บนวิดีโอ
+3. คลิกไอคอนของ **Thai Video Dubber** บนแถบเครื่องมือ:
+   - สวิตช์ **ระบบพากย์เสียงไทย** (เปิด/ปิด)
+   - เลือกเสียง **เปรมวดี (หญิง)** หรือ **นิวัฒน์ (ชาย)**
+   - ปรับ **ระดับเสียงพากย์** และ **ระดับ Ducking** (ลดเสียงคลิปต้นฉบับ)
+   - ปรับ **ความเร็วเสียงพูด** (+5% แนะนำ)
+4. เมื่อซับไตเติลภาษาอังกฤษแสดงขึ้นมา ระบบจะแปลและพากย์เสียงภาษาไทยให้อัตโนมัติทันที!
+
+---
+
+## ☁️ การ Deploy Backend ขึ้น Cloud ฟรี (Hugging Face Spaces)
+
+1. ไปที่ [Hugging Face Spaces](https://huggingface.co/spaces) -> สร้าง **New Space**
+2. ตั้งชื่อ Space และเลือก SDK เป็น **Docker (Blank)**
+3. อัปโหลดไฟล์จากโฟลเดอร์ `backend/` ขึ้นไปที่ Space Repo
+4. ไปที่แท็บ **Settings** ของ Space -> ในส่วน **Variables and secrets**:
+   - เพิ่ม Secret: `GEMINI_API_KEY` = ใส่ Gemini Key ของคุณ
+5. เมื่อ Build เสร็จ จะได้ Public URL (เช่น `https://username-space-name.hf.space`)
+6. นำ URL นี้ไปใส่ในช่อง **Backend Server URL** ใน Popup Extension เพื่อใช้งานได้ทุกที่โดยไม่ต้องเปิดเครื่องคอมฯ รัน Server
+
+---
+
+## 🧪 การทดสอบระบบ (Running Unit Tests)
+
+```bash
+cd backend
+./venv/bin/pytest tests/
+```
