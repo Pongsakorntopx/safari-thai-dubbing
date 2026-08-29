@@ -375,14 +375,12 @@ async def dub_cues_batch(req: BatchDubRequest):
 
         cue_rate = rate or diarized.get("rate", "+0%")
         if cue_rate == "+0%" or not cue_rate:
-            if speed_ratio > 1.25:
-                cue_rate = "+20%"
-            elif speed_ratio > 1.12:
-                cue_rate = "+12%"
-            elif speed_ratio > 1.04:
-                cue_rate = "+6%"
-            elif speed_ratio < 0.70:
-                cue_rate = "-5%"
+            if speed_ratio > 1.30:
+                cue_rate = "+8%"
+            elif speed_ratio > 1.15:
+                cue_rate = "+4%"
+            elif speed_ratio < 0.65:
+                cue_rate = "-3%"
             else:
                 cue_rate = "+0%"
 

@@ -1048,16 +1048,9 @@
     source.buffer = cue.audioBuffer;
     source.connect(cueGain);
 
-    // Adaptive Sentence Duration Fitting
-    const audioDur = cue.audioBuffer.duration;
-    const slotDur = Math.max(0.8, cue.end - cue.start);
-    let adaptiveRate = videoSpeed;
-    if (audioDur > slotDur * 1.12) {
-      adaptiveRate = Math.min(1.22, (audioDur / slotDur) * videoSpeed);
-    }
-
+    // Natural Human Pitch & Cadence Preservation: Match video playback speed without distorting voice pitch
     try {
-      source.playbackRate.setValueAtTime(adaptiveRate, ctx.currentTime);
+      source.playbackRate.setValueAtTime(videoSpeed, ctx.currentTime);
     } catch (rateErr) {}
 
     state.currentSource = source;
