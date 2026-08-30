@@ -98,10 +98,12 @@ def clean_thai_text_for_speech(text: str) -> str:
     return t.strip()
 
 
-def fit_audio_to_slot_duration(audio_bytes: bytes, slot_duration: float, max_speedup: float = 1.40) -> bytes:
+def fit_audio_to_slot_duration(audio_bytes: bytes, slot_duration: float, max_speedup: float = 1.38, min_speedup: float = 0.80) -> bytes:
     """
     Ensure Thai speech duration matches the original video speaker's exact time slot.
-    Uses Librosa's pitch-preserved Phase Vocoder to compress speech duration without chipmunk pitch shifts.
+    - Accelerates (เร่งเสียง) if speech is longer than slot.
+    - Elongates/Stretches (ยืดเสียง) if speech is noticeably shorter than slot.
+    - Uses Librosa's pitch-preserved Phase Vocoder: Zero pitch distortion (น้ำเสียงคงเดิม 100%).
     """
     if not audio_bytes or slot_duration <= 0.4:
         return audio_bytes
@@ -113,16 +115,24 @@ def fit_audio_to_slot_duration(audio_bytes: bytes, slot_duration: float, max_spe
         # Target duration: leave 0.05s headroom before next speaker starts
         target_duration = max(0.4, slot_duration - 0.05)
 
+        speed_factor = 1.0
+
         if actual_duration > target_duration:
+            # Accelerate (เร่งเสียง)
             speed_factor = min(max_speedup, actual_duration / target_duration)
-            if speed_factor > 1.03:
-                import librosa
-                stretched_data = librosa.effects.time_stretch(data, rate=speed_factor)
-                out_buf = io.BytesIO()
-                sf.write(out_buf, stretched_data, sr, format="WAV", subtype="PCM_16")
-                return out_buf.getvalue()
+        elif actual_duration < target_duration * 0.72 and slot_duration >= 2.0:
+            # Elongate / Stretch (ยืดเสียง)
+            target_stretch = target_duration * 0.88
+            speed_factor = max(min_speedup, actual_duration / target_stretch)
+
+        if abs(speed_factor - 1.0) > 0.03:
+            import librosa
+            stretched_data = librosa.effects.time_stretch(data, rate=speed_factor)
+            out_buf = io.BytesIO()
+            sf.write(out_buf, stretched_data, sr, format="WAV", subtype="PCM_16")
+            return out_buf.getvalue()
     except Exception as e:
-        logger.warning("Slot duration fitting skipped: %s", e)
+        logger.warning("Slot duration bidirectional fitting skipped: %s", e)
 
     return audio_bytes
 
