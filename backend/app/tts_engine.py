@@ -24,58 +24,52 @@ logger = logging.getLogger(__name__)
 VOICE_REGISTRY: Dict[str, Dict[str, str]] = {
     "gemini-thai-female": {
         "id": "gemini-thai-female",
-        "name": "✨ Google Gemini 3.5: หญิง (Aoede • นุ่มนวล ไพเราะ สมจริง 100%)",
+        "name": "🎙️ เสียงพากย์ไทย: หญิง (Premwadee • นุ่มนวล ไพเราะ เป็นธรรมชาติ 100%)",
         "gender": "female",
-        "engine": "gemini_tts",
-        "gemini_voice": "Aoede",
+        "engine": "studio_neural",
         "edge_voice": "th-TH-PremwadeeNeural",
-        "desc": "เสียงพากย์ Google Gemini 3.5 AI Studio เสียงผู้หญิง นุ่มนวล ไพเราะ เป็นธรรมชาติสูงสุด",
+        "desc": "เสียงพากย์ภาษาไทย เสียงผู้หญิง นุ่มนวล ไพเราะ เป็นธรรมชาติสูงสุด 100% คงที่ตลอดทั้งเรื่อง",
     },
     "gemini-thai-male": {
         "id": "gemini-thai-male",
-        "name": "✨ Google Gemini 3.5: ชาย (Puck • ทุ้มนุ่ม มืออาชีพ สมจริง 100%)",
+        "name": "🎙️ เสียงพากย์ไทย: ชาย (Niwat • ทุ้มนุ่ม มืออาชีพ ชัดถ้อยชัดคำ 100%)",
         "gender": "male",
-        "engine": "gemini_tts",
-        "gemini_voice": "Puck",
+        "engine": "studio_neural",
         "edge_voice": "th-TH-NiwatNeural",
-        "desc": "เสียงพากย์ Google Gemini 3.5 AI Studio เสียงผู้ชาย อบอุ่น ทุ้มนุ่ม ชัดเจน สไตล์สารคดี/ยูทูบเบอร์",
+        "desc": "เสียงพากย์ภาษาไทย เสียงผู้ชาย อบอุ่น ทุ้มนุ่ม ชัดเจน สไตล์สารคดี/ยูทูบเบอร์ คงที่ตลอดทั้งเรื่อง",
     },
     # Backwards compatibility mappings for older extension builds
     "studio-thai-female": {
         "id": "gemini-thai-female",
-        "name": "✨ Google Gemini 3.5: หญิง (Aoede • สมจริง 100%)",
+        "name": "🎙️ เสียงพากย์ไทย: หญิง (Premwadee • สมจริง 100%)",
         "gender": "female",
-        "engine": "gemini_tts",
-        "gemini_voice": "Aoede",
+        "engine": "studio_neural",
         "edge_voice": "th-TH-PremwadeeNeural",
-        "desc": "เสียงพากย์ Google Gemini 3.5",
+        "desc": "เสียงพากย์ภาษาไทย",
     },
     "studio-thai-male": {
         "id": "gemini-thai-male",
-        "name": "✨ Google Gemini 3.5: ชาย (Puck • ทุ้มนุ่ม มืออาชีพ 100%)",
+        "name": "🎙️ เสียงพากย์ไทย: ชาย (Niwat • ทุ้มนุ่ม มืออาชีพ 100%)",
         "gender": "male",
-        "engine": "gemini_tts",
-        "gemini_voice": "Puck",
+        "engine": "studio_neural",
         "edge_voice": "th-TH-NiwatNeural",
-        "desc": "เสียงพากย์ Google Gemini 3.5",
+        "desc": "เสียงพากย์ภาษาไทย",
     },
     "vits-thai-female": {
         "id": "gemini-thai-female",
-        "name": "✨ Google Gemini 3.5: หญิง (Aoede • สมจริง 100%)",
+        "name": "🎙️ เสียงพากย์ไทย: หญิง (Premwadee • สมจริง 100%)",
         "gender": "female",
-        "engine": "gemini_tts",
-        "gemini_voice": "Aoede",
+        "engine": "studio_neural",
         "edge_voice": "th-TH-PremwadeeNeural",
-        "desc": "เสียงพากย์ Google Gemini 3.5",
+        "desc": "เสียงพากย์ภาษาไทย",
     },
     "vits-thai-male": {
         "id": "gemini-thai-male",
-        "name": "✨ Google Gemini 3.5: ชาย (Puck • ทุ้มนุ่ม มืออาชีพ 100%)",
+        "name": "🎙️ เสียงพากย์ไทย: ชาย (Niwat • ทุ้มนุ่ม มืออาชีพ 100%)",
         "gender": "male",
-        "engine": "gemini_tts",
-        "gemini_voice": "Puck",
+        "engine": "studio_neural",
         "edge_voice": "th-TH-NiwatNeural",
-        "desc": "เสียงพากย์ Google Gemini 3.5",
+        "desc": "เสียงพากย์ภาษาไทย",
     },
 }
 
@@ -283,19 +277,13 @@ class GeminiThaiNeuralEngine:
             v_key = "gemini-thai-male"
 
         meta = VOICE_REGISTRY.get(v_key, VOICE_REGISTRY["gemini-thai-female"])
-        gemini_voice = meta.get("gemini_voice", "Aoede" if gender == "female" else "Puck")
         edge_voice = meta.get("edge_voice", "th-TH-PremwadeeNeural" if gender == "female" else "th-TH-NiwatNeural")
 
-        # 1. Primary: Google Gemini 3.5 AI Studio Native Audio Synthesis
-        audio_bytes = await self._synthesize_gemini(cleaned_text, voice_name=gemini_voice, custom_key=custom_gemini_key)
-
-        # 2. Resilient Fallback: Google Studio Neural (Zero Interruption)
-        if not audio_bytes:
-            logger.info("Using Studio Neural fallback for: %s", cleaned_text[:20])
-            audio_bytes = await self._synthesize_studio_neural(cleaned_text, edge_voice, rate=rate)
+        # Synthesize with 100% locked, single consistent voice actor across entire video
+        audio_bytes = await self._synthesize_studio_neural(cleaned_text, edge_voice, rate=rate)
 
         if audio_bytes:
-            logger.info("🔊 Gemini Audio Engine (%s) synthesized %d bytes for: %s", v_key, len(audio_bytes), cleaned_text[:24])
+            logger.info("🔊 Voice Engine (%s - %s) synthesized %d bytes for: %s", v_key, edge_voice, len(audio_bytes), cleaned_text[:24])
 
         return audio_bytes
 
