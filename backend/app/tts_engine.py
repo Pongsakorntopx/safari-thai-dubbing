@@ -104,7 +104,13 @@ def clean_thai_text_for_speech(text: str) -> str:
     for eng, th in acronym_map.items():
         t = re.sub(eng, th, t, flags=re.IGNORECASE)
 
-    # 2. Apply AI Self-Learning Phonetic Memory
+    # 2. Strip polite sentence-ending particles for clean semi-formal register
+    particle_pattern = r"(?:[\s\,\.\!\?]*)(?:ครับผม|ขอรับ|นะจ๊ะ|จ้า|จ๊ะ|นะครับ|นะคะ|ครับ|ค่ะ|คะ|ฮะ)(?:[\s\,\.\!\?]*)$"
+    for _ in range(3):
+        t = re.sub(particle_pattern, "", t, flags=re.IGNORECASE).strip()
+    t = re.sub(r"\s+(?:นะครับ|นะคะ|ครับ|ค่ะ|คะ|ฮะ)\s+", " ", t)
+
+    # 3. Apply AI Self-Learning Phonetic Memory
     try:
         from app.learning_engine import learning_engine
         t = learning_engine.apply_learned_phonetics(t)
