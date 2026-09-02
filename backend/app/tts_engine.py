@@ -1,59 +1,81 @@
 """
-Master Thai Neural TTS Engine (สตูดิโอ นิวรัล & ขนมตาล v1.1 ภาษาไทยแท้)
+Master Google Gemini 3.5 Realtime Thai Neural TTS Engine (Google AI Studio)
 Voices:
-  1. 🎙️ สตูดิโอ นิวรัล: หญิง (studio-thai-female / Premwadee) - เสียงผู้หญิง พากย์หนัง นุ่มนวล สมจริง 100%
-  2. 🎙️ สตูดิโอ นิวรัล: ชาย (studio-thai-male / Niwat) - เสียงผู้ชาย ทุ้มนุ่ม ชัดถ้อยชัดคำ ระดับมืออาชีพ 100%
-  3. 🧁 ขนมตาล v1.1: หญิง (khanomtan-v1.1-female / Linda) - โมเดล Open-Source ไทยแท้
-  4. 🧁 ขนมตาล v1.1: ชาย (khanomtan-v1.1-male / Thorsten) - โมเดล Open-Source ไทยแท้
+  1. ✨ Google Gemini 3.5: หญิง (gemini-thai-female / Aoede) - เสียงผู้หญิง พากย์หนัง นุ่มนวล สมจริง 100%
+  2. ✨ Google Gemini 3.5: ชาย (gemini-thai-male / Puck) - เสียงผู้ชาย ทุ้มนุ่ม ชัดถ้อยชัดคำ ระดับมืออาชีพ 100%
 """
 
 import asyncio
 import io
+import json
 import logging
 import os
 import re
-import tempfile
-import threading
+import aiohttp
+import edge_tts
+import numpy as np
+import soundfile as sf
 from typing import Dict, Optional
 
-import edge_tts
-import soundfile as sf
+from app.config import settings
 
 logger = logging.getLogger(__name__)
 
 VOICE_REGISTRY: Dict[str, Dict[str, str]] = {
-    "studio-thai-female": {
-        "id": "studio-thai-female",
-        "name": "🎙️ สตูดิโอ นิวรัล: หญิง (Premwadee • สมจริง 100%)",
+    "gemini-thai-female": {
+        "id": "gemini-thai-female",
+        "name": "✨ Google Gemini 3.5: หญิง (Aoede • นุ่มนวล ไพเราะ สมจริง 100%)",
         "gender": "female",
-        "engine": "studio_neural",
+        "engine": "gemini_tts",
+        "gemini_voice": "Aoede",
         "edge_voice": "th-TH-PremwadeeNeural",
-        "desc": "เสียงพากย์สตูดิโอนิวรัล เสียงผู้หญิง นุ่มนวล ไพเราะ เป็นธรรมชาติสูงสุด",
+        "desc": "เสียงพากย์ Google Gemini 3.5 AI Studio เสียงผู้หญิง นุ่มนวล ไพเราะ เป็นธรรมชาติสูงสุด",
     },
-    "studio-thai-male": {
-        "id": "studio-thai-male",
-        "name": "🎙️ สตูดิโอ นิวรัล: ชาย (Niwat • ทุ้มนุ่ม มืออาชีพ 100%)",
+    "gemini-thai-male": {
+        "id": "gemini-thai-male",
+        "name": "✨ Google Gemini 3.5: ชาย (Puck • ทุ้มนุ่ม มืออาชีพ สมจริง 100%)",
         "gender": "male",
-        "engine": "studio_neural",
+        "engine": "gemini_tts",
+        "gemini_voice": "Puck",
         "edge_voice": "th-TH-NiwatNeural",
-        "desc": "เสียงพากย์สตูดิโอนิวรัล เสียงผู้ชาย อบอุ่น ทุ้มนุ่ม ชัดเจน สไตล์สารคดี/ยูทูบเบอร์",
+        "desc": "เสียงพากย์ Google Gemini 3.5 AI Studio เสียงผู้ชาย อบอุ่น ทุ้มนุ่ม ชัดเจน สไตล์สารคดี/ยูทูบเบอร์",
     },
     # Backwards compatibility mappings for older extension builds
-    "vits-thai-female": {
-        "id": "vits-thai-female",
-        "name": "🎙️ สตูดิโอ นิวรัล: หญิง (Premwadee • สมจริง 100%)",
+    "studio-thai-female": {
+        "id": "gemini-thai-female",
+        "name": "✨ Google Gemini 3.5: หญิง (Aoede • สมจริง 100%)",
         "gender": "female",
-        "engine": "studio_neural",
+        "engine": "gemini_tts",
+        "gemini_voice": "Aoede",
         "edge_voice": "th-TH-PremwadeeNeural",
-        "desc": "เสียงพากย์สตูดิโอนิวรัล เสียงผู้หญิง นุ่มนวล ไพเราะ เป็นธรรมชาติสูงสุด",
+        "desc": "เสียงพากย์ Google Gemini 3.5",
+    },
+    "studio-thai-male": {
+        "id": "gemini-thai-male",
+        "name": "✨ Google Gemini 3.5: ชาย (Puck • ทุ้มนุ่ม มืออาชีพ 100%)",
+        "gender": "male",
+        "engine": "gemini_tts",
+        "gemini_voice": "Puck",
+        "edge_voice": "th-TH-NiwatNeural",
+        "desc": "เสียงพากย์ Google Gemini 3.5",
+    },
+    "vits-thai-female": {
+        "id": "gemini-thai-female",
+        "name": "✨ Google Gemini 3.5: หญิง (Aoede • สมจริง 100%)",
+        "gender": "female",
+        "engine": "gemini_tts",
+        "gemini_voice": "Aoede",
+        "edge_voice": "th-TH-PremwadeeNeural",
+        "desc": "เสียงพากย์ Google Gemini 3.5",
     },
     "vits-thai-male": {
-        "id": "vits-thai-male",
-        "name": "🎙️ สตูดิโอ นิวรัล: ชาย (Niwat • ทุ้มนุ่ม มืออาชีพ 100%)",
+        "id": "gemini-thai-male",
+        "name": "✨ Google Gemini 3.5: ชาย (Puck • ทุ้มนุ่ม มืออาชีพ 100%)",
         "gender": "male",
-        "engine": "studio_neural",
+        "engine": "gemini_tts",
+        "gemini_voice": "Puck",
         "edge_voice": "th-TH-NiwatNeural",
-        "desc": "เสียงพากย์สตูดิโอนิวรัล เสียงผู้ชาย อบอุ่น ทุ้มนุ่ม ชัดเจน สไตล์สารคดี/ยูทูบเบอร์",
+        "desc": "เสียงพากย์ Google Gemini 3.5",
     },
 }
 
@@ -83,6 +105,7 @@ def clean_thai_text_for_speech(text: str) -> str:
         r"\bApp\b": "แอป",
         r"\bApps\b": "แอป",
         r"\bWeb\b": "เว็บ",
+        r"\bGemini\b": "เจมินาย",
     }
     for eng, th in acronym_map.items():
         t = re.sub(eng, th, t, flags=re.IGNORECASE)
@@ -137,23 +160,64 @@ def fit_audio_to_slot_duration(audio_bytes: bytes, slot_duration: float, max_spe
     return audio_bytes
 
 
-class ThaiNeuralMasterEngine:
-    """Master Local Thai Neural TTS Engine (Studio Neural & KhanomTan v1.1)."""
+class GeminiThaiNeuralEngine:
+    """Master Google Gemini 3.5 AI Studio TTS Engine with Studio Neural Fallback."""
 
-    def __init__(self):
-        self._khanomtan_v11 = None
-        self._lock = threading.Lock()
+    GEMINI_TTS_MODELS = [
+        "gemini-3.1-flash-tts-preview",
+        "gemini-2.5-flash-preview-tts",
+        "gemini-2.5-pro-preview-tts",
+    ]
 
-    def _get_khanomtan(self):
-        """Lazy load KhanomTan TTS v1.1 model."""
-        if self._khanomtan_v11 is None:
-            with self._lock:
-                if self._khanomtan_v11 is None:
-                    logger.info("🧁 Loading KhanomTan TTS v1.1...")
-                    from pythaitts import TTS
-                    self._khanomtan_v11 = TTS(pretrained="khanomtan", version="1.1")
-                    logger.info("✅ KhanomTan TTS v1.1 loaded successfully!")
-        return self._khanomtan_v11
+    async def _synthesize_gemini(self, text: str, voice_name: str = "Aoede", custom_key: Optional[str] = None) -> bytes:
+        """Synthesize Thai speech directly using Google AI Studio Gemini TTS Models."""
+        active_key = (custom_key or settings.gemini_api_key).strip()
+        if not active_key or len(active_key) < 10:
+            return b""
+
+        payload = {
+            "contents": [{
+                "parts": [{"text": text}]
+            }],
+            "generationConfig": {
+                "responseModalities": ["AUDIO"],
+                "speechConfig": {
+                    "voiceConfig": {
+                        "prebuiltVoiceConfig": {
+                            "voiceName": voice_name
+                        }
+                    }
+                }
+            }
+        }
+
+        import base64
+        for model in self.GEMINI_TTS_MODELS:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={active_key}"
+            try:
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(url, json=payload, timeout=aiohttp.ClientTimeout(total=7.0)) as resp:
+                        if resp.status == 200:
+                            data = await resp.json()
+                            candidates = data.get("candidates", [])
+                            if candidates:
+                                parts = candidates[0].get("content", {}).get("parts", [])
+                                for p in parts:
+                                    if "inlineData" in p:
+                                        raw_pcm = base64.b64decode(p["inlineData"]["data"])
+                                        audio_array = np.frombuffer(raw_pcm, dtype=np.int16)
+                                        buf = io.BytesIO()
+                                        sf.write(buf, audio_array, 24000, format="WAV", subtype="PCM_16")
+                                        logger.info("✨ Synthesized via Google Gemini 3.5 (%s - %s): %d bytes WAV", model, voice_name, len(buf.getvalue()))
+                                        return buf.getvalue()
+                        elif resp.status == 429:
+                            logger.warning("Gemini TTS quota limited (429) for %s, switching to studio neural fallback...", model)
+                            break
+            except Exception as e:
+                logger.debug("Gemini TTS attempt error on %s: %s", model, e)
+                continue
+
+        return b""
 
     async def _synthesize_studio_neural(self, text: str, voice_name: str, rate: str = "+0%") -> bytes:
         """Synthesize ultra-high fidelity Studio Thai Neural speech converted to pristine WAV."""
@@ -190,94 +254,56 @@ class ThaiNeuralMasterEngine:
             logger.error("Studio Neural TTS error (%s): %s", voice_name, e)
             return b""
 
-    async def _synthesize_khanomtan(self, text: str, speaker_idx: str) -> bytes:
-        """Synthesize using local offline KhanomTan v1.1 with 1.30x natural cadence calibration."""
-        loop = asyncio.get_event_loop()
-
-        def _run():
-            try:
-                import scipy.signal
-                model = self._get_khanomtan()
-                wav_path = model.tts(text=text, speaker_idx=speaker_idx, preprocess=True)
-                if wav_path and os.path.exists(wav_path):
-                    data, sr = sf.read(wav_path)
-                    try:
-                        os.remove(wav_path)
-                    except Exception:
-                        pass
-
-                    # Calibrate KhanomTan speech speed from 0.75x to 1.30x natural conversational tempo
-                    num_samples = int(len(data) / 1.30)
-                    speed_data = scipy.signal.resample(data, num_samples)
-
-                    out_buf = io.BytesIO()
-                    sf.write(out_buf, speed_data, sr, format="WAV", subtype="PCM_16")
-                    return out_buf.getvalue()
-            except Exception as e:
-                logger.error("KhanomTan TTS error: %s", e)
-                return b""
-
-        return await loop.run_in_executor(None, _run)
-
     async def synthesize(
         self,
         text: str,
-        voice: str = "studio-thai-female",
-        engine: str = "studio_neural",
+        voice: str = "gemini-thai-female",
+        engine: str = "gemini_tts",
         style: str = "auto",
         gender: str = "female",
         rate: str = "+0%",
         pitch: str = "+0Hz",
+        custom_gemini_key: Optional[str] = None,
         **kwargs,
     ) -> bytes:
         """
-        Synthesize crystal-clear, natural Thai speech:
-        - studio-thai-female (Premwadee Neural)
-        - studio-thai-male (Niwat Neural)
-        - khanomtan-v1.1-female (Linda)
-        - khanomtan-v1.1-male (Thorsten)
+        Synthesize crystal-clear, natural Thai speech using Google Gemini 3.5 AI Studio:
+        - gemini-thai-female (Aoede)
+        - gemini-thai-male (Puck)
         """
         cleaned_text = clean_thai_text_for_speech(text)
         if not cleaned_text:
             return b""
 
-        # Normalize legacy voice identifiers
+        # Normalize voice keys
         v_key = voice
-        if v_key in ["vits-thai-female", "vits-thai-community", "vits_thai"]:
-            v_key = "studio-thai-female" if gender == "female" else "studio-thai-male"
-        elif v_key == "vits-thai-male":
-            v_key = "studio-thai-male"
-        elif v_key in ["khanomtan-v1.1", "khanomtan-v1", "khanomtan"]:
-            v_key = "khanomtan-v1.1-female" if gender == "female" else "khanomtan-v1.1-male"
+        if v_key in ["studio-thai-female", "vits-thai-female", "gemini-female"]:
+            v_key = "gemini-thai-female"
+        elif v_key in ["studio-thai-male", "vits-thai-male", "gemini-male"]:
+            v_key = "gemini-thai-male"
 
-        meta = VOICE_REGISTRY.get(v_key, VOICE_REGISTRY["studio-thai-female"])
-        target_engine = meta.get("engine", "studio_neural")
+        meta = VOICE_REGISTRY.get(v_key, VOICE_REGISTRY["gemini-thai-female"])
+        gemini_voice = meta.get("gemini_voice", "Aoede" if gender == "female" else "Puck")
+        edge_voice = meta.get("edge_voice", "th-TH-PremwadeeNeural" if gender == "female" else "th-TH-NiwatNeural")
 
-        audio_bytes = b""
+        # 1. Primary: Google Gemini 3.5 AI Studio Native Audio Synthesis
+        audio_bytes = await self._synthesize_gemini(cleaned_text, voice_name=gemini_voice, custom_key=custom_gemini_key)
 
-        # 1. Studio Neural Speech Engine
-        if target_engine == "studio_neural":
-            edge_voice = meta.get("edge_voice", "th-TH-PremwadeeNeural")
+        # 2. Resilient Fallback: Google Studio Neural (Zero Interruption)
+        if not audio_bytes:
+            logger.info("Using Studio Neural fallback for: %s", cleaned_text[:20])
             audio_bytes = await self._synthesize_studio_neural(cleaned_text, edge_voice, rate=rate)
 
-        # 2. KhanomTan v1.1 Offline Engine
-        elif target_engine == "khanomtan":
-            spk = meta.get("speaker_idx", "Linda")
-            audio_bytes = await self._synthesize_khanomtan(cleaned_text, speaker_idx=spk)
-
-        # Fallback to studio female if empty
-        if not audio_bytes:
-            audio_bytes = await self._synthesize_studio_neural(cleaned_text, "th-TH-PremwadeeNeural", rate=rate)
-
         if audio_bytes:
-            logger.info("🔊 Neural Engine (%s) synthesized %d bytes for: %s", v_key, len(audio_bytes), cleaned_text[:24])
+            logger.info("🔊 Gemini Audio Engine (%s) synthesized %d bytes for: %s", v_key, len(audio_bytes), cleaned_text[:24])
 
         return audio_bytes
 
     def list_voices(self) -> Dict[str, Dict[str, str]]:
-        """List registered Thai Neural voice models."""
+        """List registered Google Gemini 3.5 Thai voice models."""
         return VOICE_REGISTRY
 
 
-# Singleton instance of Master Thai Neural Engine
-tts_engine = ThaiNeuralMasterEngine()
+# Singleton instance of Master Gemini Thai Neural Engine
+tts_engine = GeminiThaiNeuralEngine()
+

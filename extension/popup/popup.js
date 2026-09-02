@@ -1,10 +1,10 @@
 /**
- * Safari AI Thai Video Dubber - Popup UI Controller (Thai VITS & KhanomTan Integration)
+ * Safari AI Thai Video Dubber - Popup UI Controller (Google Gemini 3.5 Integration)
  */
 
 const VITS_VOICES = [
-  { id: 'studio-thai-female', name: '🎙️ สตูดิโอ นิวรัล: หญิง (Premwadee • สมจริง 100% แนะนำ)' },
-  { id: 'studio-thai-male', name: '🎙️ สตูดิโอ นิวรัล: ชาย (Niwat • ทุ้มนุ่ม มืออาชีพ 100%)' },
+  { id: 'gemini-thai-female', name: '✨ Google Gemini 3.5: หญิง (Aoede • สมจริง 100% แนะนำ)' },
+  { id: 'gemini-thai-male', name: '✨ Google Gemini 3.5: ชาย (Puck • ทุ้มนุ่ม มืออาชีพ 100%)' },
 ];
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -61,10 +61,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       subtitleToggle.checked = !!data.showSubtitles;
     }
 
-    const activeEngine = data.engine || 'studio_neural';
-    if (engineSelect) engineSelect.value = 'studio_neural';
+    const activeEngine = data.engine || 'gemini_tts';
+    if (engineSelect) engineSelect.value = 'gemini_tts';
 
-    const defaultVoice = 'studio-thai-female';
+    const defaultVoice = 'gemini-thai-female';
     populateVoices(data.voice || defaultVoice);
 
     if (data.style) styleSelect.value = data.style;

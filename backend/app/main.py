@@ -123,12 +123,12 @@ def resolve_auto_settings(
     context: str = "",
 ):
     """
-    Thai Studio Neural Voice Resolver:
-    - Supports Studio Neural Female (Premwadee) and Male (Niwat).
+    Google Gemini 3.5 Thai Neural Voice Resolver:
+    - Supports Google Gemini 3.5 Female (Aoede) and Male (Puck).
     """
-    voice = req_voice if req_voice in VOICE_REGISTRY else "studio-thai-female"
-    reg = VOICE_REGISTRY.get(voice, VOICE_REGISTRY["studio-thai-female"])
-    engine = reg.get("engine", "studio_neural")
+    voice = req_voice if req_voice in VOICE_REGISTRY else "gemini-thai-female"
+    reg = VOICE_REGISTRY.get(voice, VOICE_REGISTRY["gemini-thai-female"])
+    engine = reg.get("engine", "gemini_tts")
     gender = reg.get("gender", "female")
     style = req_style or "auto"
     return engine, voice, style, gender
@@ -426,11 +426,11 @@ async def dub_cues_batch(req: BatchDubRequest):
     except Exception:
         pass
 
-    # 2. Hard-Locked Selected Thai Studio Neural Voice (100% consistent across entire video)
-    target_voice = voice if voice in VOICE_REGISTRY else "studio-thai-female"
-    voice_meta = VOICE_REGISTRY.get(target_voice, VOICE_REGISTRY["studio-thai-female"])
-    voice_display_name = voice_meta.get("name", "🎙️ สตูดิโอ นิวรัล: หญิง")
-    target_engine = voice_meta.get("engine", "studio_neural")
+    # 2. Hard-Locked Selected Google Gemini 3.5 Voice (100% consistent across entire video)
+    target_voice = voice if voice in VOICE_REGISTRY else "gemini-thai-female"
+    voice_meta = VOICE_REGISTRY.get(target_voice, VOICE_REGISTRY["gemini-thai-female"])
+    voice_display_name = voice_meta.get("name", "✨ Google Gemini 3.5: หญิง")
+    target_engine = voice_meta.get("engine", "gemini_tts")
     speaker_gender = voice_meta.get("gender", "female")
 
     sem = asyncio.Semaphore(4)
@@ -499,6 +499,7 @@ async def dub_cues_batch(req: BatchDubRequest):
                     gender=speaker_gender,
                     rate=cue_rate,
                     pitch=pitch,
+                    custom_gemini_key=req.customGeminiKey,
                 )
             except Exception as e:
                 logger.warning("TTS synthesis error for cue %d: %s", cue.id, e)

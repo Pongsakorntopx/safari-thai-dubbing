@@ -5,8 +5,8 @@
 
 const DEFAULT_SETTINGS = {
   enabled: true,
-  engine: 'studio_neural',
-  voice: 'studio-thai-female',
+  engine: 'gemini_tts',
+  voice: 'gemini-thai-female',
   style: 'auto',
   rate: '+0%',
   dubVolume: 1.0,

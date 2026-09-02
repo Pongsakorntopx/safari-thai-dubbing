@@ -19,10 +19,11 @@ from app.config import settings
 logger = logging.getLogger(__name__)
 
 GEMINI_MODELS = [
+    "gemini-3.5-flash",
     "gemini-3.5-flash-lite",
     "gemini-3.6-flash",
-    "gemini-3.5-flash",
-    "gemini-2.5-flash",
+    "gemini-3.7-flash",
+    "gemini-3.1-flash-lite-preview",
     "gemini-flash-latest",
     "gemini-flash-lite-latest",
 ]

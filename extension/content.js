@@ -10,8 +10,8 @@
   // --- Runtime State ---
   const state = {
     enabled: true,
-    engine: 'studio_neural',
-    voice: 'studio-thai-female',
+    engine: 'gemini_tts',
+    voice: 'gemini-thai-female',
     gender: 'female',
     style: 'auto',
     rate: '+0%',
@@ -44,8 +44,8 @@
   };
 
   const VOICES = [
-    { id: 'studio-thai-female', name: '🎙️ สตูดิโอ นิวรัล: หญิง (Premwadee • สมจริง 100%)', engine: 'studio_neural', gender: 'female' },
-    { id: 'studio-thai-male', name: '🎙️ สตูดิโอ นิวรัล: ชาย (Niwat • ทุ้มนุ่ม มืออาชีพ 100%)', engine: 'studio_neural', gender: 'male' },
+    { id: 'gemini-thai-female', name: '✨ Google Gemini 3.5: หญิง (Aoede • นุ่มนวล ไพเราะ สมจริง 100%)', engine: 'gemini_tts', gender: 'female' },
+    { id: 'gemini-thai-male', name: '✨ Google Gemini 3.5: ชาย (Puck • ทุ้มนุ่ม มืออาชีพ สมจริง 100%)', engine: 'gemini_tts', gender: 'male' },
   ];
 
   const STYLES = [
@@ -502,8 +502,8 @@
     const payload = {
       cues: cues.map((c) => ({ id: c.id, start: c.start, end: c.end, text: c.text })),
       context: getVideoTitle(),
-      engine: state.engine || 'studio_neural',
-      voice: state.voice || 'studio-thai-female',
+      engine: state.engine || 'gemini_tts',
+      voice: state.voice || 'gemini-thai-female',
       gender: state.gender || 'auto',
       style: state.style || 'auto',
       rate: state.rate,
