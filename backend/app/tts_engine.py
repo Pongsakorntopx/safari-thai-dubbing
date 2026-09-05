@@ -120,42 +120,23 @@ def trim_audio_silence(data: np.ndarray, sr: int, threshold_db: float = -38.0, p
     return trimmed
 
 
-def fit_audio_to_slot_duration(audio_bytes: bytes, slot_duration: float, max_speedup: float = 1.70) -> bytes:
+def fit_audio_to_slot_duration(audio_bytes: bytes, slot_duration: float = 0.0) -> bytes:
     """
-    Ensure Thai speech duration matches the original video speaker's exact time slot.
-    - Trims dead silence so speech starts and finishes instantly on cue.
-    - Accelerates (เร่งเสียง) cleanly if speech is longer than slot duration.
-    - Guarantees Thai voice stops at or before the video speaker stops.
+    Ensure Thai speech starts and finishes cleanly on cue by trimming dead leading/trailing silence.
+    Preserves 100% natural human neural timbre without any metallic phase-vocoder distortion.
     """
-    if not audio_bytes or slot_duration <= 0.3:
+    if not audio_bytes:
         return audio_bytes
 
     try:
         data, sr = sf.read(io.BytesIO(audio_bytes))
-        data = trim_audio_silence(data, sr)
-        actual_duration = len(data) / sr
-
-        # Target duration: leave 0.06s headroom before next speaker starts
-        target_duration = max(0.3, slot_duration - 0.06)
-
-        if actual_duration > target_duration:
-            speed_factor = min(max_speedup, actual_duration / target_duration)
-            if speed_factor > 1.03:
-                import librosa
-                data = librosa.effects.time_stretch(data, rate=speed_factor)
-                # Hard limit to slot duration with gentle fadeout to ensure ZERO overflow
-                if len(data) / sr > target_duration:
-                    max_samples = int(sr * target_duration)
-                    data = data[:max_samples]
-                    fade_len = min(len(data), int(sr * 0.03))
-                    if fade_len > 0:
-                        data[-fade_len:] *= np.linspace(1.0, 0.0, fade_len, dtype=data.dtype)
-
+        # Precision silence trimming (removes dead air at start and end)
+        data = trim_audio_silence(data, sr, threshold_db=-38.0, pad_ms=20.0)
         out_buf = io.BytesIO()
         sf.write(out_buf, data, sr, format="WAV", subtype="PCM_16")
         return out_buf.getvalue()
     except Exception as e:
-        logger.warning("Slot duration fitting error: %s", e)
+        logger.warning("Audio silence trimming error: %s", e)
         return audio_bytes
 
 

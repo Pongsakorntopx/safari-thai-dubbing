@@ -460,39 +460,21 @@ async def dub_cues_batch(req: BatchDubRequest):
 
         # 🎯 Original Video Speech Cadence & Exact Duration Pacing (WPS / WPM)
         words_count = max(1, len(cue.text.split()))
-        slot_duration = max(0.8, float(cue.end - cue.start))
+        slot_duration = max(0.6, float(cue.end - cue.start))
         orig_wps = words_count / slot_duration
         orig_wpm = round(orig_wps * 60)
 
         # Match Thai speech rate with Original Video Speaker's pacing:
-        # Average spoken Thai has ~12.5 characters/sec in normal conversational rhythm.
+        # Standard spoken Thai has ~11.5 characters/sec in natural relaxed rhythm.
         thai_chars = len(thai_text)
-        expected_sec = max(0.6, thai_chars / 12.5)
+        expected_sec = max(0.5, thai_chars / 11.5)
         speed_ratio = expected_sec / slot_duration
 
-        # 1. Speaker Tempo Boost (Adaptive detection from original video speaker's WPM)
-        if orig_wpm >= 195:
-            tempo_boost = 22
-        elif orig_wpm >= 165:
-            tempo_boost = 14
-        elif orig_wpm >= 135:
-            tempo_boost = 5
-        elif orig_wpm < 105:
-            tempo_boost = -8
-        else:
-            tempo_boost = 0
+        # Calculate exact neural rate percentage:
+        # If expected_sec > slot_duration, speed up cleanly within neural vocoder limits (-15% to +25%)
+        rate_needed = (speed_ratio - 1.0) * 100
+        auto_rate_pct = int(max(-15, min(25, rate_needed)))
 
-        # 2. Syllable/Character Density Boost (to ensure Thai dub fits in slot_duration)
-        density_boost = 0
-        if speed_ratio > 1.02:
-            density_boost = int((speed_ratio - 1.0) * 100)
-        elif speed_ratio < 0.85:
-            density_boost = int((speed_ratio - 1.0) * 100)
-
-        # 3. Combine speaker cadence & density demand
-        auto_rate_pct = max(tempo_boost, density_boost) if (tempo_boost > 0 or density_boost > 0) else min(tempo_boost, density_boost)
-
-        # 4. Add user preference offset bias (e.g. "+5%" adds 5%, "-10%" subtracts 10%)
         user_bias = 0
         if rate and rate != "+0%":
             try:
@@ -500,8 +482,7 @@ async def dub_cues_batch(req: BatchDubRequest):
             except Exception:
                 user_bias = 0
 
-        final_pct = auto_rate_pct + user_bias
-        final_pct = max(-20, min(35, final_pct))
+        final_pct = max(-15, min(25, auto_rate_pct + user_bias))
 
         if final_pct > 0:
             cue_rate = f"+{final_pct}%"

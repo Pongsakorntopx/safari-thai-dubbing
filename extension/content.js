@@ -60,20 +60,46 @@
   ];
 
   // --- Dedicated Native HTML5 Audio Player Engine (100% Audible & Compatible on Safari macOS/iOS) ---
-  let globalAudioPlayer = null;
+  // --- Dedicated Dual-Player Ping-Pong Engine (Zero-Latency Frame-Accurate Playback) ---
+  let pingPongPlayers = [null, null];
+  let activePlayerIndex = 0;
+  let preloadedCueId = null;
+
+  function getPingPongPlayer(index) {
+    if (!pingPongPlayers[index]) {
+      const id = `thai-dub-audio-player-${index}`;
+      let el = document.getElementById(id);
+      if (!el) {
+        el = document.createElement('audio');
+        el.id = id;
+        el.style.display = 'none';
+        el.preload = 'auto';
+        (document.body || document.documentElement).appendChild(el);
+      }
+      pingPongPlayers[index] = el;
+    }
+    return pingPongPlayers[index];
+  }
 
   function getGlobalAudioPlayer() {
-    if (!globalAudioPlayer) {
-      globalAudioPlayer = document.getElementById('thai-dub-audio-player');
-      if (!globalAudioPlayer) {
-        globalAudioPlayer = document.createElement('audio');
-        globalAudioPlayer.id = 'thai-dub-audio-player';
-        globalAudioPlayer.style.display = 'none';
-        globalAudioPlayer.preload = 'auto';
-        (document.body || document.documentElement).appendChild(globalAudioPlayer);
-      }
+    return getPingPongPlayer(activePlayerIndex);
+  }
+
+  function preloadUpcomingAudio(cue) {
+    if (!cue || (!cue.audioUrl && !cue.audioBase64)) return;
+    if (preloadedCueId === cue.id) return;
+
+    const standbyIndex = 1 - activePlayerIndex;
+    const standbyPlayer = getPingPongPlayer(standbyIndex);
+    const audioSrc = cue.audioUrl || base64ToBlobUrl(cue.audioBase64);
+    if (standbyPlayer.src !== audioSrc) {
+      standbyPlayer.src = audioSrc;
+      standbyPlayer.preload = 'auto';
+      try {
+        standbyPlayer.load();
+      } catch (e) {}
+      preloadedCueId = cue.id;
     }
-    return globalAudioPlayer;
   }
 
   function base64ToBlobUrl(base64) {
@@ -98,21 +124,19 @@
   function unlockAudio() {
     if (audioUnlocked) return;
     try {
-      const audio = getGlobalAudioPlayer();
-      if (audio) {
-        // 1-sample silent WAV to unlock audio playback in Safari
-        const silentWav = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
-        audio.src = silentWav;
-        const p = audio.play();
-        if (p && typeof p.then === 'function') {
-          p.then(() => {
-            audioUnlocked = true;
-            audio.pause();
-            audio.currentTime = 0;
-            console.log('[ThaiDubbing] Audio successfully unlocked for Safari.');
-          }).catch((err) => {
-            console.warn('[ThaiDubbing] Audio unlock play caught:', err);
-          });
+      const silentWav = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+      for (let i = 0; i < 2; i++) {
+        const audio = getPingPongPlayer(i);
+        if (audio) {
+          audio.src = silentWav;
+          const p = audio.play();
+          if (p && typeof p.then === 'function') {
+            p.then(() => {
+              audioUnlocked = true;
+              audio.pause();
+              audio.currentTime = 0;
+            }).catch(() => {});
+          }
         }
       }
     } catch (e) {}
@@ -1008,9 +1032,16 @@
         }
       }
 
+      // 1. Preload the next upcoming ready cue within 2.5s into standby player
+      const nextUpcomingCue = state.timedCues.find((c) => c.status === 'ready' && c.start > currentTime && c.start <= currentTime + 2.5);
+      if (nextUpcomingCue) {
+        preloadUpcomingAudio(nextUpcomingCue);
+      }
+
+      // 2. Trigger audio on exact speech onset (-0.03s compensation for 40ms interval)
       for (let i = 0; i < state.timedCues.length; i++) {
         const cue = state.timedCues[i];
-        const isCueActive = currentTime >= cue.start - 0.15 && currentTime <= cue.end + 0.4;
+        const isCueActive = currentTime >= cue.start - 0.03 && currentTime <= cue.end + 0.3;
         if (isCueActive) {
           if (cue.status === 'ready') {
             cue.status = 'played';
@@ -1018,7 +1049,7 @@
             if (cue.audioUrl || cue.audioBase64) {
               schedulePlayAudio(cue);
             } else if (cue.translated) {
-              const durMs = Math.max(800, Math.round((cue.end - cue.start) * 1000 + 400));
+              const durMs = Math.max(800, Math.round((cue.end - cue.start) * 1000 + 300));
               renderCinemaSubtitle(cue.translated, durMs);
             }
             break;
@@ -1027,7 +1058,7 @@
             triggerImmediatePrefetch(currentTime);
             break;
           }
-        } else if (cue.start > currentTime + 1.0) {
+        } else if (cue.start > currentTime + 0.8) {
           // Cues are sorted by start time, no need to check further into future
           break;
         }
@@ -1040,48 +1071,70 @@
       clearTimeout(state.playSafetyTimeout);
       state.playSafetyTimeout = null;
     }
-    const audio = getGlobalAudioPlayer();
-    if (audio) {
-      try {
-        audio.pause();
-        audio.currentTime = 0;
-      } catch (e) {}
+    for (let i = 0; i < 2; i++) {
+      const p = pingPongPlayers[i];
+      if (p) {
+        try {
+          p.pause();
+          p.currentTime = 0;
+        } catch (e) {}
+      }
     }
     state.isPlaying = false;
     state.currentPlayingCue = null;
     state.nextSpeechTime = 0;
   }
 
-  // --- Strict Single-Track Monophonic Speech Engine (Zero Overlap & Zero Dropout) ---
+  // --- Strict Dual-Player Ping-Pong Engine (Zero-Latency Frame-Accurate Playback) ---
   function schedulePlayAudio(cue) {
     if (!cue.audioUrl && !cue.audioBase64) return;
-
-    stopActivePlayback();
-    state.currentPlayingCue = cue;
 
     const video = findVideoElement();
     const videoSpeed = (video && video.playbackRate) ? video.playbackRate : 1.0;
 
-    const audio = getGlobalAudioPlayer();
-    if (!audio) return;
+    // Ping-Pong swap: target is the standby player
+    const standbyIndex = 1 - activePlayerIndex;
+    const oldPlayer = getPingPongPlayer(activePlayerIndex);
+    const newPlayer = getPingPongPlayer(standbyIndex);
 
+    // If this cue was not preloaded into standbyPlayer, set its src now
     const audioSrc = cue.audioUrl || base64ToBlobUrl(cue.audioBase64);
-    audio.src = audioSrc;
-    audio.volume = (typeof state.dubVolume === 'number' && !isNaN(state.dubVolume)) ? state.dubVolume : 1.0;
+    if (preloadedCueId !== cue.id || newPlayer.src !== audioSrc) {
+      newPlayer.src = audioSrc;
+    }
+
+    // Stop old player cleanly to prevent speech overlap
+    if (oldPlayer && !oldPlayer.paused) {
+      try {
+        oldPlayer.pause();
+        oldPlayer.currentTime = 0;
+      } catch (e) {}
+    }
+
+    // Update active index and reset preloaded id
+    activePlayerIndex = standbyIndex;
+    preloadedCueId = null;
+
+    if (state.playSafetyTimeout) {
+      clearTimeout(state.playSafetyTimeout);
+      state.playSafetyTimeout = null;
+    }
+
+    state.currentPlayingCue = cue;
+    newPlayer.volume = (typeof state.dubVolume === 'number' && !isNaN(state.dubVolume)) ? state.dubVolume : 1.0;
     try {
-      audio.preservesPitch = true;
-      audio.webkitPreservesPitch = true;
-      audio.playbackRate = videoSpeed;
+      newPlayer.preservesPitch = true;
+      newPlayer.webkitPreservesPitch = true;
+      newPlayer.playbackRate = videoSpeed;
     } catch (rateErr) {}
 
     state.isPlaying = true;
     applyAudioDucking();
 
-    // Safety watchdog: automatically unlock state.isPlaying if audio stalls or onended is dropped
-    const expectedDurationMs = Math.max(1500, Math.round(((cue.end - cue.start) + 2.5) * 1000));
+    // Safety watchdog: automatically unlock state.isPlaying if audio stalls or drops
+    const expectedDurationMs = Math.max(1500, Math.round(((cue.end - cue.start) + 2.0) * 1000));
     state.playSafetyTimeout = setTimeout(() => {
-      if (state.isPlaying) {
-        console.log('[ThaiDubbing] Safety watchdog released isPlaying lock.');
+      if (state.isPlaying && state.currentPlayingCue === cue) {
         state.isPlaying = false;
         state.currentPlayingCue = null;
         restoreVideoVolume();
@@ -1089,7 +1142,7 @@
     }, expectedDurationMs);
 
     if (state.showSubtitles) {
-      const durationMs = Math.max(800, Math.round((cue.end - cue.start) * 1000 + 400));
+      const durationMs = Math.max(800, Math.round((cue.end - cue.start) * 1000 + 300));
       renderCinemaSubtitle(cue.translated, durationMs);
     } else {
       clearCinemaSubtitle();
@@ -1098,29 +1151,35 @@
     const rhythmTag = cue.orig_wpm ? `⚡ ${cue.orig_wpm} WPM (${cue.appliedRate || '+0%'}) | ` : '';
     updateHUDStatus(`🔊 ${rhythmTag}"${cue.translated.slice(0, 18)}..."`);
 
-    audio.onended = () => {
+    newPlayer.onended = () => {
       if (state.playSafetyTimeout) clearTimeout(state.playSafetyTimeout);
-      state.isPlaying = false;
-      state.currentPlayingCue = null;
-      clearCinemaSubtitle();
-      restoreVideoVolume();
-      updateBufferGauge();
+      if (state.currentPlayingCue === cue) {
+        state.isPlaying = false;
+        state.currentPlayingCue = null;
+        clearCinemaSubtitle();
+        restoreVideoVolume();
+        updateBufferGauge();
+      }
     };
 
-    audio.onerror = (err) => {
+    newPlayer.onerror = (err) => {
       console.error('[ThaiDubbing] Audio error:', err);
       if (state.playSafetyTimeout) clearTimeout(state.playSafetyTimeout);
-      state.isPlaying = false;
-      state.currentPlayingCue = null;
-      restoreVideoVolume();
+      if (state.currentPlayingCue === cue) {
+        state.isPlaying = false;
+        state.currentPlayingCue = null;
+        restoreVideoVolume();
+      }
     };
 
-    audio.play().catch((playErr) => {
+    newPlayer.play().catch((playErr) => {
       console.warn('[ThaiDubbing] Audio play caught:', playErr);
       if (state.playSafetyTimeout) clearTimeout(state.playSafetyTimeout);
-      state.isPlaying = false;
-      state.currentPlayingCue = null;
-      restoreVideoVolume();
+      if (state.currentPlayingCue === cue) {
+        state.isPlaying = false;
+        state.currentPlayingCue = null;
+        restoreVideoVolume();
+      }
     });
   }
 
