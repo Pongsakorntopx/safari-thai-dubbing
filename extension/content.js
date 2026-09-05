@@ -10,8 +10,8 @@
   // --- Runtime State ---
   const state = {
     enabled: true,
-    engine: 'gemini_tts',
-    voice: 'gemini-thai-female',
+    engine: 'qwen_tts',
+    voice: 'qwen-thai-female',
     gender: 'female',
     style: 'auto',
     rate: '+0%',
@@ -20,7 +20,6 @@
     showSubtitles: false, // Default is OFF (ปิดเป็นค่าเริ่มต้น)
     backendUrl: 'http://127.0.0.1:8000',
     translationModel: 'qwen-max',
-    customGeminiKey: 'AQ.Ab8RN6KPbW' + 'fipLG3IEBPAVK-nRd6Ki' + 'PanW6ymcYDj3ymolbkbw',
     customQwenKey: 'sk-ws-H.DDLIDRI.FjEo.MEYCIQClFrpLY4yP_rpWWLjU-jTAsiMqqOeXOoMLE3s-6K08lAIhAJB8ZZVuWXYGmzhIxp9RXsZY-2AP_7ywEQCOWuEAmz_s',
 
     // Playback & Queue State
@@ -46,8 +45,8 @@
   };
 
   const VOICES = [
-    { id: 'gemini-thai-female', name: '✨ Google Gemini 3.5: หญิง (Aoede • นุ่มนวล ไพเราะ สมจริง 100%)', engine: 'gemini_tts', gender: 'female' },
-    { id: 'gemini-thai-male', name: '✨ Google Gemini 3.5: ชาย (Puck • ทุ้มนุ่ม มืออาชีพ สมจริง 100%)', engine: 'gemini_tts', gender: 'male' },
+    { id: 'qwen-thai-female', name: '👑 Alibaba Qwen-Max: หญิง (เปรมวดี • นุ่มนวล ไพเราะ สมจริง 100%)', engine: 'qwen_tts', gender: 'female' },
+    { id: 'qwen-thai-male', name: '👑 Alibaba Qwen-Max: ชาย (นิวัฒน์ • ทุ้มนุ่ม มืออาชีพ สมจริง 100%)', engine: 'qwen_tts', gender: 'male' },
   ];
 
   const STYLES = [
@@ -119,7 +118,8 @@
         'duckVolume',
         'showSubtitles',
         'backendUrl',
-        'customGeminiKey',
+        'customQwenKey',
+        'translationModel',
         'isCollapsed',
       ]);
       if (data.enabled !== undefined) state.enabled = data.enabled;
@@ -150,17 +150,14 @@
       }
       state.backendUrl = state.backendUrl.replace(/\/+$/, '');
 
-      const defaultKey = 'AQ.Ab8RN6KPbW' + 'fipLG3IEBPAVK-nRd6Ki' + 'PanW6ymcYDj3ymolbkbw';
-      if (data.customGeminiKey) {
-        state.customGeminiKey = data.customGeminiKey;
-        if (data.customGeminiKey.startsWith('AIzaSyCcdm') || data.customGeminiKey.startsWith('AQ.Ab8RN6JU')) {
-          state.customGeminiKey = defaultKey;
-          saveSetting('customGeminiKey', defaultKey);
-        }
+      const defaultQwenKey = 'sk-ws-H.DDLIDRI.FjEo.MEYCIQClFrpLY4yP_rpWWLjU-jTAsiMqqOeXOoMLE3s-6K08lAIhAJB8ZZVuWXYGmzhIxp9RXsZY-2AP_7ywEQCOWuEAmz_s';
+      if (data.customQwenKey) {
+        state.customQwenKey = data.customQwenKey;
       } else {
-        state.customGeminiKey = defaultKey;
-        saveSetting('customGeminiKey', defaultKey);
+        state.customQwenKey = defaultQwenKey;
+        saveSetting('customQwenKey', defaultQwenKey);
       }
+      state.translationModel = data.translationModel || 'qwen-max';
       if (data.isCollapsed !== undefined) state.isCollapsed = data.isCollapsed;
 
       renderHUD();
@@ -504,14 +501,13 @@
     const payload = {
       cues: cues.map((c) => ({ id: c.id, start: c.start, end: c.end, text: c.text })),
       context: getVideoTitle(),
-      engine: state.engine || 'gemini_tts',
-      voice: state.voice || 'gemini-thai-female',
+      engine: state.engine || 'qwen_tts',
+      voice: state.voice || 'qwen-thai-female',
       gender: state.gender || 'auto',
       style: state.style || 'auto',
       rate: state.rate,
-      translationModel: state.translationModel || 'qwen-max',
+      translationModel: 'qwen-max',
       customQwenKey: state.customQwenKey,
-      customGeminiKey: state.customGeminiKey,
       fishApiKey: state.fishApiKey,
     };
 
@@ -550,7 +546,8 @@
             gender: payload.gender || state.gender || 'male',
             style: payload.style || state.style,
             rate: payload.rate || state.rate,
-            customGeminiKey: payload.customGeminiKey || state.customGeminiKey,
+            translationModel: payload.translationModel || state.translationModel || 'qwen-max',
+            customQwenKey: payload.customQwenKey || state.customQwenKey,
             fishApiKey: payload.fishApiKey || state.fishApiKey,
           },
         },
@@ -1107,14 +1104,15 @@
       gender: state.gender,
       style: state.style || 'auto',
       rate: state.rate,
-      customGeminiKey: state.customGeminiKey,
+      translationModel: state.translationModel || 'qwen-max',
+      customQwenKey: state.customQwenKey,
     });
 
     if (dubRes && dubRes.success && dubRes.base64Audio) {
-      if (dubRes.gemini_status === 'depleted') {
-        showSystemToast('⚠️ วงเงิน Gemini Key หมดลงแล้ว (429) แปลสดชั่วคราว');
-      } else if (dubRes.gemini_status === 'invalid') {
-        showSystemToast('⚠️ Gemini Key ไม่ถูกต้อง (400) แปลสดชั่วคราว');
+      if (dubRes.qwen_status === 'depleted') {
+        showSystemToast('⚠️ โควต้า Qwen API Key หมดลงแล้ว (429)');
+      } else if (dubRes.qwen_status === 'invalid') {
+        showSystemToast('⚠️ Qwen API Key ไม่ถูกต้อง (400/401)');
       }
       playDirectLiveBuffer(dubRes.base64Audio, dubRes.translatedText);
     }
@@ -1541,8 +1539,8 @@
         </div>
 
         <div style="display: flex; justify-content: space-between; align-items: center; gap: 4px;">
-          <span style="font-size: 11px; color: #94a3b8; font-weight: 600;">Google AI Studio Key:</span>
-          <input type="password" id="hud-gemini-input" placeholder="AQ.Ab... / AIzaSy..." value="${state.customGeminiKey || ''}" style="
+          <span style="font-size: 11px; color: #94a3b8; font-weight: 600;">Alibaba Qwen Key:</span>
+          <input type="password" id="hud-qwen-input" placeholder="sk-ws-..." value="${state.customQwenKey || ''}" style="
             background: #1e293b; color: #10b981; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; padding: 2px 6px; font-size: 10px; width: 170px; outline: none;
           ">
         </div>
@@ -1680,10 +1678,13 @@
       };
     }
 
-    const geminiInput = document.getElementById('hud-gemini-input');
-    if (geminiInput) {
-      geminiInput.onchange = (e) => {
-        saveSetting('customGeminiKey', e.target.value.trim());
+    const qwenInput = document.getElementById('hud-qwen-input');
+    if (qwenInput) {
+      qwenInput.onchange = (e) => {
+        const val = e.target.value.trim();
+        saveSetting('customQwenKey', val);
+        state.customQwenKey = val;
+        updateHUDStatus('👑 บันทึก Alibaba Qwen Key เรียบร้อย');
       };
     }
 
@@ -1730,8 +1731,8 @@
     updateHUDStatus('🟡 กำลังสร้างเสียงทดสอบ...');
 
     const sampleText = state.gender === 'female'
-      ? 'ยินดีต้อนรับเข้าสู่ช่องของเรานะคะ นี่คือตัวอย่างเสียงพากย์ภาษาไทยแบบธรรมชาติค่ะ'
-      : 'ยินดีต้อนรับเข้าสู่ช่องของเรานะครับ นี่คือตัวอย่างเสียงพากย์ภาษาไทยแบบธรรมชาติครับ';
+      ? 'ยินดีต้อนรับเข้าสู่ช่องของเรา นี่คือตัวอย่างเสียงพากย์ภาษาไทยแบบธรรมชาติ'
+      : 'ยินดีต้อนรับเข้าสู่ช่องของเรา นี่คือตัวอย่างเสียงพากย์ภาษาไทยแบบธรรมชาติ';
 
     chrome.runtime.sendMessage({
       type: 'FETCH_DUB',
@@ -1743,7 +1744,8 @@
         gender: state.gender,
         style: state.style,
         rate: state.rate,
-        customGeminiKey: state.customGeminiKey,
+        translationModel: state.translationModel || 'qwen-max',
+        customQwenKey: state.customQwenKey,
       },
     }, (response) => {
       if (response && response.success && response.base64Audio) {

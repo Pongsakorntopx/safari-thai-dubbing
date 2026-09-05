@@ -258,6 +258,9 @@ class CascadeTranslator:
         gender: str = "male",
         model_name: Optional[str] = None,
         custom_key: Optional[str] = None,
+        custom_qwen_key: Optional[str] = None,
+        translation_model: Optional[str] = None,
+        **kwargs,
     ) -> List[str]:
         """
         Translate a 60-second chunk of subtitle sentences (in any language) as a coherent narrative paragraph.
@@ -279,8 +282,9 @@ class CascadeTranslator:
         full_system_instruction = system_instruction + no_particle_rule
 
         # 1. Primary: Alibaba Qwen Flagship Engine (if Qwen requested or Qwen Key present)
-        custom_qwen_key = kwargs.get("custom_qwen_key") or getattr(self, "qwen_key", None)
-        prefer_qwen = (model_name and "qwen" in model_name.lower()) or (settings.translation_engine == "qwen") or bool(custom_qwen_key or settings.qwen_api_key)
+        target_model = translation_model or model_name or settings.qwen_model or "qwen-max"
+        qwen_k = custom_qwen_key or kwargs.get("custom_qwen_key") or getattr(self, "qwen_key", None) or settings.qwen_api_key
+        prefer_qwen = (target_model and "qwen" in target_model.lower()) or (settings.translation_engine == "qwen") or bool(qwen_k)
         if prefer_qwen:
             qwen_res = await self._translate_batch_qwen(
                 cues_text=cues_text,
@@ -288,8 +292,8 @@ class CascadeTranslator:
                 style_key=style_key,
                 gender=gender,
                 full_system_instruction=full_system_instruction,
-                model_name=model_name,
-                custom_qwen_key=custom_qwen_key,
+                model_name=target_model,
+                custom_qwen_key=qwen_k,
             )
             if qwen_res and len(qwen_res) == len(cues_text):
                 return qwen_res
@@ -678,9 +682,22 @@ class CascadeTranslator:
         gender: str = "male",
         model_name: Optional[str] = None,
         custom_key: Optional[str] = None,
+        custom_qwen_key: Optional[str] = None,
+        translation_model: Optional[str] = None,
+        **kwargs,
     ) -> str:
         """Single sentence translation (for live mode)."""
-        res = await self.translate_batch([text], context=context, style=style, gender=gender, model_name=model_name, custom_key=custom_key)
+        res = await self.translate_batch(
+            [text],
+            context=context,
+            style=style,
+            gender=gender,
+            model_name=model_name,
+            custom_key=custom_key,
+            custom_qwen_key=custom_qwen_key,
+            translation_model=translation_model,
+            **kwargs,
+        )
         return res[0] if res else text
 
 

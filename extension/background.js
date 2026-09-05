@@ -5,15 +5,14 @@
 
 const DEFAULT_SETTINGS = {
   enabled: true,
-  engine: 'gemini_tts',
-  voice: 'gemini-thai-female',
+  engine: 'qwen_tts',
+  voice: 'qwen-thai-female',
   translationModel: 'qwen-max',
   style: 'auto',
   rate: '+0%',
   dubVolume: 1.0,
   duckVolume: 0.2,
   backendUrl: 'http://127.0.0.1:8000',
-  customGeminiKey: 'AQ.Ab8RN6KPbW' + 'fipLG3IEBPAVK-nRd6Ki' + 'PanW6ymcYDj3ymolbkbw',
   customQwenKey: 'sk-ws-H.DDLIDRI.FjEo.MEYCIQClFrpLY4yP_rpWWLjU-jTAsiMqqOeXOoMLE3s-6K08lAIhAJB8ZZVuWXYGmzhIxp9RXsZY-2AP_7ywEQCOWuEAmz_s',
 };
 
@@ -230,7 +229,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.type === 'FETCH_DUB_BATCH') {
     (async () => {
-      const { backendUrl, cues, context, engine, voice, style, gender, rate, customGeminiKey, fishApiKey } = message.payload;
+      const { backendUrl, cues, context, engine, voice, style, gender, rate, customQwenKey, translationModel, fishApiKey } = message.payload;
       const endpointsToTry = [
         'http://127.0.0.1:8000',
         backendUrl && !backendUrl.includes('render.com') ? backendUrl : null,
@@ -239,12 +238,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       const payload = {
         cues,
         context: context || '',
-        engine: engine || 'khanomtan',
-        voice: voice || 'khanomtan-v1.1-female',
+        engine: engine || 'qwen_tts',
+        voice: voice || 'qwen-thai-female',
         style: style || 'auto',
         gender: gender || 'auto',
         rate: rate || '+0%',
-        customGeminiKey: customGeminiKey || '',
+        translationModel: translationModel || 'qwen-max',
+        customQwenKey: customQwenKey || '',
         fishApiKey: fishApiKey || '',
       };
 
@@ -272,7 +272,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.type === 'FETCH_DUB') {
     (async () => {
-      const { backendUrl, text, context, engine, voice, style, gender, rate, customGeminiKey, fishApiKey } = message.payload;
+      const { backendUrl, text, context, engine, voice, style, gender, rate, customQwenKey, translationModel, fishApiKey } = message.payload;
       const endpointsToTry = [
         'http://127.0.0.1:8000',
         backendUrl && !backendUrl.includes('render.com') ? backendUrl : null,
@@ -281,12 +281,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       const payload = {
         text,
         context: context || '',
-        engine: engine || 'khanomtan',
-        voice: voice || 'khanomtan-v1.1-female',
+        engine: engine || 'qwen_tts',
+        voice: voice || 'qwen-thai-female',
         style: style || 'auto',
         gender: gender || 'auto',
         rate: rate || '+0%',
-        customGeminiKey: customGeminiKey || '',
+        translationModel: translationModel || 'qwen-max',
+        customQwenKey: customQwenKey || '',
         fishApiKey: fishApiKey || '',
       };
 

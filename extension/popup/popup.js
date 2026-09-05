@@ -1,10 +1,10 @@
 /**
- * Safari AI Thai Video Dubber - Popup UI Controller (Google Gemini 3.5 Integration)
+ * Safari AI Thai Video Dubber - Popup UI Controller (Alibaba Qwen Integration)
  */
 
 const VITS_VOICES = [
-  { id: 'gemini-thai-female', name: '✨ Google Gemini 3.5: หญิง (Aoede • สมจริง 100% แนะนำ)' },
-  { id: 'gemini-thai-male', name: '✨ Google Gemini 3.5: ชาย (Puck • ทุ้มนุ่ม มืออาชีพ 100%)' },
+  { id: 'qwen-thai-female', name: '👑 Alibaba Qwen-Max: หญิง (เปรมวดี • นุ่มนวล สมจริง 100% แนะนำ)' },
+  { id: 'qwen-thai-male', name: '👑 Alibaba Qwen-Max: ชาย (นิวัฒน์ • ทุ้มนุ่ม มืออาชีพ สมจริง 100%)' },
 ];
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -23,7 +23,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   const duckVolumeSlider = document.getElementById('duckVolumeSlider');
   const duckVolumeVal = document.getElementById('duckVolumeVal');
   const backendUrlInput = document.getElementById('backendUrl');
-  const customKeyInput = document.getElementById('customKey');
   const customQwenKeyInput = document.getElementById('customQwenKey');
   const testBtn = document.getElementById('testBtn');
   const connResult = document.getElementById('connResult');
@@ -52,7 +51,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       'dubVolume',
       'duckVolume',
       'backendUrl',
-      'customGeminiKey',
       'customQwenKey',
     ]);
 
@@ -65,14 +63,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       subtitleToggle.checked = !!data.showSubtitles;
     }
 
-    const activeEngine = data.engine || 'gemini_tts';
-    if (engineSelect) engineSelect.value = 'gemini_tts';
+    const activeEngine = data.engine || 'qwen_tts';
+    if (engineSelect) engineSelect.value = 'qwen_tts';
 
     if (translationModelSelect) {
       translationModelSelect.value = data.translationModel || 'qwen-max';
     }
 
-    const defaultVoice = 'gemini-thai-female';
+    const defaultVoice = 'qwen-thai-female';
     populateVoices(data.voice || defaultVoice);
 
     if (data.style) styleSelect.value = data.style;
@@ -92,17 +90,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     let bUrl = data.backendUrl || 'http://127.0.0.1:8000';
     backendUrlInput.value = bUrl;
-
-    const defaultKey = 'AQ.Ab8RN6KPbW' + 'fipLG3IEBPAVK-nRd6Ki' + 'PanW6ymcYDj3ymolbkbw';
-    let geminiKey = data.customGeminiKey || defaultKey;
-    if (geminiKey.startsWith('AIzaSyCcdm') || geminiKey.startsWith('AQ.Ab8RN6JU')) {
-      geminiKey = defaultKey;
-      chrome.storage.local.set({ customGeminiKey: geminiKey });
-    }
-    customKeyInput.value = geminiKey;
-    if (!data.customGeminiKey) {
-      chrome.storage.local.set({ customGeminiKey: geminiKey });
-    }
 
     const defaultQwenKey = 'sk-ws-H.DDLIDRI.FjEo.MEYCIQClFrpLY4yP_rpWWLjU-jTAsiMqqOeXOoMLE3s-6K08lAIhAJB8ZZVuWXYGmzhIxp9RXsZY-2AP_7ywEQCOWuEAmz_s';
     let qKey = data.customQwenKey || defaultQwenKey;
@@ -150,7 +137,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   engineSelect.addEventListener('change', () => {
     const eng = engineSelect.value;
-    const defaultVoice = 'gemini-thai-female';
+    const defaultVoice = 'qwen-thai-female';
     populateVoices(defaultVoice);
     saveSetting('engine', eng);
     saveSetting('voice', defaultVoice);
@@ -190,10 +177,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const url = backendUrlInput.value.trim().replace(/\/+$/, '');
     backendUrlInput.value = url;
     saveSetting('backendUrl', url);
-  });
-
-  customKeyInput.addEventListener('change', () => {
-    saveSetting('customGeminiKey', customKeyInput.value.trim());
   });
 
   if (customQwenKeyInput) {
@@ -280,14 +263,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       
-      const geminiStatus = data.gemini_ready
-        ? '✅ พร้อมใช้งาน (Gemini 2.0 & Unlock-TTS Ready)'
-        : '⚠️ เชื่อมต่อได้ แต่ยังไม่ได้ตั้ง GEMINI_API_KEY';
+      const qwenStatus = data.qwen_ready
+        ? '✅ พร้อมใช้งาน (Alibaba Qwen-Max Flagship Ready)'
+        : '⚠️ เชื่อมต่อได้ แต่ยังไม่ได้ตั้ง QWEN_API_KEY';
 
       const learnStats = data.learned_terms_count ? `<br>🧠 AI เรียนรู้คลังคำศัพท์แล้ว: ${data.learned_terms_count} คำ` : '';
 
       connResult.className = 'conn-status success';
-      connResult.innerHTML = `<strong>เชื่อมต่อสำเร็จ!</strong><br>${geminiStatus}${learnStats}`;
+      connResult.innerHTML = `<strong>เชื่อมต่อสำเร็จ!</strong><br>${qwenStatus}${learnStats}`;
       refreshLearnedCount();
     } catch (err) {
       connResult.className = 'conn-status error';

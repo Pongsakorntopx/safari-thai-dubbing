@@ -7,73 +7,75 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		27CB327430433DC700FBC07D /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27CB327330433DC700FBC07D /* AppDelegate.swift */; };
-		27CB327830433DC700FBC07D /* Main.html in Resources */ = {isa = PBXBuildFile; fileRef = 27CB327630433DC700FBC07D /* Main.html */; };
-		27CB327A30433DC700FBC07D /* Icon.png in Resources */ = {isa = PBXBuildFile; fileRef = 27CB327930433DC700FBC07D /* Icon.png */; };
-		27CB327C30433DC700FBC07D /* Style.css in Resources */ = {isa = PBXBuildFile; fileRef = 27CB327B30433DC700FBC07D /* Style.css */; };
-		27CB327E30433DC700FBC07D /* Script.js in Resources */ = {isa = PBXBuildFile; fileRef = 27CB327D30433DC700FBC07D /* Script.js */; };
-		27CB328030433DC700FBC07D /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27CB327F30433DC700FBC07D /* ViewController.swift */; };
-		27CB328330433DC700FBC07D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 27CB328130433DC700FBC07D /* Main.storyboard */; };
-		27CB328530433DC800FBC07D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 27CB328430433DC800FBC07D /* Assets.xcassets */; };
-		27CB328C30433DC800FBC07D /* Thai Dubbing for Safari Extension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 27CB328B30433DC800FBC07D /* Thai Dubbing for Safari Extension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		27CB329130433DC800FBC07D /* SafariWebExtensionHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27CB329030433DC800FBC07D /* SafariWebExtensionHandler.swift */; };
-		27CB32A230433DC800FBC07D /* popup in Resources */ = {isa = PBXBuildFile; fileRef = 27CB329D30433DC800FBC07D /* popup */; };
-		27CB32A330433DC800FBC07D /* background.js in Resources */ = {isa = PBXBuildFile; fileRef = 27CB329E30433DC800FBC07D /* background.js */; };
-		27CB32A430433DC800FBC07D /* icons in Resources */ = {isa = PBXBuildFile; fileRef = 27CB329F30433DC800FBC07D /* icons */; };
-		27CB32A530433DC800FBC07D /* manifest.json in Resources */ = {isa = PBXBuildFile; fileRef = 27CB32A030433DC800FBC07D /* manifest.json */; };
-		27CB32A630433DC800FBC07D /* content.js in Resources */ = {isa = PBXBuildFile; fileRef = 27CB32A130433DC800FBC07D /* content.js */; };
+		27953F36304C07EB00A8FFA0 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27953F35304C07EB00A8FFA0 /* AppDelegate.swift */; };
+		27953F3A304C07EB00A8FFA0 /* Main.html in Resources */ = {isa = PBXBuildFile; fileRef = 27953F38304C07EB00A8FFA0 /* Main.html */; };
+		27953F3C304C07EB00A8FFA0 /* Icon.png in Resources */ = {isa = PBXBuildFile; fileRef = 27953F3B304C07EB00A8FFA0 /* Icon.png */; };
+		27953F3E304C07EB00A8FFA0 /* Style.css in Resources */ = {isa = PBXBuildFile; fileRef = 27953F3D304C07EB00A8FFA0 /* Style.css */; };
+		27953F40304C07EB00A8FFA0 /* Script.js in Resources */ = {isa = PBXBuildFile; fileRef = 27953F3F304C07EB00A8FFA0 /* Script.js */; };
+		27953F42304C07EB00A8FFA0 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27953F41304C07EB00A8FFA0 /* ViewController.swift */; };
+		27953F45304C07EB00A8FFA0 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 27953F43304C07EB00A8FFA0 /* Main.storyboard */; };
+		27953F47304C07EC00A8FFA0 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 27953F46304C07EC00A8FFA0 /* Assets.xcassets */; };
+		27953F4E304C07EC00A8FFA0 /* Thai Dubbing for Safari Extension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 27953F4D304C07EC00A8FFA0 /* Thai Dubbing for Safari Extension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		27953F53304C07EC00A8FFA0 /* SafariWebExtensionHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27953F52304C07EC00A8FFA0 /* SafariWebExtensionHandler.swift */; };
+		27953F65304C07ED00A8FFA0 /* popup in Resources */ = {isa = PBXBuildFile; fileRef = 27953F5F304C07ED00A8FFA0 /* popup */; };
+		27953F66304C07ED00A8FFA0 /* background.js in Resources */ = {isa = PBXBuildFile; fileRef = 27953F60304C07ED00A8FFA0 /* background.js */; };
+		27953F67304C07ED00A8FFA0 /* icons in Resources */ = {isa = PBXBuildFile; fileRef = 27953F61304C07ED00A8FFA0 /* icons */; };
+		27953F68304C07ED00A8FFA0 /* manifest.json in Resources */ = {isa = PBXBuildFile; fileRef = 27953F62304C07ED00A8FFA0 /* manifest.json */; };
+		27953F69304C07ED00A8FFA0 /* content.js in Resources */ = {isa = PBXBuildFile; fileRef = 27953F63304C07ED00A8FFA0 /* content.js */; };
+		27953F6A304C07ED00A8FFA0 /* play in Resources */ = {isa = PBXBuildFile; fileRef = 27953F64304C07ED00A8FFA0 /* play */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		27CB328D30433DC800FBC07D /* PBXContainerItemProxy */ = {
+		27953F4F304C07EC00A8FFA0 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
-			containerPortal = 27CB326830433DC700FBC07D /* Project object */;
+			containerPortal = 27953F2A304C07EB00A8FFA0 /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = 27CB328A30433DC800FBC07D;
+			remoteGlobalIDString = 27953F4C304C07EC00A8FFA0;
 			remoteInfo = "Thai Dubbing for Safari Extension";
 		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
-		27CB329830433DC800FBC07D /* Embed Foundation Extensions */ = {
+		27953F5A304C07EC00A8FFA0 /* Embed Foundation Extensions */ = {
 			isa = PBXCopyFilesBuildPhase;
 			dstPath = "";
 			dstSubfolder = PlugIns;
 			files = (
-				27CB328C30433DC800FBC07D /* Thai Dubbing for Safari Extension.appex in Embed Foundation Extensions */,
+				27953F4E304C07EC00A8FFA0 /* Thai Dubbing for Safari Extension.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		27CB327030433DC700FBC07D /* Thai Dubbing for Safari.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Thai Dubbing for Safari.app"; sourceTree = BUILT_PRODUCTS_DIR; };
-		27CB327330433DC700FBC07D /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
-		27CB327730433DC700FBC07D /* Base */ = {isa = PBXFileReference; lastKnownFileType = text.html; name = Base; path = Base.lproj/Main.html; sourceTree = "<group>"; };
-		27CB327930433DC700FBC07D /* Icon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Icon.png; sourceTree = "<group>"; };
-		27CB327B30433DC700FBC07D /* Style.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; path = Style.css; sourceTree = "<group>"; };
-		27CB327D30433DC700FBC07D /* Script.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = Script.js; sourceTree = "<group>"; };
-		27CB327F30433DC700FBC07D /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
-		27CB328230433DC700FBC07D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
-		27CB328430433DC800FBC07D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		27CB328630433DC800FBC07D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		27CB328B30433DC800FBC07D /* Thai Dubbing for Safari Extension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "Thai Dubbing for Safari Extension.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
-		27CB329030433DC800FBC07D /* SafariWebExtensionHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafariWebExtensionHandler.swift; sourceTree = "<group>"; };
-		27CB329230433DC800FBC07D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		27CB329D30433DC800FBC07D /* popup */ = {isa = PBXFileReference; lastKnownFileType = folder; name = popup; path = ../../../extension/popup; sourceTree = "<group>"; };
-		27CB329E30433DC800FBC07D /* background.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; name = background.js; path = ../../../extension/background.js; sourceTree = "<group>"; };
-		27CB329F30433DC800FBC07D /* icons */ = {isa = PBXFileReference; lastKnownFileType = folder; name = icons; path = ../../../extension/icons; sourceTree = "<group>"; };
-		27CB32A030433DC800FBC07D /* manifest.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = manifest.json; path = ../../../extension/manifest.json; sourceTree = "<group>"; };
-		27CB32A130433DC800FBC07D /* content.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; name = content.js; path = ../../../extension/content.js; sourceTree = "<group>"; };
+		27953F32304C07EB00A8FFA0 /* Thai Dubbing for Safari.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Thai Dubbing for Safari.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		27953F35304C07EB00A8FFA0 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		27953F39304C07EB00A8FFA0 /* Base */ = {isa = PBXFileReference; lastKnownFileType = text.html; name = Base; path = Base.lproj/Main.html; sourceTree = "<group>"; };
+		27953F3B304C07EB00A8FFA0 /* Icon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Icon.png; sourceTree = "<group>"; };
+		27953F3D304C07EB00A8FFA0 /* Style.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; path = Style.css; sourceTree = "<group>"; };
+		27953F3F304C07EB00A8FFA0 /* Script.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = Script.js; sourceTree = "<group>"; };
+		27953F41304C07EB00A8FFA0 /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
+		27953F44304C07EB00A8FFA0 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
+		27953F46304C07EC00A8FFA0 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		27953F48304C07EC00A8FFA0 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		27953F4D304C07EC00A8FFA0 /* Thai Dubbing for Safari Extension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "Thai Dubbing for Safari Extension.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
+		27953F52304C07EC00A8FFA0 /* SafariWebExtensionHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafariWebExtensionHandler.swift; sourceTree = "<group>"; };
+		27953F54304C07EC00A8FFA0 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		27953F5F304C07ED00A8FFA0 /* popup */ = {isa = PBXFileReference; lastKnownFileType = folder; name = popup; path = ../../../extension/popup; sourceTree = "<group>"; };
+		27953F60304C07ED00A8FFA0 /* background.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; name = background.js; path = ../../../extension/background.js; sourceTree = "<group>"; };
+		27953F61304C07ED00A8FFA0 /* icons */ = {isa = PBXFileReference; lastKnownFileType = folder; name = icons; path = ../../../extension/icons; sourceTree = "<group>"; };
+		27953F62304C07ED00A8FFA0 /* manifest.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = manifest.json; path = ../../../extension/manifest.json; sourceTree = "<group>"; };
+		27953F63304C07ED00A8FFA0 /* content.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; name = content.js; path = ../../../extension/content.js; sourceTree = "<group>"; };
+		27953F64304C07ED00A8FFA0 /* play */ = {isa = PBXFileReference; lastKnownFileType = text; name = play; path = ../../../extension/play; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		27CB326D30433DC700FBC07D /* Frameworks */ = {
+		27953F2F304C07EB00A8FFA0 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			files = (
 			);
 		};
-		27CB328830433DC800FBC07D /* Frameworks */ = {
+		27953F4A304C07EC00A8FFA0 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			files = (
 			);
@@ -81,66 +83,67 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		27CB326730433DC700FBC07D = {
+		27953F29304C07EB00A8FFA0 = {
 			isa = PBXGroup;
 			children = (
-				27CB327230433DC700FBC07D /* Thai Dubbing for Safari */,
-				27CB328F30433DC800FBC07D /* Thai Dubbing for Safari Extension */,
-				27CB327130433DC700FBC07D /* Products */,
+				27953F34304C07EB00A8FFA0 /* Thai Dubbing for Safari */,
+				27953F51304C07EC00A8FFA0 /* Thai Dubbing for Safari Extension */,
+				27953F33304C07EB00A8FFA0 /* Products */,
 			);
 			sourceTree = "<group>";
 		};
-		27CB327130433DC700FBC07D /* Products */ = {
+		27953F33304C07EB00A8FFA0 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				27CB327030433DC700FBC07D /* Thai Dubbing for Safari.app */,
-				27CB328B30433DC800FBC07D /* Thai Dubbing for Safari Extension.appex */,
+				27953F32304C07EB00A8FFA0 /* Thai Dubbing for Safari.app */,
+				27953F4D304C07EC00A8FFA0 /* Thai Dubbing for Safari Extension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
 		};
-		27CB327230433DC700FBC07D /* Thai Dubbing for Safari */ = {
+		27953F34304C07EB00A8FFA0 /* Thai Dubbing for Safari */ = {
 			isa = PBXGroup;
 			children = (
-				27CB327330433DC700FBC07D /* AppDelegate.swift */,
-				27CB327F30433DC700FBC07D /* ViewController.swift */,
-				27CB328130433DC700FBC07D /* Main.storyboard */,
-				27CB328430433DC800FBC07D /* Assets.xcassets */,
-				27CB328630433DC800FBC07D /* Info.plist */,
-				27CB327530433DC700FBC07D /* Resources */,
+				27953F35304C07EB00A8FFA0 /* AppDelegate.swift */,
+				27953F41304C07EB00A8FFA0 /* ViewController.swift */,
+				27953F43304C07EB00A8FFA0 /* Main.storyboard */,
+				27953F46304C07EC00A8FFA0 /* Assets.xcassets */,
+				27953F48304C07EC00A8FFA0 /* Info.plist */,
+				27953F37304C07EB00A8FFA0 /* Resources */,
 			);
 			path = "Thai Dubbing for Safari";
 			sourceTree = "<group>";
 		};
-		27CB327530433DC700FBC07D /* Resources */ = {
+		27953F37304C07EB00A8FFA0 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
-				27CB327630433DC700FBC07D /* Main.html */,
-				27CB327930433DC700FBC07D /* Icon.png */,
-				27CB327B30433DC700FBC07D /* Style.css */,
-				27CB327D30433DC700FBC07D /* Script.js */,
+				27953F38304C07EB00A8FFA0 /* Main.html */,
+				27953F3B304C07EB00A8FFA0 /* Icon.png */,
+				27953F3D304C07EB00A8FFA0 /* Style.css */,
+				27953F3F304C07EB00A8FFA0 /* Script.js */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
 		};
-		27CB328F30433DC800FBC07D /* Thai Dubbing for Safari Extension */ = {
+		27953F51304C07EC00A8FFA0 /* Thai Dubbing for Safari Extension */ = {
 			isa = PBXGroup;
 			children = (
-				27CB329C30433DC800FBC07D /* Resources */,
-				27CB329030433DC800FBC07D /* SafariWebExtensionHandler.swift */,
-				27CB329230433DC800FBC07D /* Info.plist */,
+				27953F5E304C07ED00A8FFA0 /* Resources */,
+				27953F52304C07EC00A8FFA0 /* SafariWebExtensionHandler.swift */,
+				27953F54304C07EC00A8FFA0 /* Info.plist */,
 			);
 			path = "Thai Dubbing for Safari Extension";
 			sourceTree = "<group>";
 		};
-		27CB329C30433DC800FBC07D /* Resources */ = {
+		27953F5E304C07ED00A8FFA0 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
-				27CB329D30433DC800FBC07D /* popup */,
-				27CB329E30433DC800FBC07D /* background.js */,
-				27CB329F30433DC800FBC07D /* icons */,
-				27CB32A030433DC800FBC07D /* manifest.json */,
-				27CB32A130433DC800FBC07D /* content.js */,
+				27953F5F304C07ED00A8FFA0 /* popup */,
+				27953F60304C07ED00A8FFA0 /* background.js */,
+				27953F61304C07ED00A8FFA0 /* icons */,
+				27953F62304C07ED00A8FFA0 /* manifest.json */,
+				27953F63304C07ED00A8FFA0 /* content.js */,
+				27953F64304C07ED00A8FFA0 /* play */,
 			);
 			name = Resources;
 			path = "Thai Dubbing for Safari Extension";
@@ -149,139 +152,140 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		27CB326F30433DC700FBC07D /* Thai Dubbing for Safari */ = {
+		27953F31304C07EB00A8FFA0 /* Thai Dubbing for Safari */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 27CB329930433DC800FBC07D /* Build configuration list for PBXNativeTarget "Thai Dubbing for Safari" */;
+			buildConfigurationList = 27953F5B304C07EC00A8FFA0 /* Build configuration list for PBXNativeTarget "Thai Dubbing for Safari" */;
 			buildPhases = (
-				27CB326C30433DC700FBC07D /* Sources */,
-				27CB326D30433DC700FBC07D /* Frameworks */,
-				27CB326E30433DC700FBC07D /* Resources */,
-				27CB329830433DC800FBC07D /* Embed Foundation Extensions */,
+				27953F2E304C07EB00A8FFA0 /* Sources */,
+				27953F2F304C07EB00A8FFA0 /* Frameworks */,
+				27953F30304C07EB00A8FFA0 /* Resources */,
+				27953F5A304C07EC00A8FFA0 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
-				27CB328E30433DC800FBC07D /* PBXTargetDependency */,
+				27953F50304C07EC00A8FFA0 /* PBXTargetDependency */,
 			);
 			name = "Thai Dubbing for Safari";
 			productName = "Thai Dubbing for Safari";
-			productReference = 27CB327030433DC700FBC07D /* Thai Dubbing for Safari.app */;
+			productReference = 27953F32304C07EB00A8FFA0 /* Thai Dubbing for Safari.app */;
 			productType = "com.apple.product-type.application";
 		};
-		27CB328A30433DC800FBC07D /* Thai Dubbing for Safari Extension */ = {
+		27953F4C304C07EC00A8FFA0 /* Thai Dubbing for Safari Extension */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 27CB329530433DC800FBC07D /* Build configuration list for PBXNativeTarget "Thai Dubbing for Safari Extension" */;
+			buildConfigurationList = 27953F57304C07EC00A8FFA0 /* Build configuration list for PBXNativeTarget "Thai Dubbing for Safari Extension" */;
 			buildPhases = (
-				27CB328730433DC800FBC07D /* Sources */,
-				27CB328830433DC800FBC07D /* Frameworks */,
-				27CB328930433DC800FBC07D /* Resources */,
+				27953F49304C07EC00A8FFA0 /* Sources */,
+				27953F4A304C07EC00A8FFA0 /* Frameworks */,
+				27953F4B304C07EC00A8FFA0 /* Resources */,
 			);
 			buildRules = (
 			);
 			name = "Thai Dubbing for Safari Extension";
 			productName = "Thai Dubbing for Safari Extension";
-			productReference = 27CB328B30433DC800FBC07D /* Thai Dubbing for Safari Extension.appex */;
+			productReference = 27953F4D304C07EC00A8FFA0 /* Thai Dubbing for Safari Extension.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
-		27CB326830433DC700FBC07D /* Project object */ = {
+		27953F2A304C07EB00A8FFA0 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 2700;
 				LastUpgradeCheck = 2700;
 				TargetAttributes = {
-					27CB326F30433DC700FBC07D = {
+					27953F31304C07EB00A8FFA0 = {
 						CreatedOnToolsVersion = 27.0;
 					};
-					27CB328A30433DC800FBC07D = {
+					27953F4C304C07EC00A8FFA0 = {
 						CreatedOnToolsVersion = 27.0;
 					};
 				};
 			};
-			buildConfigurationList = 27CB326B30433DC700FBC07D /* Build configuration list for PBXProject "Thai Dubbing for Safari" */;
+			buildConfigurationList = 27953F2D304C07EB00A8FFA0 /* Build configuration list for PBXProject "Thai Dubbing for Safari" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
 				Base,
 			);
-			mainGroup = 27CB326730433DC700FBC07D;
+			mainGroup = 27953F29304C07EB00A8FFA0;
 			minimizedProjectReferenceProxies = 1;
 			preferredProjectObjectVersion = 77;
-			productRefGroup = 27CB327130433DC700FBC07D /* Products */;
+			productRefGroup = 27953F33304C07EB00A8FFA0 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				27CB326F30433DC700FBC07D /* Thai Dubbing for Safari */,
-				27CB328A30433DC800FBC07D /* Thai Dubbing for Safari Extension */,
+				27953F31304C07EB00A8FFA0 /* Thai Dubbing for Safari */,
+				27953F4C304C07EC00A8FFA0 /* Thai Dubbing for Safari Extension */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		27CB326E30433DC700FBC07D /* Resources */ = {
+		27953F30304C07EB00A8FFA0 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			files = (
-				27CB327A30433DC700FBC07D /* Icon.png in Resources */,
-				27CB328330433DC700FBC07D /* Main.storyboard in Resources */,
-				27CB327E30433DC700FBC07D /* Script.js in Resources */,
-				27CB327830433DC700FBC07D /* Main.html in Resources */,
-				27CB328530433DC800FBC07D /* Assets.xcassets in Resources */,
-				27CB327C30433DC700FBC07D /* Style.css in Resources */,
+				27953F3C304C07EB00A8FFA0 /* Icon.png in Resources */,
+				27953F45304C07EB00A8FFA0 /* Main.storyboard in Resources */,
+				27953F40304C07EB00A8FFA0 /* Script.js in Resources */,
+				27953F3A304C07EB00A8FFA0 /* Main.html in Resources */,
+				27953F47304C07EC00A8FFA0 /* Assets.xcassets in Resources */,
+				27953F3E304C07EB00A8FFA0 /* Style.css in Resources */,
 			);
 		};
-		27CB328930433DC800FBC07D /* Resources */ = {
+		27953F4B304C07EC00A8FFA0 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			files = (
-				27CB32A530433DC800FBC07D /* manifest.json in Resources */,
-				27CB32A430433DC800FBC07D /* icons in Resources */,
-				27CB32A330433DC800FBC07D /* background.js in Resources */,
-				27CB32A230433DC800FBC07D /* popup in Resources */,
-				27CB32A630433DC800FBC07D /* content.js in Resources */,
+				27953F68304C07ED00A8FFA0 /* manifest.json in Resources */,
+				27953F67304C07ED00A8FFA0 /* icons in Resources */,
+				27953F66304C07ED00A8FFA0 /* background.js in Resources */,
+				27953F65304C07ED00A8FFA0 /* popup in Resources */,
+				27953F6A304C07ED00A8FFA0 /* play in Resources */,
+				27953F69304C07ED00A8FFA0 /* content.js in Resources */,
 			);
 		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		27CB326C30433DC700FBC07D /* Sources */ = {
+		27953F2E304C07EB00A8FFA0 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			files = (
-				27CB328030433DC700FBC07D /* ViewController.swift in Sources */,
-				27CB327430433DC700FBC07D /* AppDelegate.swift in Sources */,
+				27953F42304C07EB00A8FFA0 /* ViewController.swift in Sources */,
+				27953F36304C07EB00A8FFA0 /* AppDelegate.swift in Sources */,
 			);
 		};
-		27CB328730433DC800FBC07D /* Sources */ = {
+		27953F49304C07EC00A8FFA0 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			files = (
-				27CB329130433DC800FBC07D /* SafariWebExtensionHandler.swift in Sources */,
+				27953F53304C07EC00A8FFA0 /* SafariWebExtensionHandler.swift in Sources */,
 			);
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		27CB328E30433DC800FBC07D /* PBXTargetDependency */ = {
+		27953F50304C07EC00A8FFA0 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 27CB328A30433DC800FBC07D /* Thai Dubbing for Safari Extension */;
-			targetProxy = 27CB328D30433DC800FBC07D /* PBXContainerItemProxy */;
+			target = 27953F4C304C07EC00A8FFA0 /* Thai Dubbing for Safari Extension */;
+			targetProxy = 27953F4F304C07EC00A8FFA0 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
 /* Begin PBXVariantGroup section */
-		27CB327630433DC700FBC07D /* Main.html */ = {
+		27953F38304C07EB00A8FFA0 /* Main.html */ = {
 			isa = PBXVariantGroup;
 			children = (
-				27CB327730433DC700FBC07D /* Base */,
+				27953F39304C07EB00A8FFA0 /* Base */,
 			);
 			name = Main.html;
 			sourceTree = "<group>";
 		};
-		27CB328130433DC700FBC07D /* Main.storyboard */ = {
+		27953F43304C07EB00A8FFA0 /* Main.storyboard */ = {
 			isa = PBXVariantGroup;
 			children = (
-				27CB328230433DC700FBC07D /* Base */,
+				27953F44304C07EB00A8FFA0 /* Base */,
 			);
 			name = Main.storyboard;
 			sourceTree = "<group>";
@@ -289,7 +293,7 @@
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
-		27CB329330433DC800FBC07D /* Debug configuration for PBXProject "Thai Dubbing for Safari" */ = {
+		27953F55304C07EC00A8FFA0 /* Debug configuration for PBXProject "Thai Dubbing for Safari" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -352,7 +356,7 @@
 			};
 			name = Debug;
 		};
-		27CB329430433DC800FBC07D /* Release configuration for PBXProject "Thai Dubbing for Safari" */ = {
+		27953F56304C07EC00A8FFA0 /* Release configuration for PBXProject "Thai Dubbing for Safari" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -407,7 +411,7 @@
 			};
 			name = Release;
 		};
-		27CB329630433DC800FBC07D /* Debug configuration for PBXNativeTarget "Thai Dubbing for Safari Extension" */ = {
+		27953F58304C07EC00A8FFA0 /* Debug configuration for PBXNativeTarget "Thai Dubbing for Safari Extension" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
@@ -441,7 +445,7 @@
 			};
 			name = Debug;
 		};
-		27CB329730433DC800FBC07D /* Release configuration for PBXNativeTarget "Thai Dubbing for Safari Extension" */ = {
+		27953F59304C07EC00A8FFA0 /* Release configuration for PBXNativeTarget "Thai Dubbing for Safari Extension" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
@@ -475,7 +479,7 @@
 			};
 			name = Release;
 		};
-		27CB329A30433DC800FBC07D /* Debug configuration for PBXNativeTarget "Thai Dubbing for Safari" */ = {
+		27953F5C304C07EC00A8FFA0 /* Debug configuration for PBXNativeTarget "Thai Dubbing for Safari" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -517,7 +521,7 @@
 			};
 			name = Debug;
 		};
-		27CB329B30433DC800FBC07D /* Release configuration for PBXNativeTarget "Thai Dubbing for Safari" */ = {
+		27953F5D304C07EC00A8FFA0 /* Release configuration for PBXNativeTarget "Thai Dubbing for Safari" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -562,32 +566,32 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		27CB326B30433DC700FBC07D /* Build configuration list for PBXProject "Thai Dubbing for Safari" */ = {
+		27953F2D304C07EB00A8FFA0 /* Build configuration list for PBXProject "Thai Dubbing for Safari" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				27CB329330433DC800FBC07D /* Debug configuration for PBXProject "Thai Dubbing for Safari" */,
-				27CB329430433DC800FBC07D /* Release configuration for PBXProject "Thai Dubbing for Safari" */,
+				27953F55304C07EC00A8FFA0 /* Debug configuration for PBXProject "Thai Dubbing for Safari" */,
+				27953F56304C07EC00A8FFA0 /* Release configuration for PBXProject "Thai Dubbing for Safari" */,
 			);
 			defaultConfigurationName = Release;
 		};
-		27CB329530433DC800FBC07D /* Build configuration list for PBXNativeTarget "Thai Dubbing for Safari Extension" */ = {
+		27953F57304C07EC00A8FFA0 /* Build configuration list for PBXNativeTarget "Thai Dubbing for Safari Extension" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				27CB329630433DC800FBC07D /* Debug configuration for PBXNativeTarget "Thai Dubbing for Safari Extension" */,
-				27CB329730433DC800FBC07D /* Release configuration for PBXNativeTarget "Thai Dubbing for Safari Extension" */,
+				27953F58304C07EC00A8FFA0 /* Debug configuration for PBXNativeTarget "Thai Dubbing for Safari Extension" */,
+				27953F59304C07EC00A8FFA0 /* Release configuration for PBXNativeTarget "Thai Dubbing for Safari Extension" */,
 			);
 			defaultConfigurationName = Release;
 		};
-		27CB329930433DC800FBC07D /* Build configuration list for PBXNativeTarget "Thai Dubbing for Safari" */ = {
+		27953F5B304C07EC00A8FFA0 /* Build configuration list for PBXNativeTarget "Thai Dubbing for Safari" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				27CB329A30433DC800FBC07D /* Debug configuration for PBXNativeTarget "Thai Dubbing for Safari" */,
-				27CB329B30433DC800FBC07D /* Release configuration for PBXNativeTarget "Thai Dubbing for Safari" */,
+				27953F5C304C07EC00A8FFA0 /* Debug configuration for PBXNativeTarget "Thai Dubbing for Safari" */,
+				27953F5D304C07EC00A8FFA0 /* Release configuration for PBXNativeTarget "Thai Dubbing for Safari" */,
 			);
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
-	rootObject = 27CB326830433DC700FBC07D /* Project object */;
+	rootObject = 27953F2A304C07EB00A8FFA0 /* Project object */;
 	validationLevel = 1;
 }

@@ -51,7 +51,7 @@
           <span>🚀 โมเดลสร้างเสียง (TTS Engine)</span>
         </label>
         <select id="engineSelect" class="select-input">
-          <option value="vits_thai" selected>🇹🇭 VITS Thai Models (สถาปัตยกรรม VITS ภาษาไทยแท้ • PyThaiNLP)</option>
+          <option value="qwen_tts" selected>👑 Alibaba Qwen-Max Neural TTS (เสียงสมจริง 100% คงที่ทั้งเรื่อง)</option>
         </select>
       </div>
 
@@ -62,7 +62,7 @@
         </label>
         <select id="translationModelSelect" class="select-input">
           <option value="qwen-max" selected>👑 Alibaba Qwen-Max (โมเดลที่ดีที่สุดของ Qwen • แม่นยำ 100%)</option>
-          <option value="gemini-3.5-flash">✨ Google Gemini 3.5 Flash (คลาวด์ฟรี สละสลวย)</option>
+          <option value="qwen-plus-latest">⚡ Alibaba Qwen-Plus (ความเร็วสูง ตอบสนองฉับไว)</option>
         </select>
       </div>
 
@@ -76,13 +76,14 @@
         </select>
       </div>
 
-      <!-- Style Selector (Visible when Google Engine is active) -->
+      <!-- Style Selector -->
       <div id="styleGroup" class="form-group" style="margin-top: 10px;">
         <label for="styleSelect" class="form-label">
           <span>🎨 อารมณ์ / สไตล์การพูด</span>
         </label>
         <select id="styleSelect" class="select-input">
-          <option value="notebooklm" selected>🎙️ NotebookLM Audio Overview (เล่าเรื่องมีเสน่ห์ - แนะนำ)</option>
+          <option value="auto" selected>🤖 ปรับอารมณ์ตามบริบทคลิปอัตโนมัติ (แนะนำ)</option>
+          <option value="notebooklm">🎙️ NotebookLM Audio Overview (เล่าเรื่องมีเสน่ห์)</option>
           <option value="podcast">🎧 พอดแคสต์ / เล่าเรื่อง สุภาพ</option>
           <option value="cinema">🎬 หนัง / ซีรีส์ / อารมณ์สมจริง</option>
           <option value="casual">🗣️ ยูทูบเบอร์ / เกม / เป็นกันเอง</option>
@@ -130,7 +131,7 @@
         <span id="learnedCountBadge" class="badge" style="background: rgba(99, 102, 241, 0.25); color: #a5b4fc; font-size: 10px; padding: 2px 8px;">เรียนรู้แล้ว 60+ คำ</span>
       </div>
       <p style="font-size: 11px; color: #94a3b8; margin: 0 0 10px 0; line-height: 1.4;">
-        สอนคำศัพท์เฉพาะทาง คำทับศัพท์ หรือชื่อเฉพาะให้โมเดลเสียงทั้ง 4 ตัวออกเสียงได้ถูกต้องแม่นยำยิ่งขึ้น
+        สอนคำศัพท์เฉพาะทาง คำทับศัพท์ หรือชื่อเฉพาะให้โมเดลเสียงออกเสียงได้ถูกต้องแม่นยำยิ่งขึ้น
       </p>
       <div style="display: flex; gap: 6px; margin-bottom: 6px;">
         <input type="text" id="learnTermInput" class="text-input" placeholder="คำเดิม (เช่น DeepSeek)" style="flex: 1; font-size: 11px; padding: 6px 8px;">
@@ -162,17 +163,13 @@
             <label for="customQwenKey" class="form-label">Alibaba DashScope (Qwen-Max) Key</label>
             <input type="password" id="customQwenKey" class="text-input" placeholder="sk-ws-...">
           </div>
-          <div class="form-group" style="margin-top: 8px;">
-            <label for="customKey" class="form-label">Google Gemini API Key</label>
-            <input type="password" id="customKey" class="text-input" placeholder="AQ.Ab8RN...">
-          </div>
         </div>
       </details>
     </div>
 
     <!-- Footer -->
     <footer class="footer">
-      <span>Zero-Cost Stack • Gemini 2.0 & Unlock-TTS Audio</span>
+      <span>Alibaba Qwen-Max Flagship AI Dubbing Engine</span>
     </footer>
   </div>
 

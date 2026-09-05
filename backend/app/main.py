@@ -23,7 +23,7 @@ from pydantic import BaseModel
 from app.cache import cache
 from app.config import settings
 from app.translator import translator
-from app.tts_engine import tts_engine, VOICE_REGISTRY
+from app.tts_engine import tts_engine, VOICE_REGISTRY, VOICE_ALIASES
 
 logging.basicConfig(
     level=logging.INFO,
@@ -60,12 +60,14 @@ app.add_middleware(
 class DubRequest(BaseModel):
     text: str
     context: Optional[str] = ""
-    engine: Optional[str] = "fish_speech"
-    voice: Optional[str] = "auto"
+    engine: Optional[str] = "qwen_tts"
+    voice: Optional[str] = "qwen-thai-female"
     style: Optional[str] = "auto"
     gender: Optional[str] = "auto"
     rate: Optional[str] = "+0%"
     customGeminiKey: Optional[str] = ""
+    customQwenKey: Optional[str] = ""
+    translationModel: Optional[str] = "qwen-max"
     fishApiKey: Optional[str] = ""
 
 
@@ -79,8 +81,8 @@ class CueItem(BaseModel):
 class BatchDubRequest(BaseModel):
     cues: List[CueItem]
     context: Optional[str] = ""
-    engine: Optional[str] = "studio_neural"
-    voice: Optional[str] = "auto"
+    engine: Optional[str] = "qwen_tts"
+    voice: Optional[str] = "qwen-thai-female"
     style: Optional[str] = "auto"
     gender: Optional[str] = "auto"
     rate: Optional[str] = "+0%"
@@ -125,12 +127,14 @@ def resolve_auto_settings(
     context: str = "",
 ):
     """
-    Google Gemini 3.5 Thai Neural Voice Resolver:
-    - Supports Google Gemini 3.5 Female (Aoede) and Male (Puck).
+    Alibaba Qwen-Max Thai Neural Voice Resolver:
+    - Supports Alibaba Qwen-Max Female (Premwadee) and Male (Niwat).
     """
-    voice = req_voice if req_voice in VOICE_REGISTRY else "gemini-thai-female"
-    reg = VOICE_REGISTRY.get(voice, VOICE_REGISTRY["gemini-thai-female"])
-    engine = reg.get("engine", "gemini_tts")
+    raw_voice = req_voice or "qwen-thai-female"
+    normalized = VOICE_ALIASES.get(raw_voice, raw_voice)
+    voice = normalized if normalized in VOICE_REGISTRY else "qwen-thai-female"
+    reg = VOICE_REGISTRY.get(voice, VOICE_REGISTRY["qwen-thai-female"])
+    engine = reg.get("engine", "qwen_tts")
     gender = reg.get("gender", "female")
     style = req_style or "auto"
     return engine, voice, style, gender
@@ -432,11 +436,11 @@ async def dub_cues_batch(req: BatchDubRequest):
     except Exception:
         pass
 
-    # 2. Hard-Locked Selected Google Gemini 3.5 Voice (100% consistent across entire video)
-    target_voice = voice if voice in VOICE_REGISTRY else "gemini-thai-female"
-    voice_meta = VOICE_REGISTRY.get(target_voice, VOICE_REGISTRY["gemini-thai-female"])
-    voice_display_name = voice_meta.get("name", "✨ Google Gemini 3.5: หญิง")
-    target_engine = voice_meta.get("engine", "gemini_tts")
+    # 2. Hard-Locked Selected Alibaba Qwen-Max Voice (100% consistent across entire video)
+    target_voice = voice if voice in VOICE_REGISTRY else "qwen-thai-female"
+    voice_meta = VOICE_REGISTRY.get(target_voice, VOICE_REGISTRY["qwen-thai-female"])
+    voice_display_name = voice_meta.get("name", "👑 Alibaba Qwen-Max: หญิง")
+    target_engine = voice_meta.get("engine", "qwen_tts")
     speaker_gender = voice_meta.get("gender", "female")
 
     sem = asyncio.Semaphore(4)
@@ -555,6 +559,7 @@ async def dub_cues_batch(req: BatchDubRequest):
         "results": results,
         "active_voice": target_voice,
         "voice_name": voice_display_name,
+        "qwen_status": translator.last_status,
         "gemini_status": translator.last_status,
         "total_cues": len(req.cues),
     }
@@ -572,7 +577,9 @@ async def dub_text(req: DubRequest):
         req.engine, req.voice, req.style, req.gender, context=req.context or ""
     )
     rate = req.rate or "+0%"
-    custom_key = req.customGeminiKey.strip() if req.customGeminiKey else None
+    custom_gemini = req.customGeminiKey.strip() if req.customGeminiKey else None
+    custom_qwen = (req.customQwenKey.strip() if req.customQwenKey else None) or settings.qwen_api_key
+    translation_model = req.translationModel or "qwen-max"
 
     # 1. Translate
     thai_text = await translator.translate(
@@ -580,7 +587,9 @@ async def dub_text(req: DubRequest):
         context=req.context or "",
         style=style,
         gender=gender,
-        custom_key=custom_key,
+        custom_key=custom_gemini,
+        custom_qwen_key=custom_qwen,
+        translation_model=translation_model,
     )
 
     if not thai_text:
@@ -615,7 +624,7 @@ async def dub_text(req: DubRequest):
         voice=voice,
         style=style,
         rate=rate,
-        api_key=custom_key,
+        api_key=custom_gemini,
     )
 
     if not audio_bytes:
@@ -643,5 +652,6 @@ async def dub_text(req: DubRequest):
         "translatedText": thai_text,
         "base64Audio": base64.b64encode(audio_bytes).decode("utf-8"),
         "cached": False,
+        "qwen_status": translator.last_status,
         "gemini_status": translator.last_status,
     }

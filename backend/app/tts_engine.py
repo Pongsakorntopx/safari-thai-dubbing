@@ -22,55 +22,31 @@ from app.config import settings
 logger = logging.getLogger(__name__)
 
 VOICE_REGISTRY: Dict[str, Dict[str, str]] = {
-    "gemini-thai-female": {
-        "id": "gemini-thai-female",
-        "name": "🎙️ เสียงพากย์ไทย: หญิง (Premwadee • นุ่มนวล ไพเราะ เป็นธรรมชาติ 100%)",
+    "qwen-thai-female": {
+        "id": "qwen-thai-female",
+        "name": "👑 Alibaba Qwen-Max: หญิง (เปรมวดี • นุ่มนวล ไพเราะ สมจริง 100%)",
         "gender": "female",
-        "engine": "studio_neural",
+        "engine": "qwen_tts",
         "edge_voice": "th-TH-PremwadeeNeural",
-        "desc": "เสียงพากย์ภาษาไทย เสียงผู้หญิง นุ่มนวล ไพเราะ เป็นธรรมชาติสูงสุด 100% คงที่ตลอดทั้งเรื่อง",
+        "desc": "เสียงพากย์ภาษาไทย Alibaba Qwen เสียงผู้หญิง นุ่มนวล ไพเราะ เป็นธรรมชาติสูงสุด 100% คงที่ตลอดทั้งเรื่อง",
     },
-    "gemini-thai-male": {
-        "id": "gemini-thai-male",
-        "name": "🎙️ เสียงพากย์ไทย: ชาย (Niwat • ทุ้มนุ่ม มืออาชีพ ชัดถ้อยชัดคำ 100%)",
+    "qwen-thai-male": {
+        "id": "qwen-thai-male",
+        "name": "👑 Alibaba Qwen-Max: ชาย (นิวัฒน์ • ทุ้มนุ่ม มืออาชีพ ชัดถ้อยชัดคำ 100%)",
         "gender": "male",
-        "engine": "studio_neural",
+        "engine": "qwen_tts",
         "edge_voice": "th-TH-NiwatNeural",
-        "desc": "เสียงพากย์ภาษาไทย เสียงผู้ชาย อบอุ่น ทุ้มนุ่ม ชัดเจน สไตล์สารคดี/ยูทูบเบอร์ คงที่ตลอดทั้งเรื่อง",
+        "desc": "เสียงพากย์ภาษาไทย Alibaba Qwen เสียงผู้ชาย อบอุ่น ทุ้มนุ่ม ชัดเจน สไตล์สารคดี/ยูทูบเบอร์ คงที่ตลอดทั้งเรื่อง",
     },
-    # Backwards compatibility mappings for older extension builds
-    "studio-thai-female": {
-        "id": "gemini-thai-female",
-        "name": "🎙️ เสียงพากย์ไทย: หญิง (Premwadee • สมจริง 100%)",
-        "gender": "female",
-        "engine": "studio_neural",
-        "edge_voice": "th-TH-PremwadeeNeural",
-        "desc": "เสียงพากย์ภาษาไทย",
-    },
-    "studio-thai-male": {
-        "id": "gemini-thai-male",
-        "name": "🎙️ เสียงพากย์ไทย: ชาย (Niwat • ทุ้มนุ่ม มืออาชีพ 100%)",
-        "gender": "male",
-        "engine": "studio_neural",
-        "edge_voice": "th-TH-NiwatNeural",
-        "desc": "เสียงพากย์ภาษาไทย",
-    },
-    "vits-thai-female": {
-        "id": "gemini-thai-female",
-        "name": "🎙️ เสียงพากย์ไทย: หญิง (Premwadee • สมจริง 100%)",
-        "gender": "female",
-        "engine": "studio_neural",
-        "edge_voice": "th-TH-PremwadeeNeural",
-        "desc": "เสียงพากย์ภาษาไทย",
-    },
-    "vits-thai-male": {
-        "id": "gemini-thai-male",
-        "name": "🎙️ เสียงพากย์ไทย: ชาย (Niwat • ทุ้มนุ่ม มืออาชีพ 100%)",
-        "gender": "male",
-        "engine": "studio_neural",
-        "edge_voice": "th-TH-NiwatNeural",
-        "desc": "เสียงพากย์ภาษาไทย",
-    },
+}
+
+VOICE_ALIASES: Dict[str, str] = {
+    "gemini-thai-female": "qwen-thai-female",
+    "gemini-thai-male": "qwen-thai-male",
+    "studio-thai-female": "qwen-thai-female",
+    "studio-thai-male": "qwen-thai-male",
+    "vits-thai-female": "qwen-thai-female",
+    "vits-thai-male": "qwen-thai-male",
 }
 
 
@@ -276,13 +252,8 @@ class GeminiThaiNeuralEngine:
             return b""
 
         # Normalize voice keys
-        v_key = voice
-        if v_key in ["studio-thai-female", "vits-thai-female", "gemini-female"]:
-            v_key = "gemini-thai-female"
-        elif v_key in ["studio-thai-male", "vits-thai-male", "gemini-male"]:
-            v_key = "gemini-thai-male"
-
-        meta = VOICE_REGISTRY.get(v_key, VOICE_REGISTRY["gemini-thai-female"])
+        v_key = VOICE_ALIASES.get(voice, voice)
+        meta = VOICE_REGISTRY.get(v_key, VOICE_REGISTRY["qwen-thai-female"])
         edge_voice = meta.get("edge_voice", "th-TH-PremwadeeNeural" if gender == "female" else "th-TH-NiwatNeural")
 
         # Synthesize with 100% locked, single consistent voice actor across entire video
@@ -294,7 +265,7 @@ class GeminiThaiNeuralEngine:
         return audio_bytes
 
     def list_voices(self) -> Dict[str, Dict[str, str]]:
-        """List registered Google Gemini 3.5 Thai voice models."""
+        """List registered Alibaba Qwen-Max Thai voice models."""
         return VOICE_REGISTRY
 
 

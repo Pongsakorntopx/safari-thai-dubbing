@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     qwen_api_key: str = os.getenv("QWEN_API_KEY", "sk-ws-H.DDLIDRI.FjEo.MEYCIQClFrpLY4yP_rpWWLjU-jTAsiMqqOeXOoMLE3s-6K08lAIhAJB8ZZVuWXYGmzhIxp9RXsZY-2AP_7ywEQCOWuEAmz_s")
     qwen_model: str = os.getenv("QWEN_MODEL", "qwen-max")
     translation_engine: str = os.getenv("TRANSLATION_ENGINE", "qwen")
-    default_voice: str = os.getenv("DEFAULT_VOICE", "gemini-thai-female")
+    default_voice: str = os.getenv("DEFAULT_VOICE", "qwen-thai-female")
     default_rate: str = os.getenv("DEFAULT_RATE", "+0%")
     default_pitch: str = os.getenv("DEFAULT_PITCH", "+0Hz")
     sqlite_cache_db: str = os.getenv("SQLITE_CACHE_DB", str(Path(__file__).resolve().parent.parent / "dub_cache.db"))

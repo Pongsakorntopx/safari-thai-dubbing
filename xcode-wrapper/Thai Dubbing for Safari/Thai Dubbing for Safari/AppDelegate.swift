@@ -2,7 +2,7 @@
 //  AppDelegate.swift
 //  Thai Dubbing for Safari
 //
-//  Created by Macbook Pro's Pongsakorn on 29/8/2569 BE.
+//  Created by Macbook Pro's Pongsakorn on 5/9/2569 BE.
 //
 
 import Cocoa
