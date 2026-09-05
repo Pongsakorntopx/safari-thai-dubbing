@@ -227,9 +227,12 @@ async def fetch_youtube_innertube_cues_async(video_id: str) -> List[Dict]:
                     data = await resp.json(content_type=None)
                     caption_tracks = data.get("captions", {}).get("playerCaptionsTracklistRenderer", {}).get("captionTracks", [])
                     if caption_tracks:
-                        # Prioritize English or Thai or first available (Korean, Japanese, Spanish, etc.)
-                        chosen = next((t for t in caption_tracks if t.get("languageCode") in ["en", "en-US"]), None) or \
-                                 next((t for t in caption_tracks if t.get("languageCode") == "th"), None) or \
+                        # Prioritize English or Thai, avoid Chinese (zh) tracks
+                        chosen = next((t for t in caption_tracks if (t.get("languageCode") or "").lower() in ["en", "en-us", "en-gb"]), None) or \
+                                 next((t for t in caption_tracks if (t.get("languageCode") or "").lower().startswith("en")), None) or \
+                                 next((t for t in caption_tracks if (t.get("vssId") or "").endswith(".en")), None) or \
+                                 next((t for t in caption_tracks if (t.get("languageCode") or "").lower() == "th"), None) or \
+                                 next((t for t in caption_tracks if not (t.get("languageCode") or "").lower().startswith("zh")), None) or \
                                  caption_tracks[0]
 
                         base_url = chosen.get("baseUrl")
@@ -341,8 +344,10 @@ async def get_transcript(req: TranscriptRequest):
             from youtube_transcript_api import YouTubeTranscriptApi
             api = YouTubeTranscriptApi()
             tl = api.list(clean_vid)
-            chosen_t = next((t for t in tl if t.language_code in ["en", "en-US"]), None) or \
-                       next((t for t in tl if t.language_code == "th"), None) or \
+            chosen_t = next((t for t in tl if (t.language_code or "").lower() in ["en", "en-us", "en-gb"]), None) or \
+                       next((t for t in tl if (t.language_code or "").lower().startswith("en")), None) or \
+                       next((t for t in tl if (t.language_code or "").lower() == "th"), None) or \
+                       next((t for t in tl if not (t.language_code or "").lower().startswith("zh")), None) or \
                        next(iter(tl), None)
             if chosen_t:
                 snippets = chosen_t.fetch()

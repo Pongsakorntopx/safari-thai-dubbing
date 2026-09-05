@@ -96,11 +96,24 @@
 
   let audioUnlocked = false;
   function unlockAudio() {
-    if (audioUnlocked || state.isPlaying) return;
+    if (audioUnlocked) return;
     try {
       const audio = getGlobalAudioPlayer();
-      if (audio && audio.paused) {
-        audioUnlocked = true;
+      if (audio) {
+        // 1-sample silent WAV to unlock audio playback in Safari
+        const silentWav = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+        audio.src = silentWav;
+        const p = audio.play();
+        if (p && typeof p.then === 'function') {
+          p.then(() => {
+            audioUnlocked = true;
+            audio.pause();
+            audio.currentTime = 0;
+            console.log('[ThaiDubbing] Audio successfully unlocked for Safari.');
+          }).catch((err) => {
+            console.warn('[ThaiDubbing] Audio unlock play caught:', err);
+          });
+        }
       }
     } catch (e) {}
   }
@@ -442,9 +455,11 @@
 
       console.log(`[ThaiDubbing] Available caption tracks (${captionTracks.length}):`, captionTracks.map((t) => t.languageCode));
 
-      // Prioritize English, then Thai, then any available track
-      const chosen = captionTracks.find((t) => t.languageCode === 'en' || t.languageCode === 'en-US') ||
+      // Prioritize English tracks (en, en-US, en-GB, or auto-generated English a.en), then Thai, then any non-Chinese track
+      const chosen = captionTracks.find((t) => t.languageCode && t.languageCode.toLowerCase().startsWith('en')) ||
+                     captionTracks.find((t) => t.vssId && t.vssId.includes('.en')) ||
                      captionTracks.find((t) => t.languageCode === 'th') ||
+                     captionTracks.find((t) => !t.languageCode.toLowerCase().startsWith('zh')) ||
                      captionTracks[0];
 
       if (!chosen || !chosen.baseUrl) return null;
@@ -643,19 +658,72 @@
       }
     });
 
+    let isUrgentFetching = false;
+    async function triggerImmediatePrefetch(fromTime) {
+      if (!state.isDubbingActive || state.timedCues.length === 0 || isUrgentFetching) return;
+
+      const pendingCues = state.timedCues.filter((c) => c.end >= fromTime - 0.5 && c.status === 'pending');
+      if (pendingCues.length === 0) return;
+
+      const urgentBatch = pendingCues.slice(0, 8);
+      urgentBatch.forEach((c) => (c.status = 'fetching'));
+      isUrgentFetching = true;
+      updateHUDStatus('⚡ กำลังโหลดเสียงพากย์จุดนี้ทันที...');
+
+      try {
+        const batchRes = await fetchDubBatchDirect(urgentBatch);
+        if (batchRes && batchRes.success && batchRes.results) {
+          for (const item of batchRes.results) {
+            const cue = state.timedCues.find((c) => c.id === item.id);
+            if (cue) {
+              cue.translated = item.translatedText || cue.text;
+              cue.isMasterTrack = !!item.isMasterTrack;
+              cue.speaker = item.speaker || 'Host';
+              cue.emotion = item.emotion || 'normal';
+              cue.orig_wpm = item.orig_wpm || 140;
+              cue.appliedRate = item.appliedRate || '+0%';
+              if (item.base64Audio) {
+                cue.audioBase64 = item.base64Audio;
+                cue.audioUrl = base64ToBlobUrl(item.base64Audio);
+                cue.status = 'ready';
+              } else {
+                cue.status = 'ready';
+              }
+            }
+          }
+          updateBufferGauge();
+          updateHUDStatus('🟢 พร้อมเล่นเสียงพากย์จุดนี้แล้ว');
+        } else {
+          urgentBatch.forEach((c) => {
+            if (c.status === 'fetching') c.status = 'pending';
+          });
+        }
+      } catch (err) {
+        console.error('[ThaiDubbing] Urgent prefetch error:', err);
+        urgentBatch.forEach((c) => {
+          if (c.status === 'fetching') c.status = 'pending';
+        });
+      } finally {
+        isUrgentFetching = false;
+      }
+    }
+
     video.addEventListener('seeking', () => {
       if (state.isDubbingActive) {
         stopActivePlayback();
         restoreVideoVolume();
+        unlockAudio();
+        disableAllVideoTextTracks();
         const cur = video.currentTime;
         state.timedCues.forEach((c) => {
-          if (c.end < cur) {
+          if (c.end < cur - 0.5) {
             c.status = 'played';
-          } else if (c.start >= cur) {
+          } else {
             c.status = (c.audioUrl || c.audioBase64) ? 'ready' : 'pending';
           }
         });
         updateBufferGauge();
+        triggerImmediatePrefetch(cur);
       }
     });
 
@@ -784,8 +852,7 @@
           }
         }
 
-        // 4. 3-Minute buffer is ready -> Automatically Play Video & Start Background Lookahead!
-        state.bufferedSeconds = state.targetBufferSeconds;
+        // 4. 1-Minute buffer is ready -> Automatically Play Video & Start Background Lookahead!
         updateBufferGauge();
         onBufferSyncComplete();
         startLookaheadWorkers();
@@ -923,14 +990,16 @@
 
       const currentTime = video.currentTime;
 
-      // 🎯 Movie Dubbing Cutoff Enforcer:
-      // If audio is currently playing for currentPlayingCue, check if video has passed cue.end.
-      // If original video speaker stopped speaking (>0.2s gap or next cue not yet started),
-      // stop dubbing audio immediately so Thai voice stops precisely when the speaker's mouth closes!
+      // Continuously enforce native track suppression
+      disableAllVideoTextTracks();
+
+      // 🎯 Movie Dubbing Safe Playback Enforcer:
+      // Allow Thai speech to finish naturally without cutting off words abruptly.
+      // Only pause if video has moved far beyond cue.end (> 1.2s leeway) into a wide silence gap.
       if (state.isPlaying && state.currentPlayingCue) {
-        if (currentTime >= state.currentPlayingCue.end + 0.08) {
+        if (currentTime >= state.currentPlayingCue.end + 1.2) {
           const nextCue = state.timedCues.find((c) => c.start > state.currentPlayingCue.end);
-          const isSpeechGap = !nextCue || (nextCue.start > state.currentPlayingCue.end + 0.2);
+          const isSpeechGap = !nextCue || (nextCue.start > state.currentPlayingCue.end + 0.6);
           if (isSpeechGap) {
             stopActivePlayback();
             clearCinemaSubtitle();
@@ -941,17 +1010,24 @@
 
       for (let i = 0; i < state.timedCues.length; i++) {
         const cue = state.timedCues[i];
-        if (cue.status === 'ready' && currentTime >= cue.start - 0.08 && currentTime <= cue.end + 0.3) {
-          cue.status = 'played';
-          state.lastScheduledCue = cue;
-          if (cue.audioUrl || cue.audioBase64) {
-            schedulePlayAudio(cue);
-          } else if (cue.translated) {
-            const durMs = Math.max(800, Math.round((cue.end - cue.start) * 1000 + 400));
-            renderCinemaSubtitle(cue.translated, durMs);
+        const isCueActive = currentTime >= cue.start - 0.15 && currentTime <= cue.end + 0.4;
+        if (isCueActive) {
+          if (cue.status === 'ready') {
+            cue.status = 'played';
+            state.lastScheduledCue = cue;
+            if (cue.audioUrl || cue.audioBase64) {
+              schedulePlayAudio(cue);
+            } else if (cue.translated) {
+              const durMs = Math.max(800, Math.round((cue.end - cue.start) * 1000 + 400));
+              renderCinemaSubtitle(cue.translated, durMs);
+            }
+            break;
+          } else if (cue.status === 'pending') {
+            // Missing audio at playhead! Trigger urgent prefetch immediately!
+            triggerImmediatePrefetch(currentTime);
+            break;
           }
-          break;
-        } else if (cue.start > currentTime + 0.5) {
+        } else if (cue.start > currentTime + 1.0) {
           // Cues are sorted by start time, no need to check further into future
           break;
         }
@@ -1048,18 +1124,27 @@
     });
   }
 
+  function getContiguousBufferSeconds(currentTime) {
+    if (!state.timedCues || state.timedCues.length === 0) return 0;
+    const upcomingCues = state.timedCues.filter((c) => c.end > currentTime);
+    if (upcomingCues.length === 0) return 0;
+
+    let bufferedUntil = currentTime;
+    for (let i = 0; i < upcomingCues.length; i++) {
+      const cue = upcomingCues[i];
+      const isReady = cue.status === 'ready' && (cue.audioUrl || cue.audioBase64);
+      if (!isReady) {
+        return Math.max(0, Math.round(cue.start - currentTime));
+      }
+      bufferedUntil = Math.max(bufferedUntil, cue.end);
+    }
+    return Math.max(0, Math.round(bufferedUntil - currentTime));
+  }
+
   function updateBufferGauge() {
     const video = findVideoElement();
     const cur = video ? video.currentTime : 0;
-    const readyCues = state.timedCues.filter((c) => c.status === 'ready' && (c.audioUrl || c.audioBase64) && c.end >= cur - 1.0);
-
-    if (readyCues.length > 0) {
-      const readyDuration = readyCues.reduce((acc, c) => acc + (c.end - c.start), 0);
-      const maxEnd = Math.max(...readyCues.map((c) => c.end));
-      state.bufferedSeconds = Math.max(Math.round(readyDuration), Math.round(maxEnd - cur));
-    } else {
-      state.bufferedSeconds = 0;
-    }
+    state.bufferedSeconds = getContiguousBufferSeconds(cur);
 
     const gaugeEl = document.getElementById('hud-buffer-text');
     const barEl = document.getElementById('hud-buffer-bar');
@@ -1206,6 +1291,40 @@
   }
 
   // --- Hide YouTube Native Captions during Dubbing ---
+  function disableAllVideoTextTracks() {
+    try {
+      const videos = document.querySelectorAll('video');
+      videos.forEach((v) => {
+        if (v.textTracks && v.textTracks.length > 0) {
+          for (let i = 0; i < v.textTracks.length; i++) {
+            if (v.textTracks[i].mode !== 'disabled') {
+              v.textTracks[i].mode = 'disabled';
+            }
+          }
+        }
+      });
+    } catch (e) {}
+  }
+
+  function disableYouTubePlayerCaptions() {
+    try {
+      const player = document.querySelector('#movie_player');
+      if (player) {
+        if (typeof player.setOption === 'function') {
+          player.setOption('captions', 'track', {});
+        }
+        if (typeof player.unloadModule === 'function') {
+          player.unloadModule('captions');
+        }
+      }
+      const ccBtn = document.querySelector('.ytp-subtitles-button');
+      if (ccBtn && ccBtn.getAttribute('aria-pressed') === 'true') {
+        ccBtn.click();
+      }
+    } catch (e) {}
+    disableAllVideoTextTracks();
+  }
+
   function setNativeCaptionsHidden(hide) {
     let styleEl = document.getElementById('thai-dub-hide-cc-style');
     if (hide) {
@@ -1214,16 +1333,32 @@
         styleEl.id = 'thai-dub-hide-cc-style';
         styleEl.textContent = `
           .ytp-caption-window-bottom,
+          .ytp-caption-window-rollup,
+          .ytp-caption-window-top,
           .caption-window,
           .ytp-caption-segment,
-          #ytp-caption-window-container {
+          #ytp-caption-window-container,
+          .caption-visual-line,
+          .captions-text,
+          div[class*="caption-window"],
+          div[class*="ytp-caption"],
+          #movie_player .caption-window,
+          .ytp-timedmarkers-container,
+          video::cue,
+          ::cue {
             display: none !important;
             opacity: 0 !important;
             visibility: hidden !important;
+            height: 0 !important;
+            font-size: 0 !important;
+            line-height: 0 !important;
+            background: transparent !important;
+            color: transparent !important;
           }
         `;
         document.head.appendChild(styleEl);
       }
+      disableYouTubePlayerCaptions();
     } else {
       if (styleEl) styleEl.remove();
     }

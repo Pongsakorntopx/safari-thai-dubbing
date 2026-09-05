@@ -155,8 +155,14 @@ def detect_context_style(context: str, requested_style: str = "auto") -> str:
 
 
 def is_valid_thai_translation(text: str) -> bool:
-    """Check if the translated text is valid and not an API error response."""
+    """Check if the translated text is valid, contains genuine Thai characters, and strictly contains no Chinese characters."""
     if not text or not text.strip():
+        return False
+    # Strict rule: Must NOT contain any Chinese characters
+    if re.search(r"[\u4e00-\u9fff]", text):
+        return False
+    # Must contain at least some Thai characters
+    if not re.search(r"[\u0e00-\u0e7f]", text):
         return False
     t_upper = text.upper()
     bad_tokens = [
@@ -433,7 +439,7 @@ class CascadeTranslator:
         system_prompt = f"""คุณคือ "ผู้กำกับเสียงพากย์และนักเขียนบทพากย์ภาษาไทยระดับมืออาชีพชั้นนำ" (Master Thai Movie & Video Dubbing Director)
 ภารกิจของคุณคือ: แปลและเรียบเรียงบทสนทนาต้นฉบับให้เป็น "บทพากย์ภาษาไทยที่ฟังแล้วเข้าใจได้ทันที 100% สละสลวย เป็นธรรมชาติ เหมือนดูหนังต่างประเทศที่พากย์ไทยโดยทีมพากย์มืออาชีพ"
 
-กฎเหล็กสำคัญ 5 ประการ:
+กฎเหล็กสำคัญ 6 ประการ:
 1. **ห้ามแปลตรงตัวคำต่อคำ (Strict Anti-Literal Translation):**
    - ห้ามแปลเรียงคำตามโครงสร้างภาษาต้นฉบับเด็ดขาด (Anti-Translationese)
    - ให้จับ "ใจความสำคัญและอารมณ์" แล้วจัดเรียงคำและประโยคขึ้นมาใหม่ทั้งหมดด้วยภาษาพูดที่คนไทยใช้จริงในชีวิตประจำวัน ฟังปุ๊บเข้าใจปั๊บ ลื่นหู ไม่สับสน
@@ -452,7 +458,12 @@ class CascadeTranslator:
 4. **ประโยคสมบูรณ์ในตัวเอง (Complete Clauses):**
    - แต่ละท่อน [1], [2], [3]... ต้องเป็นใจความที่เข้าใจได้ทันที ไม่ตัดคำผสมภาษาไทยแยกออกจากกัน
 
-5. **รูปแบบผลลัพธ์ (JSON Object เท่านั้น):**
+5. **กฎเหล็กภาษาไทยแท้ 100% (Strict Thai Script Only - No Chinese Allowed):**
+   - ห้ามมีตัวอักษรจีน (Chinese characters / 汉字 / 拼音) ปรากฏในบทพากย์ภาษาไทยเด็ดขาด 100%!
+   - บทพากย์ในช่อง "thai" ทุกท่อนจะต้องเป็น "ตัวอักษรภาษาไทยล้วน" (Pure Thai text) เท่านั้น หากมีตัวอักษรจีนแม้แต่ตัวเดียวจะถือว่าล้มเหลว
+   - ชื่อเฉพาะหรือคำทับศัพท์ ให้เขียนทับศัพท์เป็นภาษาไทยอย่างถูกต้อง เช่น New York -> นิวยอร์ก, Jimmy -> จิมมี่, Erling Haaland -> เออร์ลิง ฮาแลนด์
+
+6. **รูปแบบผลลัพธ์ (JSON Object เท่านั้น):**
    ส่งผลลัพธ์เป็น JSON Object ในรูปแบบ:
    {{
      "results": [
@@ -518,24 +529,21 @@ class CascadeTranslator:
                                         cid = c.get("id", i + 1)
                                         matched = cue_map.get(cid) or (raw_items[i] if i < len(raw_items) and isinstance(raw_items[i], dict) else None)
                                         thai_str = (matched.get("thai", "") if matched else "").strip()
-                                        if thai_str:
-                                            final_results.append({
-                                                "id": cid,
-                                                "speaker": "host",
-                                                "gender": gender if gender in ["male", "female"] else "female",
-                                                "emotion": matched.get("emotion", "engaging") if matched else "engaging",
-                                                "rate": matched.get("rate", "+0%") if matched else "+0%",
-                                                "thai": transcreate_thai_dialogue(thai_str, style=effective_style, gender=gender),
-                                            })
-                                        else:
-                                            final_results.append({
-                                                "id": cid,
-                                                "speaker": "host",
-                                                "gender": gender if gender in ["male", "female"] else "female",
-                                                "emotion": "engaging",
-                                                "rate": "+0%",
-                                                "thai": transcreate_thai_dialogue(c.get("text", ""), style=effective_style, gender=gender),
-                                            })
+                                        
+                                        # Strict Thai validation: Must contain Thai and must NOT contain Chinese
+                                        is_valid = bool(thai_str) and not re.search(r"[\u4e00-\u9fff]", thai_str) and bool(re.search(r"[\u0e00-\u0e7f]", thai_str))
+                                        if not is_valid:
+                                            fallback_raw = translate_via_google_multi(c.get("text", ""))
+                                            thai_str = fallback_raw if fallback_raw and not re.search(r"[\u4e00-\u9fff]", fallback_raw) else c.get("text", "")
+
+                                        final_results.append({
+                                            "id": cid,
+                                            "speaker": "host",
+                                            "gender": gender if gender in ["male", "female"] else "female",
+                                            "emotion": matched.get("emotion", "engaging") if matched else "engaging",
+                                            "rate": matched.get("rate", "+0%") if matched else "+0%",
+                                            "thai": transcreate_thai_dialogue(thai_str, style=effective_style, gender=gender),
+                                        })
 
                                     if len(final_results) == len(cues):
                                         logger.info("Successfully transcreated %d cues with Master Dubbing Qwen (%s)", len(cues), model)
