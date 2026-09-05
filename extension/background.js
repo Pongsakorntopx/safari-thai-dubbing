@@ -7,12 +7,14 @@ const DEFAULT_SETTINGS = {
   enabled: true,
   engine: 'gemini_tts',
   voice: 'gemini-thai-female',
+  translationModel: 'qwen-max',
   style: 'auto',
   rate: '+0%',
   dubVolume: 1.0,
   duckVolume: 0.2,
   backendUrl: 'http://127.0.0.1:8000',
   customGeminiKey: 'AQ.Ab8RN6KPbW' + 'fipLG3IEBPAVK-nRd6Ki' + 'PanW6ymcYDj3ymolbkbw',
+  customQwenKey: 'sk-ws-H.DDLIDRI.FjEo.MEYCIQClFrpLY4yP_rpWWLjU-jTAsiMqqOeXOoMLE3s-6K08lAIhAJB8ZZVuWXYGmzhIxp9RXsZY-2AP_7ywEQCOWuEAmz_s',
 };
 
 chrome.runtime.onInstalled.addListener(async () => {

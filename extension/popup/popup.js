@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const subtitleToggle = document.getElementById('subtitleToggle');
   const statusBadge = document.getElementById('statusBadge');
   const engineSelect = document.getElementById('engineSelect');
+  const translationModelSelect = document.getElementById('translationModelSelect');
   const voiceSelect = document.getElementById('voiceSelect');
   const styleGroup = document.getElementById('styleGroup');
   const styleSelect = document.getElementById('styleSelect');
@@ -23,6 +24,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const duckVolumeVal = document.getElementById('duckVolumeVal');
   const backendUrlInput = document.getElementById('backendUrl');
   const customKeyInput = document.getElementById('customKey');
+  const customQwenKeyInput = document.getElementById('customQwenKey');
   const testBtn = document.getElementById('testBtn');
   const connResult = document.getElementById('connResult');
 
@@ -43,6 +45,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       'enabled',
       'showSubtitles',
       'engine',
+      'translationModel',
       'voice',
       'style',
       'rate',
@@ -50,6 +53,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       'duckVolume',
       'backendUrl',
       'customGeminiKey',
+      'customQwenKey',
     ]);
 
     if (data.enabled !== undefined) {
@@ -63,6 +67,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const activeEngine = data.engine || 'gemini_tts';
     if (engineSelect) engineSelect.value = 'gemini_tts';
+
+    if (translationModelSelect) {
+      translationModelSelect.value = data.translationModel || 'qwen-max';
+    }
 
     const defaultVoice = 'gemini-thai-female';
     populateVoices(data.voice || defaultVoice);
@@ -94,6 +102,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     customKeyInput.value = geminiKey;
     if (!data.customGeminiKey) {
       chrome.storage.local.set({ customGeminiKey: geminiKey });
+    }
+
+    const defaultQwenKey = 'sk-ws-H.DDLIDRI.FjEo.MEYCIQClFrpLY4yP_rpWWLjU-jTAsiMqqOeXOoMLE3s-6K08lAIhAJB8ZZVuWXYGmzhIxp9RXsZY-2AP_7ywEQCOWuEAmz_s';
+    let qKey = data.customQwenKey || defaultQwenKey;
+    if (customQwenKeyInput) {
+      customQwenKeyInput.value = qKey;
+    }
+    if (!data.customQwenKey) {
+      chrome.storage.local.set({ customQwenKey: qKey });
     }
   } catch (err) {
     console.error('Failed to load settings in popup:', err);
@@ -133,11 +150,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   engineSelect.addEventListener('change', () => {
     const eng = engineSelect.value;
-    const defaultVoice = eng === 'edge' ? 'th-TH-PremwadeeNeural' : 'Aoede';
-    populateVoices(eng, defaultVoice);
+    const defaultVoice = 'gemini-thai-female';
+    populateVoices(defaultVoice);
     saveSetting('engine', eng);
     saveSetting('voice', defaultVoice);
   });
+
+  if (translationModelSelect) {
+    translationModelSelect.addEventListener('change', () => {
+      saveSetting('translationModel', translationModelSelect.value);
+    });
+  }
 
   voiceSelect.addEventListener('change', () => {
     saveSetting('voice', voiceSelect.value);
@@ -172,6 +195,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   customKeyInput.addEventListener('change', () => {
     saveSetting('customGeminiKey', customKeyInput.value.trim());
   });
+
+  if (customQwenKeyInput) {
+    customQwenKeyInput.addEventListener('change', () => {
+      saveSetting('customQwenKey', customQwenKeyInput.value.trim());
+    });
+  }
 
   // --- AI Self-Learning Lexicon Handlers ---
   const learnedCountBadge = document.getElementById('learnedCountBadge');

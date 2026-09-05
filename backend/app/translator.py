@@ -28,6 +28,17 @@ GEMINI_MODELS = [
     "gemini-flash-lite-latest",
 ]
 
+QWEN_MODELS = [
+    "qwen-max",
+    "qwen-plus-latest",
+    "qwen-turbo",
+]
+
+DASHSCOPE_ENDPOINTS = [
+    "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions",
+    "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
+]
+
 STYLE_SYSTEM_PROMPTS = {
     "auto": """คุณคือนักเขียนบทพากย์และผู้กำกับเสียงภาษาไทยระดับมืออาชีพชั้นนำ (Master Thai Dubbing Director)
 หน้าที่ของคุณคือ:
@@ -267,7 +278,23 @@ class CascadeTranslator:
 """
         full_system_instruction = system_instruction + no_particle_rule
 
-        # 1. Primary: Official Gemini Models (with user API Key)
+        # 1. Primary: Alibaba Qwen Flagship Engine (if Qwen requested or Qwen Key present)
+        custom_qwen_key = kwargs.get("custom_qwen_key") or getattr(self, "qwen_key", None)
+        prefer_qwen = (model_name and "qwen" in model_name.lower()) or (settings.translation_engine == "qwen") or bool(custom_qwen_key or settings.qwen_api_key)
+        if prefer_qwen:
+            qwen_res = await self._translate_batch_qwen(
+                cues_text=cues_text,
+                context=context,
+                style_key=style_key,
+                gender=gender,
+                full_system_instruction=full_system_instruction,
+                model_name=model_name,
+                custom_qwen_key=custom_qwen_key,
+            )
+            if qwen_res and len(qwen_res) == len(cues_text):
+                return qwen_res
+
+        # 2. Secondary: Official Google Gemini Models
         fallback_key = "AQ.Ab8RN6KPbW" + "fipLG3IEBPAVK-nRd6Ki" + "PanW6ymcYDj3ymolbkbw"
         active_key = (custom_key or self.api_key or settings.gemini_api_key or fallback_key).strip()
         if active_key and len(active_key) > 10:
@@ -315,9 +342,155 @@ class CascadeTranslator:
                     logger.debug("Gemini attempt error for %s: %s", model, e)
                     continue
 
-        # 2. High-Quality Full-Paragraph Neural Translation Engine Fallback (100% Coherent, Full Context)
+        # 3. High-Quality Full-Paragraph Neural Translation Engine Fallback (100% Coherent, Full Context)
         logger.info("Using Master Full-Paragraph Neural Transcreator (sl=auto -> th)")
         return await self._fallback_batch_translate(cues_text, style_key, gender)
+
+    async def _translate_batch_qwen(
+        self,
+        cues_text: List[str],
+        context: str,
+        style_key: str,
+        gender: str,
+        full_system_instruction: str,
+        model_name: Optional[str] = None,
+        custom_qwen_key: Optional[str] = None,
+    ) -> List[str]:
+        """Translate batch of cues using Alibaba Qwen Flagship (Qwen-Max / Qwen-Plus) via DashScope API."""
+        qwen_key = (custom_qwen_key or settings.qwen_api_key or "").strip()
+        if not qwen_key or len(qwen_key) < 10:
+            return []
+
+        model = model_name if (model_name and "qwen" in model_name.lower()) else (settings.qwen_model or "qwen-max")
+        numbered_input = "\n".join([f"[{i+1}] {c.strip()}" for i, c in enumerate(cues_text)])
+        user_prompt = f"Video Title & Context: {context.strip() or 'General'}\nVideo Genre/Register: {style_key}\nSpeaker Gender: {gender}\n\nOriginal Dialogue to Dub (60-second passage in any source language):\n{numbered_input}"
+
+        payload = {
+            "model": model,
+            "messages": [
+                {"role": "system", "content": full_system_instruction},
+                {"role": "user", "content": user_prompt},
+            ],
+            "temperature": 0.15,
+            "max_tokens": 2048,
+        }
+
+        for endpoint in DASHSCOPE_ENDPOINTS:
+            try:
+                headers = {
+                    "Authorization": f"Bearer {qwen_key}",
+                    "Content-Type": "application/json",
+                }
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(endpoint, json=payload, headers=headers, timeout=aiohttp.ClientTimeout(total=8.0)) as resp:
+                        if resp.status == 200:
+                            data = await resp.json()
+                            choices = data.get("choices", [])
+                            if choices:
+                                raw_text = choices[0].get("message", {}).get("content", "")
+                                parsed = self._parse_numbered_output(raw_text, len(cues_text), style_key, gender)
+                                if parsed and len(parsed) == len(cues_text):
+                                    logger.info("Successfully transcreated batch with Qwen Flagship (%s)", model)
+                                    return parsed
+                        else:
+                            err_body = await resp.text()
+                            logger.warning("Qwen API HTTP %d from %s: %s", resp.status, endpoint, err_body[:100])
+            except Exception as e:
+                logger.debug("Qwen request failed for %s: %s", endpoint, e)
+                continue
+
+        return []
+
+    async def _translate_batch_diarized_qwen(
+        self,
+        cues: List[Dict],
+        context: str,
+        style: str,
+        gender: str,
+        model_name: Optional[str] = None,
+        custom_qwen_key: Optional[str] = None,
+    ) -> List[Dict]:
+        """Transcreate diarized subtitle cues using Alibaba Qwen Flagship (Qwen-Max)."""
+        qwen_key = (custom_qwen_key or settings.qwen_api_key or "").strip()
+        if not qwen_key or len(qwen_key) < 10:
+            return []
+
+        model = model_name if (model_name and "qwen" in model_name.lower()) else (settings.qwen_model or "qwen-max")
+        effective_style = detect_context_style(context, style)
+
+        formatted_cues = []
+        for c in cues:
+            cid = c.get("id", 1)
+            dur = round(float(c.get("end", 3.0) - c.get("start", 0.0)), 2)
+            txt = c.get("text", "").strip()
+            formatted_cues.append(f"[{cid}] ({dur}s) {txt}")
+
+        numbered_input = "\n".join(formatted_cues)
+        system_prompt = f"""คุณคือนักเขียนบทพากย์และผู้เชี่ยวชาญการแปลซับไตเติลภาษาไทยระดับมืออาชีพชั้นนำ (Master Thai Dubbing & Subtitle Director)
+เป้าหมายสูงสุดของคุณคือ: "แปลงบทสนทนาต้นฉบับให้เป็นบทพูดภาษาไทยระดับกึ่งทางการ (Semi-Formal) ที่สละสลวย ชัดเจน และเป็นธรรมชาติ 100%"
+
+กฎเหล็กสำคัญ 4 ประการ:
+1. **ระดับภาษากึ่งทางการและปลอดคำลงท้าย (Semi-Formal, Zero Ending Particles):**
+   - แปลและเรียบเรียงขึ้นมาใหม่ (Transcreation) โดยใช้ภาษาพูดที่คนไทยใช้จริง สละสลวย ชัดเจน ลื่นไหล เป็นธรรมชาติ 100%
+   - **กฎเหล็กเด็ดขาด:** ห้ามใส่คำลงท้าย เช่น "ครับ", "ค่ะ", "นะครับ", "นะคะ", "คะ", "ฮะ" ต่อท้ายประโยคเด็ดขาด ให้จบประโยคด้วยเนื้อหาที่สมบูรณ์
+2. **ประโยคสมบูรณ์ในตัวเองและไม่ตัดคำแยกออกจากกัน (Complete Clauses & Zero Word Splitting):**
+   - แต่ละท่อน [1], [2], [3]... **ต้องเป็นประโยคที่พูดจบสมบูรณ์ในตัวเอง มีประธาน กริยา กรรม หรือใจความที่เข้าใจได้ทันที**
+   - **ห้ามตัดประโยคค้างคา** และห้ามตัดคำผสมภาษาไทยแยกออกจากกันเด็ดขาด
+3. **ความยาวและจังหวะพยางค์พอดีกับเวลา (Duration-Aware Syllable Pacing):**
+   - ดูเวลาในวงเล็บ (เช่น 1.5s, 3.0s, 5.0s) แล้วแต่งประโยคให้มีความยาวพยางค์พอดีกับเวลา (อัตราเฉลี่ย 3.5-4 พยางค์ต่อวินาที)
+4. **ข้อความ `thai` นี้จะถูกนำไปสังเคราะห์เสียงและแสดงเป็นซับไตเติลบนหน้าจอตรงกัน 100%**
+
+ส่งผลลัพธ์เป็น JSON Array เท่านั้น ในรูปแบบ:
+[
+  {{"id": 1, "speaker": "host", "gender": "{gender}", "emotion": "engaging", "rate": "+0%", "thai": "ข้อความภาษาไทยที่จบประโยคสมบูรณ์ระดับกึ่งทางการ"}},
+  {{"id": 2, "speaker": "host", "gender": "{gender}", "emotion": "engaging", "rate": "+0%", "thai": "ข้อความภาษาไทยท่อนถัดไปที่จบประโยคสมบูรณ์ระดับกึ่งทางการ"}}
+]"""
+
+        user_prompt = f"Video Title & Context: {context.strip() or 'General'}\nTarget Register: {effective_style}\n\nDialogue to Transcreate & Dub:\n{numbered_input}"
+
+        payload = {
+            "model": model,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            "response_format": {"type": "json_object"},
+            "temperature": 0.12,
+        }
+
+        for endpoint in DASHSCOPE_ENDPOINTS:
+            try:
+                headers = {
+                    "Authorization": f"Bearer {qwen_key}",
+                    "Content-Type": "application/json",
+                }
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(endpoint, json=payload, headers=headers, timeout=aiohttp.ClientTimeout(total=8.0)) as resp:
+                        if resp.status == 200:
+                            data = await resp.json()
+                            choices = data.get("choices", [])
+                            if choices:
+                                raw_json = choices[0].get("message", {}).get("content", "").strip()
+                                parsed_list = json.loads(raw_json)
+                                if isinstance(parsed_list, dict):
+                                    for key_name in ["results", "cues", "dialogue", "items", "data"]:
+                                        if key_name in parsed_list and isinstance(parsed_list[key_name], list):
+                                            parsed_list = parsed_list[key_name]
+                                            break
+                                if isinstance(parsed_list, list) and len(parsed_list) == len(cues):
+                                    logger.info("Successfully transcreated %d cues with Qwen Flagship (%s)", len(cues), model)
+                                    for item in parsed_list:
+                                        g = item.get("gender", gender)
+                                        item["thai"] = transcreate_thai_dialogue(item.get("thai", ""), style=effective_style, gender=g)
+                                    return parsed_list
+                        else:
+                            err_body = await resp.text()
+                            logger.warning("Qwen Diarized API HTTP %d from %s: %s", resp.status, endpoint, err_body[:100])
+            except Exception as e:
+                logger.debug("Qwen diarized request failed for %s: %s", endpoint, e)
+                continue
+
+        return []
 
     def _parse_numbered_output(self, raw_text: str, expected_count: int, style: str, gender: str) -> List[str]:
         """Parse [1] text, [2] text from response and apply master spoken restructuring with gender alignment."""
@@ -376,6 +549,9 @@ class CascadeTranslator:
         gender: str = "auto",
         model_name: Optional[str] = None,
         custom_key: Optional[str] = None,
+        custom_qwen_key: Optional[str] = None,
+        translation_model: Optional[str] = None,
+        **kwargs,
     ) -> List[Dict]:
         """
         Master Multi-Speaker Diarization, Tone & Emotion Analysis, and Duration-Aware Spoken Thai Dialogue.
@@ -385,6 +561,23 @@ class CascadeTranslator:
         if not cues:
             return []
 
+        # 1. Primary: Alibaba Qwen Flagship (Qwen-Max) if requested or Qwen Key available
+        chosen_model = translation_model or model_name
+        qwen_k = custom_qwen_key or kwargs.get("custom_qwen_key") or settings.qwen_api_key
+        prefer_qwen = (chosen_model and "qwen" in chosen_model.lower()) or (settings.translation_engine == "qwen") or bool(qwen_k)
+        if prefer_qwen:
+            qwen_res = await self._translate_batch_diarized_qwen(
+                cues=cues,
+                context=context,
+                style=style,
+                gender=gender,
+                model_name=chosen_model,
+                custom_qwen_key=qwen_k,
+            )
+            if qwen_res and len(qwen_res) == len(cues):
+                return qwen_res
+
+        # 2. Secondary: Google Gemini Engine
         effective_style = detect_context_style(context, style)
         fallback_key = "AQ.Ab8RN6KPbW" + "fipLG3IEBPAVK-nRd6Ki" + "PanW6ymcYDj3ymolbkbw"
         active_key = (custom_key or self.api_key or settings.gemini_api_key or fallback_key).strip()
@@ -399,27 +592,24 @@ class CascadeTranslator:
 
             numbered_input = "\n".join(formatted_cues)
             system_prompt = f"""คุณคือนักเขียนบทพากย์และผู้เชี่ยวชาญการแปลซับไตเติลภาษาไทยระดับมืออาชีพชั้นนำ (Master Thai Dubbing & Subtitle Director)
-เป้าหมายสูงสุดของคุณคือ: "แปลงบทสนทนาต้นฉบับให้เป็นบทพูดและซับไตเติลภาษาไทยที่สละสลวย สมบูรณ์แบบ ถูกต้อง 100% และตรงกับเสียงพากย์ทุกตัวอักษร"
+เป้าหมายสูงสุดของคุณคือ: "แปลงบทสนทนาต้นฉบับให้เป็นบทพูดและซับไตเติลภาษาไทยระดับกึ่งทางการ (Semi-Formal) ที่สละสลวย สมบูรณ์แบบ ถูกต้อง 100% และตรงกับเสียงพากย์ทุกตัวอักษร"
 
 กฎเหล็กสำคัญ 4 ประการ:
-1. **คุณภาพภาษาไทยที่ดีที่สุด (Highest Natural Spoken Thai Quality):**
+1. **คุณภาพภาษาไทยระดับกึ่งทางการ (Semi-Formal, Zero Ending Particles):**
    - แปลและเรียบเรียงขึ้นมาใหม่ (Transcreation) โดยใช้ภาษาพูดที่คนไทยใช้จริงในชีวิตประจำวัน สละสลวย ชัดเจน ลื่นไหล เป็นธรรมชาติ 100%
-   - **กำจัดการแปลแข็งทื่อแบบหุ่นยนต์ (Anti-Translationese):** ห้ามแปลตรงตัวคำต่อคำ ห้ามใช้สำนวนภาษาอังกฤษที่แปลมาดื้อๆ
-   - สรรพนามและคำลงท้าย (ล็อกเพศเสียง {gender.upper()} 100%):
-     - หากเป็นเพศชาย: ใช้ 'ผม / เรา', ลงท้าย 'ครับ / นะครับ' เสมอ
-     - หากเป็นเพศหญิง: ใช้ 'ฉัน / เรา / หนู', ลงท้าย 'ค่ะ / นะคะ' เสมอ
+   - **กำจัดการแปลแข็งทื่อแบบหุ่นยนต์ (Anti-Translationese):** ห้ามแปลตรงตัวคำต่อคำ
+   - **กฎเหล็กเรื่องคำลงท้าย:** ห้ามใส่คำลงท้าย เช่น "ครับ", "ค่ะ", "นะครับ", "นะคะ", "คะ", "ฮะ" ต่อท้ายประโยคเด็ดขาด ให้จบประโยคด้วยเนื้อหาที่สมบูรณ์
 2. **ประโยคสมบูรณ์ในตัวเองและไม่ตัดคำแยกออกจากกัน (Complete Clauses & Zero Word Splitting):**
    - แต่ละท่อน [1], [2], [3]... **ต้องเป็นประโยคที่พูดจบสมบูรณ์ในตัวเอง มีประธาน กริยา กรรม หรือใจความที่เข้าใจได้ทันที**
-   - **ห้ามตัดประโยคค้างคา** เช่น ห้ามจบด้วย 'ที่...', 'และ...', 'เพื่อ...', 'เพราะ...' แล้วยกใจความไปต่อท่อนถัดไป ให้เกลี่ยข้อความให้ทั้งสองท่อนสมบูรณ์
-   - **ห้ามตัดคำผสมภาษาไทยแยกออกจากกันเด็ดขาด** (เช่น คำว่า 'ปัญญาประดิษฐ์', 'ระบบปฏิบัติการ', 'การตั้งค่า')
+   - **ห้ามตัดประโยคค้างคา** และห้ามตัดคำผสมภาษาไทยแยกออกจากกันเด็ดขาด
 3. **ความยาวและจังหวะพยางค์พอดีกับเวลา (Duration-Aware Syllable Pacing):**
-   - ดูเวลาในวงเล็บ (เช่น 1.5s, 3.0s, 5.0s) แล้วแต่งประโยคให้มีความยาวพยางค์พอดีกับเวลา (อัตราเฉลี่ย 3.5-4 พยางค์ต่อวินาที) เพื่อให้เสียงพากย์พูดได้ทันและพอดีกับภาพ
-4. **ข้อความ `thai` นี้จะถูกนำไปสังเคราะห์เสียงและแสดงเป็นซับไตเติลบนหน้าจอตรงกัน 100% ตัวอักษรต่อตัวอักษร**
+   - ดูเวลาในวงเล็บ (เช่น 1.5s, 3.0s, 5.0s) แล้วแต่งประโยคให้มีความยาวพยางค์พอดีกับเวลา (อัตราเฉลี่ย 3.5-4 พยางค์ต่อวินาที)
+4. **ข้อความ `thai` นี้จะถูกนำไปสังเคราะห์เสียงและแสดงเป็นซับไตเติลบนหน้าจอตรงกัน 100%**
 
 ส่งผลลัพธ์เป็น JSON Array เท่านั้น ในรูปแบบ:
 [
-  {{"id": 1, "speaker": "host", "gender": "{gender}", "emotion": "cheerful", "rate": "+0%", "thai": "ข้อความภาษาไทยที่พากย์และแสดงเป็นซับไตเติลอย่างสมบูรณ์แบบ"}},
-  {{"id": 2, "speaker": "host", "gender": "{gender}", "emotion": "engaging", "rate": "+0%", "thai": "ข้อความภาษาไทยท่อนถัดไปที่จบประโยคสมบูรณ์"}}
+  {{"id": 1, "speaker": "host", "gender": "{gender}", "emotion": "engaging", "rate": "+0%", "thai": "ข้อความภาษาไทยระดับกึ่งทางการที่จบประโยคสมบูรณ์"}},
+  {{"id": 2, "speaker": "host", "gender": "{gender}", "emotion": "engaging", "rate": "+0%", "thai": "ข้อความภาษาไทยท่อนถัดไประดับกึ่งทางการที่จบประโยคสมบูรณ์"}}
 ]"""
 
             user_prompt = f"Video Title & Context: {context.strip() or 'General'}\nTarget Voice Persona: {gender}\nTarget Register: {effective_style}\n\nDialogue to Transcreate & Dub:\n{numbered_input}"

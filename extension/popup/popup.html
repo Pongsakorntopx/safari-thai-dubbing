@@ -55,6 +55,17 @@
         </select>
       </div>
 
+      <!-- Translation Engine / Model Selector -->
+      <div class="form-group" style="margin-top: 10px;">
+        <label for="translationModelSelect" class="form-label">
+          <span>🧠 โมเดล AI แปลและเขียนบทพากย์</span>
+        </label>
+        <select id="translationModelSelect" class="select-input">
+          <option value="qwen-max" selected>👑 Alibaba Qwen-Max (โมเดลที่ดีที่สุดของ Qwen • แม่นยำ 100%)</option>
+          <option value="gemini-3.5-flash">✨ Google Gemini 3.5 Flash (คลาวด์ฟรี สละสลวย)</option>
+        </select>
+      </div>
+
       <!-- Voice Selector -->
       <div class="form-group" style="margin-top: 10px;">
         <label for="voiceSelect" class="form-label">
@@ -145,10 +156,14 @@
       <div id="connResult" class="conn-status"></div>
 
       <details class="advanced-section">
-        <summary class="advanced-toggle">⚙️ ตัวเลือกขั้นสูง (Gemini API Key)</summary>
+        <summary class="advanced-toggle">⚙️ ตัวเลือกขั้นสูง (AI API Keys)</summary>
         <div class="advanced-content">
           <div class="form-group">
-            <label for="customKey" class="form-label">Custom Gemini API Key</label>
+            <label for="customQwenKey" class="form-label">Alibaba DashScope (Qwen-Max) Key</label>
+            <input type="password" id="customQwenKey" class="text-input" placeholder="sk-ws-...">
+          </div>
+          <div class="form-group" style="margin-top: 8px;">
+            <label for="customKey" class="form-label">Google Gemini API Key</label>
             <input type="password" id="customKey" class="text-input" placeholder="AQ.Ab8RN...">
           </div>
         </div>

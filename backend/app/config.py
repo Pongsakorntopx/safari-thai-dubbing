@@ -14,6 +14,9 @@ class Settings(BaseSettings):
 
     gemini_api_key: str = os.getenv("GEMINI_API_KEY", "AQ.Ab8RN6KPbW" + "fipLG3IEBPAVK-nRd6Ki" + "PanW6ymcYDj3ymolbkbw")
     gemini_model: str = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
+    qwen_api_key: str = os.getenv("QWEN_API_KEY", "sk-ws-H.DDLIDRI.FjEo.MEYCIQClFrpLY4yP_rpWWLjU-jTAsiMqqOeXOoMLE3s-6K08lAIhAJB8ZZVuWXYGmzhIxp9RXsZY-2AP_7ywEQCOWuEAmz_s")
+    qwen_model: str = os.getenv("QWEN_MODEL", "qwen-max")
+    translation_engine: str = os.getenv("TRANSLATION_ENGINE", "qwen")
     default_voice: str = os.getenv("DEFAULT_VOICE", "gemini-thai-female")
     default_rate: str = os.getenv("DEFAULT_RATE", "+0%")
     default_pitch: str = os.getenv("DEFAULT_PITCH", "+0Hz")

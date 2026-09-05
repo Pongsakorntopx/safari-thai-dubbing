@@ -79,12 +79,14 @@ class CueItem(BaseModel):
 class BatchDubRequest(BaseModel):
     cues: List[CueItem]
     context: Optional[str] = ""
-    engine: Optional[str] = "fish_speech"
+    engine: Optional[str] = "studio_neural"
     voice: Optional[str] = "auto"
     style: Optional[str] = "auto"
     gender: Optional[str] = "auto"
     rate: Optional[str] = "+0%"
     customGeminiKey: Optional[str] = ""
+    customQwenKey: Optional[str] = ""
+    translationModel: Optional[str] = "qwen-max"
     fishApiKey: Optional[str] = ""
 
 
@@ -142,6 +144,7 @@ async def health_check():
         "status": "healthy",
         "service": "thai-dubbing-api",
         "gemini_ready": bool(settings.gemini_api_key),
+        "qwen_ready": bool(settings.qwen_api_key),
         "voices": tts_engine.list_voices(),
         "learned_terms_count": len(learning_engine.get_learned_lexicon()),
     }
@@ -406,9 +409,10 @@ async def dub_cues_batch(req: BatchDubRequest):
     )
     rate = req.rate or "+0%"
     custom_key = req.customGeminiKey.strip() if req.customGeminiKey else None
+    custom_qwen_key = req.customQwenKey.strip() if req.customQwenKey else None
     custom_fish_key = req.fishApiKey.strip() if req.fishApiKey else None
 
-    # 1. Master Spoken Thai Transcreation & Rhythm Alignment
+    # 1. Master Spoken Thai Transcreation & Rhythm Alignment (Qwen-Max or Gemini 3.5)
     raw_cues_dict = [c.dict() for c in req.cues]
     diarized_results = await translator.translate_batch_diarized(
         cues=raw_cues_dict,
@@ -416,6 +420,8 @@ async def dub_cues_batch(req: BatchDubRequest):
         style=req.style or "auto",
         gender=gender,
         custom_key=custom_key,
+        custom_qwen_key=custom_qwen_key,
+        translation_model=req.translationModel or "qwen-max",
     )
 
     # 🧠 Continuous AI Auto-Learning: Absorb new tech terms & vocabulary into persistent memory
