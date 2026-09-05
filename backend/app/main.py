@@ -267,7 +267,7 @@ async def fetch_youtube_innertube_cues_async(video_id: str) -> List[Dict]:
                                                 current_cue["text"] += " " + text
                                                 current_cue["end"] = max(current_cue["end"], end)
 
-                                                is_end = bool(re.search(r"[.!?。！？]$", text)) or gap > 0.8 or (current_cue["end"] - current_cue["start"] >= 5.5)
+                                                is_end = bool(re.search(r"[.!?。！？]$", text)) or gap > 0.6 or (current_cue["end"] - current_cue["start"] >= 4.8)
                                                 if is_end:
                                                     cues.append(current_cue)
                                                     current_cue = None
@@ -300,7 +300,7 @@ async def fetch_youtube_innertube_cues_async(video_id: str) -> List[Dict]:
                                                     current_cue["text"] += " " + text
                                                     current_cue["end"] = max(current_cue["end"], end)
 
-                                                    is_end = bool(re.search(r"[.!?。！？]$", text)) or gap > 0.8 or (current_cue["end"] - current_cue["start"] >= 5.5)
+                                                    is_end = bool(re.search(r"[.!?。！？]$", text)) or gap > 0.6 or (current_cue["end"] - current_cue["start"] >= 4.8)
                                                     if is_end:
                                                         cues.append(current_cue)
                                                         current_cue = None
@@ -364,7 +364,7 @@ async def get_transcript(req: TranscriptRequest):
                         if not curr_c["text"].endswith(tx):
                             curr_c["text"] += " " + tx
                         curr_c["end"] = max(curr_c["end"], en)
-                        is_end = bool(re.search(r'[.!?。！？]["\']?$', curr_c["text"])) or gap > 0.9 or (curr_c["end"] - curr_c["start"] >= 8.0)
+                        is_end = bool(re.search(r'[.!?。！？]["\']?$', curr_c["text"])) or gap > 0.6 or (curr_c["end"] - curr_c["start"] >= 4.8)
                         if is_end:
                             fb_cues.append(curr_c)
                             curr_c = None
@@ -454,26 +454,56 @@ async def dub_cues_batch(req: BatchDubRequest):
         cue_voice = target_voice
 
         # 🎯 Original Video Speech Cadence & Exact Duration Pacing (WPS / WPM)
-        words_count = len(cue.text.split())
+        words_count = max(1, len(cue.text.split()))
         slot_duration = max(0.8, float(cue.end - cue.start))
         orig_wps = words_count / slot_duration
         orig_wpm = round(orig_wps * 60)
 
         # Match Thai speech rate with Original Video Speaker's pacing:
+        # Average spoken Thai has ~12.5 characters/sec in normal conversational rhythm.
         thai_chars = len(thai_text)
-        expected_sec = thai_chars / 12.0
+        expected_sec = max(0.6, thai_chars / 12.5)
         speed_ratio = expected_sec / slot_duration
 
-        cue_rate = rate if (rate and rate != "+0%") else diarized.get("rate", "+0%")
-        if cue_rate == "+0%" or not cue_rate:
-            if speed_ratio > 1.05:
-                rate_pct = min(35, max(5, int((speed_ratio - 1.0) * 100)))
-                cue_rate = f"+{rate_pct}%"
-            elif speed_ratio < 0.80:
-                rate_pct = max(-20, min(-5, int((speed_ratio - 1.0) * 100)))
-                cue_rate = f"{rate_pct}%"
-            else:
-                cue_rate = "+0%"
+        # 1. Speaker Tempo Boost (Adaptive detection from original video speaker's WPM)
+        if orig_wpm >= 195:
+            tempo_boost = 22
+        elif orig_wpm >= 165:
+            tempo_boost = 14
+        elif orig_wpm >= 135:
+            tempo_boost = 5
+        elif orig_wpm < 105:
+            tempo_boost = -8
+        else:
+            tempo_boost = 0
+
+        # 2. Syllable/Character Density Boost (to ensure Thai dub fits in slot_duration)
+        density_boost = 0
+        if speed_ratio > 1.02:
+            density_boost = int((speed_ratio - 1.0) * 100)
+        elif speed_ratio < 0.85:
+            density_boost = int((speed_ratio - 1.0) * 100)
+
+        # 3. Combine speaker cadence & density demand
+        auto_rate_pct = max(tempo_boost, density_boost) if (tempo_boost > 0 or density_boost > 0) else min(tempo_boost, density_boost)
+
+        # 4. Add user preference offset bias (e.g. "+5%" adds 5%, "-10%" subtracts 10%)
+        user_bias = 0
+        if rate and rate != "+0%":
+            try:
+                user_bias = int(rate.replace("%", "").replace("+", "").strip())
+            except Exception:
+                user_bias = 0
+
+        final_pct = auto_rate_pct + user_bias
+        final_pct = max(-20, min(35, final_pct))
+
+        if final_pct > 0:
+            cue_rate = f"+{final_pct}%"
+        elif final_pct < 0:
+            cue_rate = f"{final_pct}%"
+        else:
+            cue_rate = "+0%"
 
         cached = await cache.get_audio_dub(
             source_text=cue.text,
@@ -486,6 +516,8 @@ async def dub_cues_batch(req: BatchDubRequest):
         )
         if cached:
             _, audio_bytes = cached
+            from app.tts_engine import fit_audio_to_slot_duration
+            audio_bytes = fit_audio_to_slot_duration(audio_bytes, slot_duration)
             return {
                 "id": cue.id,
                 "translatedText": thai_text,
@@ -633,6 +665,9 @@ async def dub_text(req: DubRequest):
             "translatedText": thai_text,
             "error": "Audio synthesis failed",
         }
+
+    from app.tts_engine import trim_audio_silence
+    audio_bytes = trim_audio_silence(audio_bytes)
 
     # 4. Save to Cache
     await cache.set_audio_dub(

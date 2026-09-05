@@ -97,43 +97,66 @@ def clean_thai_text_for_speech(text: str) -> str:
     return t.strip()
 
 
-def fit_audio_to_slot_duration(audio_bytes: bytes, slot_duration: float, max_speedup: float = 1.38, min_speedup: float = 0.80) -> bytes:
+def trim_audio_silence(data: np.ndarray, sr: int, threshold_db: float = -38.0, pad_ms: float = 20.0) -> np.ndarray:
+    """Trim dead silence from start and end with micro-fade to eliminate latency and trailing gap."""
+    if len(data) == 0:
+        return data
+    thresh = 10.0 ** (threshold_db / 20.0)
+    is_speech = np.abs(data) > thresh
+    if not np.any(is_speech):
+        return data
+    pad = int(sr * (pad_ms / 1000.0))
+    start_idx = max(0, int(np.argmax(is_speech)) - pad)
+    end_idx = min(len(data), len(data) - int(np.argmax(is_speech[::-1])) + pad)
+    trimmed = data[start_idx:end_idx].copy()
+
+    # 15ms anti-pop micro-fades
+    fade_len = min(len(trimmed) // 4, int(sr * 0.015))
+    if fade_len > 0:
+        fade_in = np.linspace(0.0, 1.0, fade_len, dtype=trimmed.dtype)
+        fade_out = np.linspace(1.0, 0.0, fade_len, dtype=trimmed.dtype)
+        trimmed[:fade_len] *= fade_in
+        trimmed[-fade_len:] *= fade_out
+    return trimmed
+
+
+def fit_audio_to_slot_duration(audio_bytes: bytes, slot_duration: float, max_speedup: float = 1.70) -> bytes:
     """
     Ensure Thai speech duration matches the original video speaker's exact time slot.
-    - Accelerates (เร่งเสียง) if speech is longer than slot.
-    - Elongates/Stretches (ยืดเสียง) if speech is noticeably shorter than slot.
-    - Uses Librosa's pitch-preserved Phase Vocoder: Zero pitch distortion (น้ำเสียงคงเดิม 100%).
+    - Trims dead silence so speech starts and finishes instantly on cue.
+    - Accelerates (เร่งเสียง) cleanly if speech is longer than slot duration.
+    - Guarantees Thai voice stops at or before the video speaker stops.
     """
-    if not audio_bytes or slot_duration <= 0.4:
+    if not audio_bytes or slot_duration <= 0.3:
         return audio_bytes
 
     try:
         data, sr = sf.read(io.BytesIO(audio_bytes))
+        data = trim_audio_silence(data, sr)
         actual_duration = len(data) / sr
 
-        # Target duration: leave 0.05s headroom before next speaker starts
-        target_duration = max(0.4, slot_duration - 0.05)
-
-        speed_factor = 1.0
+        # Target duration: leave 0.06s headroom before next speaker starts
+        target_duration = max(0.3, slot_duration - 0.06)
 
         if actual_duration > target_duration:
-            # Accelerate (เร่งเสียง)
             speed_factor = min(max_speedup, actual_duration / target_duration)
-        elif actual_duration < target_duration * 0.72 and slot_duration >= 2.0:
-            # Elongate / Stretch (ยืดเสียง)
-            target_stretch = target_duration * 0.88
-            speed_factor = max(min_speedup, actual_duration / target_stretch)
+            if speed_factor > 1.03:
+                import librosa
+                data = librosa.effects.time_stretch(data, rate=speed_factor)
+                # Hard limit to slot duration with gentle fadeout to ensure ZERO overflow
+                if len(data) / sr > target_duration:
+                    max_samples = int(sr * target_duration)
+                    data = data[:max_samples]
+                    fade_len = min(len(data), int(sr * 0.03))
+                    if fade_len > 0:
+                        data[-fade_len:] *= np.linspace(1.0, 0.0, fade_len, dtype=data.dtype)
 
-        if abs(speed_factor - 1.0) > 0.03:
-            import librosa
-            stretched_data = librosa.effects.time_stretch(data, rate=speed_factor)
-            out_buf = io.BytesIO()
-            sf.write(out_buf, stretched_data, sr, format="WAV", subtype="PCM_16")
-            return out_buf.getvalue()
+        out_buf = io.BytesIO()
+        sf.write(out_buf, data, sr, format="WAV", subtype="PCM_16")
+        return out_buf.getvalue()
     except Exception as e:
-        logger.warning("Slot duration bidirectional fitting skipped: %s", e)
-
-    return audio_bytes
+        logger.warning("Slot duration fitting error: %s", e)
+        return audio_bytes
 
 
 class GeminiThaiNeuralEngine:
@@ -223,6 +246,8 @@ class GeminiThaiNeuralEngine:
 
             # Convert to standard 24kHz 16-bit PCM WAV for 100% distortion-free WebKit playback
             data, sr = sf.read(io.BytesIO(mp3_data))
+            # Trim leading & trailing dead silence (eliminates 1s dead gap and starts speaking immediately)
+            data = trim_audio_silence(data, sr)
             out_buf = io.BytesIO()
             sf.write(out_buf, data, sr, format="WAV", subtype="PCM_16")
             return out_buf.getvalue()

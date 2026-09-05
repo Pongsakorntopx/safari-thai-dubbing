@@ -28,6 +28,7 @@
     currentVideoId: null,
     targetBufferSeconds: 180, // 180-Second (3-minute) Golden Buffer
     lastScheduledCue: null,
+    currentPlayingCue: null,
     nextSpeechTime: 0,
     syncInterval: null,
     liveObserver: null,
@@ -300,8 +301,8 @@
 
         // Merge into complete, natural semantic thoughts
         const isPunctuation = /[.!?。！？]["']?$/.test(currentCue.text);
-        const isSpeechPause = gap > 0.9;
-        const isMaxDuration = (currentCue.end - currentCue.start >= 8.0);
+        const isSpeechPause = gap > 0.6;
+        const isMaxDuration = (currentCue.end - currentCue.start >= 4.8);
 
         if (isPunctuation || isSpeechPause || isMaxDuration) {
           cues.push(currentCue);
@@ -340,8 +341,8 @@
           currentCue.end = Math.max(currentCue.end, end);
 
           const isPunctuation = /[.!?。！？]["']?$/.test(currentCue.text);
-          const isSpeechPause = gap > 0.9;
-          const isMaxDuration = (currentCue.end - currentCue.start >= 8.0);
+          const isSpeechPause = gap > 0.6;
+          const isMaxDuration = (currentCue.end - currentCue.start >= 4.8);
 
           if (isPunctuation || isSpeechPause || isMaxDuration) {
             cues.push(currentCue);
@@ -610,7 +611,11 @@
 
   function attachVideoEvents(video) {
     video.addEventListener('pause', () => {
-      // Do not suspend audioCtx on pause, just allow monophonic queue management
+      // Pause Thai dub audio immediately when video is paused
+      const audio = getGlobalAudioPlayer();
+      if (audio && !audio.paused) {
+        audio.pause();
+      }
     });
 
     video.addEventListener('play', () => {
@@ -619,6 +624,22 @@
         console.log('[ThaiDubbing] Video play attempted during pre-buffering, keeping paused...');
         pauseYouTubeVideo();
         return;
+      }
+      // Resume Thai dub audio if it was active
+      const audio = getGlobalAudioPlayer();
+      if (audio && audio.paused && state.isPlaying) {
+        audio.play().catch(() => {});
+      }
+    });
+
+    video.addEventListener('ratechange', () => {
+      const audio = getGlobalAudioPlayer();
+      if (audio) {
+        try {
+          audio.preservesPitch = true;
+          audio.webkitPreservesPitch = true;
+          audio.playbackRate = video.playbackRate || 1.0;
+        } catch (e) {}
       }
     });
 
@@ -902,6 +923,22 @@
 
       const currentTime = video.currentTime;
 
+      // 🎯 Movie Dubbing Cutoff Enforcer:
+      // If audio is currently playing for currentPlayingCue, check if video has passed cue.end.
+      // If original video speaker stopped speaking (>0.2s gap or next cue not yet started),
+      // stop dubbing audio immediately so Thai voice stops precisely when the speaker's mouth closes!
+      if (state.isPlaying && state.currentPlayingCue) {
+        if (currentTime >= state.currentPlayingCue.end + 0.08) {
+          const nextCue = state.timedCues.find((c) => c.start > state.currentPlayingCue.end);
+          const isSpeechGap = !nextCue || (nextCue.start > state.currentPlayingCue.end + 0.2);
+          if (isSpeechGap) {
+            stopActivePlayback();
+            clearCinemaSubtitle();
+            restoreVideoVolume();
+          }
+        }
+      }
+
       for (let i = 0; i < state.timedCues.length; i++) {
         const cue = state.timedCues[i];
         if (cue.status === 'ready' && currentTime >= cue.start - 0.08 && currentTime <= cue.end + 0.3) {
@@ -935,6 +972,7 @@
       } catch (e) {}
     }
     state.isPlaying = false;
+    state.currentPlayingCue = null;
     state.nextSpeechTime = 0;
   }
 
@@ -943,6 +981,7 @@
     if (!cue.audioUrl && !cue.audioBase64) return;
 
     stopActivePlayback();
+    state.currentPlayingCue = cue;
 
     const video = findVideoElement();
     const videoSpeed = (video && video.playbackRate) ? video.playbackRate : 1.0;
@@ -956,7 +995,7 @@
     try {
       audio.preservesPitch = true;
       audio.webkitPreservesPitch = true;
-      audio.playbackRate = 1.0;
+      audio.playbackRate = videoSpeed;
     } catch (rateErr) {}
 
     state.isPlaying = true;
@@ -968,6 +1007,7 @@
       if (state.isPlaying) {
         console.log('[ThaiDubbing] Safety watchdog released isPlaying lock.');
         state.isPlaying = false;
+        state.currentPlayingCue = null;
         restoreVideoVolume();
       }
     }, expectedDurationMs);
@@ -985,6 +1025,7 @@
     audio.onended = () => {
       if (state.playSafetyTimeout) clearTimeout(state.playSafetyTimeout);
       state.isPlaying = false;
+      state.currentPlayingCue = null;
       clearCinemaSubtitle();
       restoreVideoVolume();
       updateBufferGauge();
@@ -994,6 +1035,7 @@
       console.error('[ThaiDubbing] Audio error:', err);
       if (state.playSafetyTimeout) clearTimeout(state.playSafetyTimeout);
       state.isPlaying = false;
+      state.currentPlayingCue = null;
       restoreVideoVolume();
     };
 
@@ -1001,6 +1043,7 @@
       console.warn('[ThaiDubbing] Audio play caught:', playErr);
       if (state.playSafetyTimeout) clearTimeout(state.playSafetyTimeout);
       state.isPlaying = false;
+      state.currentPlayingCue = null;
       restoreVideoVolume();
     });
   }

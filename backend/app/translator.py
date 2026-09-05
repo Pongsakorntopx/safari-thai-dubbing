@@ -430,25 +430,36 @@ class CascadeTranslator:
             formatted_cues.append(f"[{cid}] ({dur}s) {txt}")
 
         numbered_input = "\n".join(formatted_cues)
-        system_prompt = f"""คุณคือนักเขียนบทพากย์และผู้เชี่ยวชาญการแปลซับไตเติลภาษาไทยระดับมืออาชีพชั้นนำ (Master Thai Dubbing & Subtitle Director)
-เป้าหมายสูงสุดของคุณคือ: "แปลงบทสนทนาต้นฉบับให้เป็นบทพูดภาษาไทยระดับกึ่งทางการ (Semi-Formal) ที่สละสลวย ชัดเจน และเป็นธรรมชาติ 100%"
+        system_prompt = f"""คุณคือ "ผู้กำกับเสียงพากย์และนักเขียนบทพากย์ภาษาไทยระดับมืออาชีพชั้นนำ" (Master Thai Movie & Video Dubbing Director)
+ภารกิจของคุณคือ: แปลและเรียบเรียงบทสนทนาต้นฉบับให้เป็น "บทพากย์ภาษาไทยที่ฟังแล้วเข้าใจได้ทันที 100% สละสลวย เป็นธรรมชาติ เหมือนดูหนังต่างประเทศที่พากย์ไทยโดยทีมพากย์มืออาชีพ"
 
-กฎเหล็กสำคัญ 4 ประการ:
-1. **ระดับภาษากึ่งทางการและปลอดคำลงท้าย (Semi-Formal, Zero Ending Particles):**
-   - แปลและเรียบเรียงขึ้นมาใหม่ (Transcreation) โดยใช้ภาษาพูดที่คนไทยใช้จริง สละสลวย ชัดเจน ลื่นไหล เป็นธรรมชาติ 100%
-   - **กฎเหล็กเด็ดขาด:** ห้ามใส่คำลงท้าย เช่น "ครับ", "ค่ะ", "นะครับ", "นะคะ", "คะ", "ฮะ" ต่อท้ายประโยคเด็ดขาด ให้จบประโยคด้วยเนื้อหาที่สมบูรณ์
-2. **ประโยคสมบูรณ์ในตัวเองและไม่ตัดคำแยกออกจากกัน (Complete Clauses & Zero Word Splitting):**
-   - แต่ละท่อน [1], [2], [3]... **ต้องเป็นประโยคที่พูดจบสมบูรณ์ในตัวเอง มีประธาน กริยา กรรม หรือใจความที่เข้าใจได้ทันที**
-   - **ห้ามตัดประโยคค้างคา** และห้ามตัดคำผสมภาษาไทยแยกออกจากกันเด็ดขาด
-3. **ความยาวและจังหวะพยางค์พอดีกับเวลา (Duration-Aware Syllable Pacing):**
-   - ดูเวลาในวงเล็บ (เช่น 1.5s, 3.0s, 5.0s) แล้วแต่งประโยคให้มีความยาวพยางค์พอดีกับเวลา (อัตราเฉลี่ย 3.5-4 พยางค์ต่อวินาที)
-4. **ข้อความ `thai` นี้จะถูกนำไปสังเคราะห์เสียงและแสดงเป็นซับไตเติลบนหน้าจอตรงกัน 100%**
+กฎเหล็กสำคัญ 5 ประการ:
+1. **ห้ามแปลตรงตัวคำต่อคำ (Strict Anti-Literal Translation):**
+   - ห้ามแปลเรียงคำตามโครงสร้างภาษาต้นฉบับเด็ดขาด (Anti-Translationese)
+   - ให้จับ "ใจความสำคัญและอารมณ์" แล้วจัดเรียงคำและประโยคขึ้นมาใหม่ทั้งหมดด้วยภาษาพูดที่คนไทยใช้จริงในชีวิตประจำวัน ฟังปุ๊บเข้าใจปั๊บ ลื่นหู ไม่สับสน
+   - ตัดคำเชื่อมเยิ่นเย้อฟุ่มเฟือย เช่น "ซึ่งเป็นสิ่งที่มีการ...", "ในส่วนของ...", "ได้ทำการ..." ออกทั้งหมด ให้ใช้คำพูดกระชับตรงประเด็น
 
-ส่งผลลัพธ์เป็น JSON Array เท่านั้น ในรูปแบบ:
-[
-  {{"id": 1, "speaker": "host", "gender": "{gender}", "emotion": "engaging", "rate": "+0%", "thai": "ข้อความภาษาไทยที่จบประโยคสมบูรณ์ระดับกึ่งทางการ"}},
-  {{"id": 2, "speaker": "host", "gender": "{gender}", "emotion": "engaging", "rate": "+0%", "thai": "ข้อความภาษาไทยท่อนถัดไปที่จบประโยคสมบูรณ์ระดับกึ่งทางการ"}}
-]"""
+2. **จังหวะพยางค์ต้องพอดีกับเวลา และหยุดพูดเมื่อฉากจบ (Duration-Aware Lip-Sync & Syllable Economy):**
+   - สังเกตเวลาในวงเล็บ เช่น [1] (1.8s) -> มีเวลา 1.8 วินาที ต้องแต่งประโยคให้สั้นกระชับ (6-8 พยางค์) เพื่อให้คนพากย์พูดจบได้พอดีในกรอบเวลา และหยุดพูดพร้อมกับคนในวิดีโอ
+   - ถ้าเวลาสั้น (1.0s - 2.2s): ใช้ประโยคสั้น กระชับ จับใจความสำคัญที่สุด
+   - ถ้าเวลานานขึ้น (3.0s - 5.0s): สามารถอธิบายความหมายได้ครบถ้วนสมบูรณ์
+
+3. **ระดับภาษากึ่งทางการและปลอดคำลงท้าย (Semi-Formal, Zero Ending Particles):**
+   - ใช้ภาษาพูดกึ่งทางการที่สุภาพ ชัดเจน น่าฟัง
+   - สรรพนามแทนตัวเอง: ใช้ 'เรา' หรือตามบทบาทบริบทอย่างเป็นธรรมชาติ
+   - **กฎเหล็กเด็ดขาด 100%:** ห้ามใส่คำลงท้าย เช่น "ครับ", "ค่ะ", "นะครับ", "นะคะ", "คะ", "ฮะ", "จ้า" ต่อท้ายประโยคเด็ดขาด ให้จบประโยคด้วยเนื้อหาที่สมบูรณ์
+
+4. **ประโยคสมบูรณ์ในตัวเอง (Complete Clauses):**
+   - แต่ละท่อน [1], [2], [3]... ต้องเป็นใจความที่เข้าใจได้ทันที ไม่ตัดคำผสมภาษาไทยแยกออกจากกัน
+
+5. **รูปแบบผลลัพธ์ (JSON Object เท่านั้น):**
+   ส่งผลลัพธ์เป็น JSON Object ในรูปแบบ:
+   {{
+     "results": [
+       {{"id": 1, "thai": "บทพูดภาษาไทยที่เรียบเรียงใหม่ ฟังแล้วเข้าใจทันที ไม่เกินเวลา"}},
+       {{"id": 2, "thai": "บทพูดภาษาไทยท่อนถัดไป กระชับ ลื่นไหล เป็นธรรมชาติ"}}
+     ]
+   }}"""
 
         user_prompt = f"Video Title & Context: {context.strip() or 'General'}\nTarget Register: {effective_style}\n\nDialogue to Transcreate & Dub:\n{numbered_input}"
 
@@ -459,7 +470,7 @@ class CascadeTranslator:
                 {"role": "user", "content": user_prompt},
             ],
             "response_format": {"type": "json_object"},
-            "temperature": 0.12,
+            "temperature": 0.15,
         }
 
         for endpoint in DASHSCOPE_ENDPOINTS:
@@ -469,27 +480,72 @@ class CascadeTranslator:
                     "Content-Type": "application/json",
                 }
                 async with aiohttp.ClientSession() as session:
-                    async with session.post(endpoint, json=payload, headers=headers, timeout=aiohttp.ClientTimeout(total=8.0)) as resp:
+                    async with session.post(endpoint, json=payload, headers=headers, timeout=aiohttp.ClientTimeout(total=9.0)) as resp:
                         if resp.status == 200:
+                            self.last_status = "ok"
                             data = await resp.json()
                             choices = data.get("choices", [])
                             if choices:
                                 raw_json = choices[0].get("message", {}).get("content", "").strip()
-                                parsed_list = json.loads(raw_json)
-                                if isinstance(parsed_list, dict):
-                                    for key_name in ["results", "cues", "dialogue", "items", "data"]:
-                                        if key_name in parsed_list and isinstance(parsed_list[key_name], list):
-                                            parsed_list = parsed_list[key_name]
+                                # Clean markdown code fences if model enclosed in ```json
+                                raw_json = re.sub(r"^```(?:json)?\s*", "", raw_json, flags=re.IGNORECASE)
+                                raw_json = re.sub(r"\s*```$", "", raw_json)
+                                parsed_data = json.loads(raw_json)
+
+                                raw_items = []
+                                if isinstance(parsed_data, dict):
+                                    for key_name in ["results", "cues", "dialogue", "items", "data", "translations", "dubbing"]:
+                                        if key_name in parsed_data and isinstance(parsed_data[key_name], list):
+                                            raw_items = parsed_data[key_name]
                                             break
-                                if isinstance(parsed_list, list) and len(parsed_list) == len(cues):
-                                    logger.info("Successfully transcreated %d cues with Qwen Flagship (%s)", len(cues), model)
-                                    for item in parsed_list:
-                                        g = item.get("gender", gender)
-                                        item["thai"] = transcreate_thai_dialogue(item.get("thai", ""), style=effective_style, gender=g)
-                                    return parsed_list
-                        else:
-                            err_body = await resp.text()
-                            logger.warning("Qwen Diarized API HTTP %d from %s: %s", resp.status, endpoint, err_body[:100])
+                                    if not raw_items and all(isinstance(v, dict) for v in parsed_data.values()):
+                                        raw_items = list(parsed_data.values())
+                                elif isinstance(parsed_data, list):
+                                    raw_items = parsed_data
+
+                                if raw_items:
+                                    # Build ID map
+                                    cue_map = {}
+                                    for item in raw_items:
+                                        if isinstance(item, dict) and "id" in item:
+                                            try:
+                                                cue_map[int(item["id"])] = item
+                                            except (ValueError, TypeError):
+                                                pass
+
+                                    final_results = []
+                                    for i, c in enumerate(cues):
+                                        cid = c.get("id", i + 1)
+                                        matched = cue_map.get(cid) or (raw_items[i] if i < len(raw_items) and isinstance(raw_items[i], dict) else None)
+                                        thai_str = (matched.get("thai", "") if matched else "").strip()
+                                        if thai_str:
+                                            final_results.append({
+                                                "id": cid,
+                                                "speaker": "host",
+                                                "gender": gender if gender in ["male", "female"] else "female",
+                                                "emotion": matched.get("emotion", "engaging") if matched else "engaging",
+                                                "rate": matched.get("rate", "+0%") if matched else "+0%",
+                                                "thai": transcreate_thai_dialogue(thai_str, style=effective_style, gender=gender),
+                                            })
+                                        else:
+                                            final_results.append({
+                                                "id": cid,
+                                                "speaker": "host",
+                                                "gender": gender if gender in ["male", "female"] else "female",
+                                                "emotion": "engaging",
+                                                "rate": "+0%",
+                                                "thai": transcreate_thai_dialogue(c.get("text", ""), style=effective_style, gender=gender),
+                                            })
+
+                                    if len(final_results) == len(cues):
+                                        logger.info("Successfully transcreated %d cues with Master Dubbing Qwen (%s)", len(cues), model)
+                                        return final_results
+                        elif resp.status == 429:
+                            self.last_status = "depleted"
+                            logger.warning("Qwen API Rate limited (429)")
+                        elif resp.status in [400, 401]:
+                            self.last_status = "invalid"
+                            logger.warning("Qwen API Key invalid (400/401)")
             except Exception as e:
                 logger.debug("Qwen diarized request failed for %s: %s", endpoint, e)
                 continue
@@ -660,7 +716,16 @@ class CascadeTranslator:
 
         # Fallback to standard translation if AI transcreation API is unavailable
         raw_texts = [c.get("text", "").strip() for c in cues]
-        thai_texts = await self.translate_batch(raw_texts, context=context, style=style, gender=gender, model_name=model_name, custom_key=custom_key)
+        thai_texts = await self.translate_batch(
+            raw_texts,
+            context=context,
+            style=style,
+            gender=gender,
+            model_name=model_name,
+            custom_key=custom_key,
+            custom_qwen_key=custom_qwen_key,
+            translation_model=translation_model,
+        )
         return [
             {
                 "id": c.get("id", i + 1),
