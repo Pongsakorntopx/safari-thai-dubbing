@@ -26,7 +26,7 @@
     isDubbingActive: false,
     timedCues: [],
     currentVideoId: null,
-    targetBufferSeconds: 180, // 180-Second (3-minute) Golden Buffer
+    targetBufferSeconds: 60, // 60-Second (1-minute) Buffer
     lastScheduledCue: null,
     currentPlayingCue: null,
     nextSpeechTime: 0,
@@ -726,7 +726,7 @@
     // 1. Pause video cleanly while buffering
     pauseYouTubeVideo();
     renderHUD();
-    updateHUDStatus('⏳ วิดีโอหยุดชั่วคราว: กำลังวิเคราะห์และเรียบเรียงภาษาไทยล่วงหน้า 3 นาที...');
+    updateHUDStatus('⏳ วิดีโอหยุดชั่วคราว: กำลังวิเคราะห์และเรียบเรียงภาษาไทยล่วงหน้า 1 นาที...');
 
     try {
       // 2. Fetch Structured Transcript via Background Proxy
@@ -741,14 +741,14 @@
           status: 'pending',
         }));
         state.currentVideoId = videoId;
-        console.log(`[ThaiDubbing] Loaded ${state.timedCues.length} cues. Pre-buffering 180 seconds...`);
+        console.log(`[ThaiDubbing] Loaded ${state.timedCues.length} cues. Pre-buffering 60 seconds...`);
 
-        // 3. 3-Minute Golden Buffer: Pre-buffer 180 seconds for cohesive storytelling & flawless audio
+        // 3. 1-Minute Buffer: Pre-buffer 60 seconds for cohesive storytelling & flawless audio
         const video = findVideoElement();
         const cur = video ? video.currentTime : 0;
         const targetTime = cur + state.targetBufferSeconds;
         const batchCues = state.timedCues.filter((c) => c.end >= cur && c.start <= targetTime);
-        const toFetch = (batchCues.length > 0 ? batchCues : state.timedCues).slice(0, 48);
+        const toFetch = (batchCues.length > 0 ? batchCues : state.timedCues).slice(0, 16);
 
         const chunkSize = 8;
         let totalFetchedCues = 0;
@@ -759,7 +759,7 @@
           chunk.forEach((c) => (c.status = 'fetching'));
 
           const progressPercent = Math.round((totalFetchedCues / toFetch.length) * 100);
-          updateHUDStatus(`⏳ กำลังเรียบเรียงและสร้างเสียงพากย์ล่วงหน้า 3 นาที (${progressPercent}% - ท่อนที่ ${i + 1}/${toFetch.length})...`);
+          updateHUDStatus(`⏳ กำลังเรียบเรียงและสร้างเสียงพากย์ล่วงหน้า 1 นาที (${progressPercent}% - ท่อนที่ ${i + 1}/${toFetch.length})...`);
 
           const batchRes = await fetchDubBatchDirect(chunk);
           if (batchRes && batchRes.success && batchRes.results) {
@@ -828,13 +828,13 @@
 
   function onBufferSyncComplete() {
     if (!state.isSyncBuffering) return;
-    console.log('[ThaiDubbing] >>> 180s Buffer Ready! Resuming video playback...');
+    console.log('[ThaiDubbing] >>> 60s Buffer Ready! Resuming video playback...');
     state.isSyncBuffering = false;
 
     // Automatically Resume Video Immediately
     resumeYouTubeVideo();
     renderHUD();
-    updateHUDStatus('🟢 บัฟเฟอร์ 3 นาทีพร้อมแล้ว! วิดีโอกำลังเล่น');
+    updateHUDStatus('🟢 บัฟเฟอร์ 1 นาทีพร้อมแล้ว! วิดีโอกำลังเล่น');
   }
 
   // --- Continuous Lookahead Worker & Audio Scheduler ---
@@ -842,20 +842,20 @@
     if (state.lookaheadTimer) clearInterval(state.lookaheadTimer);
     if (state.schedulerTimer) clearInterval(state.schedulerTimer);
 
-    // Continuous Worker: Maintains 100-180s paragraph buffer ahead throughout entire video
+    // Continuous Worker: Maintains 45-60s paragraph buffer ahead throughout entire video
     state.lookaheadTimer = setInterval(async () => {
       if (!state.isDubbingActive || state.timedCues.length === 0 || state.isPreFetching) return;
       const video = findVideoElement();
       const currentTime = video ? video.currentTime : 0;
       updateBufferGauge();
 
-      // If buffer drops below 160s, keep fetching upcoming pending cues continuously!
-      if (state.bufferedSeconds < 160) {
+      // If buffer drops below 50s, keep fetching upcoming pending cues continuously!
+      if (state.bufferedSeconds < 50) {
         const upcomingCues = state.timedCues.filter((c) => c.end >= currentTime - 1.0);
         const pendingCues = upcomingCues.filter((c) => c.status === 'pending');
 
         if (pendingCues.length > 0) {
-          const nextBatch = pendingCues.slice(0, 12);
+          const nextBatch = pendingCues.slice(0, 8);
           nextBatch.forEach((c) => (c.status = 'fetching'));
           state.isPreFetching = true;
 
@@ -1065,7 +1065,7 @@
     const barEl = document.getElementById('hud-buffer-bar');
     if (gaugeEl) {
       if (state.isSyncBuffering) {
-        gaugeEl.textContent = `⏳ ซิงค์ 3 นาที: ${state.bufferedSeconds}s/${state.targetBufferSeconds}s`;
+        gaugeEl.textContent = `⏳ ซิงค์ 1 นาที: ${state.bufferedSeconds}s/${state.targetBufferSeconds}s`;
       } else {
         gaugeEl.textContent = `⚡ บัฟเฟอร์ล่วงหน้า: ${state.bufferedSeconds}s`;
       }
@@ -1412,7 +1412,7 @@
       ">
         <!-- Main "เริ่มพากย์ไทย" / "หยุดพากย์" Button -->
         ${!state.isDubbingActive ? `
-          <button id="hud-start-dub-btn" type="button" title="คลิกเพื่อหยุดวิดีโอ วิเคราะห์เนื้อหาและเรียบเรียงภาษาไทยล่วงหน้า 2 นาที แล้วเริ่มเล่นพร้อมพากย์ไทย" style="
+          <button id="hud-start-dub-btn" type="button" title="คลิกเพื่อหยุดวิดีโอ วิเคราะห์เนื้อหาและเรียบเรียงภาษาไทยล่วงหน้า 1 นาที แล้วเริ่มเล่นพร้อมพากย์ไทย" style="
             background: linear-gradient(135deg, #4f46e5, #2563eb);
             color: #ffffff;
             border: none;
@@ -1427,7 +1427,7 @@
             box-shadow: 0 2px 10px rgba(79, 70, 229, 0.5);
           ">
             <span>🚀</span>
-            <span>เริ่มพากย์ไทย (3 นาที)</span>
+            <span>เริ่มพากย์ไทย (1 นาที)</span>
           </button>
         ` : (state.isSyncBuffering ? `
           <button id="hud-skip-sync-btn" type="button" title="ข้ามการรอและเล่นวิดีโอทันที" style="
@@ -1465,10 +1465,10 @@
           </button>
         `)}
 
-        <!-- 180-Second Golden Buffer Gauge Indicator -->
+        <!-- 60-Second Buffer Gauge Indicator -->
         <div style="display: flex; flex-direction: column; gap: 2px; min-width: 135px;">
           <span id="hud-buffer-text" style="font-size: 10px; font-weight: 600; color: ${state.isSyncBuffering ? '#f59e0b' : '#38bdf8'};">
-            ${state.isSyncBuffering ? `⏳ ซิงค์ 3 นาที: ${state.bufferedSeconds}s/${state.targetBufferSeconds}s` : (state.isDubbingActive ? `⚡ บัฟเฟอร์ล่วงหน้า: ${state.bufferedSeconds}s` : 'พร้อมแปล (กดปุ่มเริ่ม)')}
+            ${state.isSyncBuffering ? `⏳ ซิงค์ 1 นาที: ${state.bufferedSeconds}s/${state.targetBufferSeconds}s` : (state.isDubbingActive ? `⚡ บัฟเฟอร์ล่วงหน้า: ${state.bufferedSeconds}s` : 'พร้อมแปล (กดปุ่มเริ่ม)')}
           </span>
           <div style="width: 100%; height: 3px; background: rgba(255,255,255,0.15); border-radius: 2px; overflow: hidden;">
             <div id="hud-buffer-bar" style="width: ${state.isDubbingActive ? bufferPercent : 0}%; height: 100%; background: ${state.isSyncBuffering ? '#f59e0b' : '#10b981'}; transition: width 0.3s ease;"></div>
@@ -1596,7 +1596,7 @@
         </div>
 
         <div id="hud-status-text" style="font-size: 10px; color: #38bdf8; text-align: center; margin-top: 2px;">
-          ${state.isDubbingActive ? '🟢 ระบบกำลังพากย์สด' : '⏸️ กด "🚀 เริ่มพากย์ไทย (2 นาที)" เพื่อเริ่มซิงค์เสียง'}
+          ${state.isDubbingActive ? '🟢 ระบบกำลังพากย์สด' : '⏸️ กด "🚀 เริ่มพากย์ไทย (1 นาที)" เพื่อเริ่มซิงค์เสียง'}
         </div>
       </div>
     `;
